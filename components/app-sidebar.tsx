@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -15,15 +16,16 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar"
-import { 
-  IconLayoutDashboard, 
-  IconReceipt, 
-  IconListCheck, 
-  IconFileCheck, 
-  IconTruckDelivery, 
-  IconShip, 
-  IconUsers, 
-  IconUserCog 
+import {
+  IconLayoutDashboard,
+  IconReceipt,
+  IconListCheck,
+  IconFileCheck,
+  IconTruckDelivery,
+  IconShip,
+  IconUsers,
+  IconUserCog,
+  IconFileInvoice,
 } from "@tabler/icons-react"
 
 // This is sample data.
@@ -38,7 +40,6 @@ const data = {
       title: "Dashboard",
       url: "/",
       icon: <IconLayoutDashboard />,
-      isActive: true,
     },
     {
       title: "Purchase order",
@@ -66,6 +67,11 @@ const data = {
       icon: <IconShip />,
     },
     {
+      title: "HBL/HAWB",
+      url: "/hbl-hawb",
+      icon: <IconFileInvoice />,
+    },
+    {
       title: "Clients",
       url: "/clients",
       icon: <IconUsers />,
@@ -79,6 +85,13 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname()
+
+  const navMainWithActiveState = data.navMain.map((item) => ({
+    ...item,
+    isActive: pathname === item.url || (item.url !== "/" && pathname.startsWith(item.url)),
+  }))
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -99,7 +112,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navMainWithActiveState} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

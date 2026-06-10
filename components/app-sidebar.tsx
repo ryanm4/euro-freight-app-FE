@@ -1,176 +1,79 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 
 import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
 } from "@/components/ui/sidebar"
-import { IconLayoutRows, IconWaveSine, IconCommand, IconTerminal2, IconRobot, IconBook, IconSettings, IconFrame, IconChartPie, IconMap } from "@tabler/icons-react"
+import { 
+  IconLayoutDashboard, 
+  IconReceipt, 
+  IconListCheck, 
+  IconFileCheck, 
+  IconTruckDelivery, 
+  IconShip, 
+  IconUsers, 
+  IconUserCog 
+} from "@tabler/icons-react"
 
 // This is sample data.
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "Admin User",
+    email: "admin@example.com",
+    avatar: "/avatars/admin.jpg",
   },
-  teams: [
-    {
-      name: "Acme Inc",
-      logo: (
-        <IconLayoutRows
-        />
-      ),
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: (
-        <IconWaveSine
-        />
-      ),
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: (
-        <IconCommand
-        />
-      ),
-      plan: "Free",
-    },
-  ],
   navMain: [
     {
-      title: "Playground",
-      url: "#",
-      icon: (
-        <IconTerminal2
-        />
-      ),
+      title: "Dashboard",
+      url: "/",
+      icon: <IconLayoutDashboard />,
       isActive: true,
-      items: [
-        {
-          title: "History",
-          url: "#",
-        },
-        {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
-        },
-      ],
     },
     {
-      title: "Models",
-      url: "#",
-      icon: (
-        <IconRobot
-        />
-      ),
-      items: [
-        {
-          title: "Genesis",
-          url: "#",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
-        },
-      ],
+      title: "Purchase order",
+      url: "/purchase-order",
+      icon: <IconReceipt />,
     },
     {
-      title: "Documentation",
-      url: "#",
-      icon: (
-        <IconBook
-        />
-      ),
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
+      title: "Packing List",
+      url: "/packing-list",
+      icon: <IconListCheck />,
     },
     {
-      title: "Settings",
-      url: "#",
-      icon: (
-        <IconSettings
-        />
-      ),
-      items: [
-        {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: (
-        <IconFrame
-        />
-      ),
+      title: "Good Received Notes",
+      url: "/grn",
+      icon: <IconFileCheck />,
     },
     {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: (
-        <IconChartPie
-        />
-      ),
+      title: "Goods Dispatched Notes",
+      url: "/gdn",
+      icon: <IconTruckDelivery />,
     },
     {
-      name: "Travel",
-      url: "#",
-      icon: (
-        <IconMap
-        />
-      ),
+      title: "Shipment",
+      url: "/shipment",
+      icon: <IconShip />,
+    },
+    {
+      title: "Clients",
+      url: "/clients",
+      icon: <IconUsers />,
+    },
+    {
+      title: "Users",
+      url: "/users",
+      icon: <IconUserCog />,
     },
   ],
 }
@@ -179,11 +82,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" asChild>
+              <Link href="/">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <IconShip className="size-4" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">EURO Freight</span>
+                  <span className="truncate text-xs">App</span>
+                </div>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

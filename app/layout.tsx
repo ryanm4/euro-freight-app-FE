@@ -3,6 +3,10 @@ import { Geist, Geist_Mono, Manrope } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/app-sidebar"
+import { Separator } from "@/components/ui/separator"
+import { ReusableBreadcrumb } from "@/components/reusable-breadcrumb"
 
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-sans" })
 
@@ -28,7 +32,21 @@ export default function RootLayout({
       )}
     >
       <body>
-        <ThemeProvider defaultTheme="dark">{children}</ThemeProvider>
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset>
+            <ThemeProvider defaultTheme="dark">
+              <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+                <SidebarTrigger className="-ml-1" />
+                <Separator orientation="vertical" className="mr-2 h-4" />
+                <ReusableBreadcrumb />
+              </header>
+              <main className="relative flex w-full flex-1 flex-col">
+                {children}
+              </main>
+            </ThemeProvider>
+          </SidebarInset>
+        </SidebarProvider>
       </body>
     </html>
   )

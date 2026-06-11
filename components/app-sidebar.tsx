@@ -1,8 +1,8 @@
 "use client"
 
-import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import * as React from "react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -11,21 +11,21 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarRail,
   SidebarMenu,
-  SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
 } from "@/components/ui/sidebar"
 import {
-  IconLayoutDashboard,
-  IconReceipt,
-  IconListCheck,
   IconFileCheck,
-  IconTruckDelivery,
-  IconShip,
-  IconUsers,
-  IconUserCog,
   IconFileInvoice,
+  IconLayoutDashboard,
+  IconListCheck,
+  IconReceipt,
+  IconShip,
+  IconTruckDelivery,
+  IconUserCog,
+  IconUsers,
 } from "@tabler/icons-react"
 
 // This is sample data.
@@ -42,7 +42,7 @@ const data = {
       icon: <IconLayoutDashboard />,
     },
     {
-      title: "Purchase order",
+      title: "Purchase Order",
       url: "/purchase-order",
       icon: <IconReceipt />,
     },

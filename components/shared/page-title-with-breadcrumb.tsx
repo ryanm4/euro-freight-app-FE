@@ -1,12 +1,14 @@
+"use client"
+
 import {
   Breadcrumb,
-  BreadcrumbList,
   BreadcrumbItem,
   BreadcrumbLink,
-  BreadcrumbSeparator,
+  BreadcrumbList,
   BreadcrumbPage,
+  BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import React, { useState, useEffect } from "react"
+import React, { useEffect, useState } from "react"
 
 interface PageTitleWithBreadcrumbProps {
   title?: string

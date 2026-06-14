@@ -1,10 +1,14 @@
-export interface GRN {
-  client_id: number;
-  manufacture_id: number;
-  forwarder_id: number;
-  date: string;
-  quantity: number;
-  status: string;
-  created_by: string;
-  packing_list_ids: number[];
+export interface GOODS_RECEIVE_NOTE {
+  id: number
+  client_id?: number | null
+  manufacture_id?: number | null
+  forwarder_id?: number | null
+  date?: string | null
+  quantity?: number | null
+  bill_id?: number | null
+  status?: string | null
+  created_by?: string | null
+  created_on?: string | null
+  updated_by?: string | null
+  updated_on?: string | null
 }

@@ -3,7 +3,7 @@
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import GoodsReceiveNoteForm from "../_components/grn-form"
+import GoodsDispatchNoteForm from "../_components/gdn-form"
 
 export default function PurchaseOrderCreatePage() {
   const router = useRouter()
@@ -28,7 +28,7 @@ export default function PurchaseOrderCreatePage() {
       </div>
 
       <div className="mt-4">
-        <GoodsReceiveNoteForm />
+        <GoodsDispatchNoteForm />
       </div>
     </div>
   )

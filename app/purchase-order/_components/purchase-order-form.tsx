@@ -265,7 +265,9 @@ function FreightSplitSection({
     <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-100">Freight Split</h2>
+          <h2 className="text-sm font-semibold text-zinc-100">
+            Order Quantity Split
+          </h2>
           <p className="mt-0.5 text-xs text-zinc-500">
             Divide the PO quantity across freight methods. Total must equal PO
             quantity.

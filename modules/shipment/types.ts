@@ -1,6 +1,9 @@
 export interface SHIPMENT {
-  vessel_name: string;
-  status: string;
-  created_by: string;
-  hbl_ids: number[];
+  id: number
+  vessel_name?: string | null
+  status?: string | null
+  created_by?: string | null
+  created_on?: string | null
+  updated_by?: string | null
+  updated_on?: string | null
 }

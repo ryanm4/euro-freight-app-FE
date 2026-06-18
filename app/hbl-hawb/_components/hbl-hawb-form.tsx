@@ -9,6 +9,14 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useState } from "react"
+import { PortMultiSelect } from "./port-multi-select"
+
+export interface Port {
+  value: string
+  label: string
+  country?: string
+  code?: string
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function FormField({
@@ -120,6 +128,16 @@ export default function HBLHABWForm() {
   const [containerSealNo, setContainerSealNo] = useState("")
   const [onboardedDate, setOnboardedDate] = useState("")
   const [remarks, setRemarks] = useState("")
+  const [arrivalPorts, setArrivalPorts] = useState<Port[]>([])
+
+  const availablePorts: Port[] = [
+    { value: "cmb", label: "Colombo", code: "CMB", country: "Sri Lanka" },
+    { value: "sin", label: "Singapore", code: "SIN", country: "Singapore" },
+    { value: "dxb", label: "Dubai", code: "DXB", country: "UAE" },
+    { value: "sha", label: "Shanghai", code: "SHA", country: "China" },
+    { value: "klang", label: "Port Klang", code: "PKG", country: "Malaysia" },
+    { value: "jfk", label: "New York JFK", code: "JFK", country: "USA" },
+  ]
 
   return (
     <div className="mx-auto space-y-5">
@@ -318,16 +336,11 @@ export default function HBLHABWForm() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormSelect
+              <PortMultiSelect
                 label="Arrival Port"
-                value={arrivalPort}
-                onValueChange={setArrivalPort}
-                placeholder="Choose Arrival Port"
-                options={[
-                  { value: "p1", label: "List 1" },
-                  { value: "p2", label: "List 2" },
-                  { value: "p3", label: "List 3" },
-                ]}
+                selected={arrivalPorts}
+                onChange={setArrivalPorts}
+                ports={availablePorts}
               />
 
               <FormSelect

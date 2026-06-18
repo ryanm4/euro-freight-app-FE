@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   IconChevronDown,
   IconChevronUp,
+  IconFileSpreadsheet,
   IconPlus,
   IconTrash,
 } from "@tabler/icons-react"
@@ -372,7 +373,7 @@ export default function PurchaseOrderForm() {
   const [poQuantity, setPoQuantity] = useState("")
   const [supplier, setSupplier] = useState("")
   const [freightForwarder, setFreightForwarder] = useState("")
-  const [shippingMode, setShippingMode] = useState("")
+  // const [shippingMode, setShippingMode] = useState("")
   const [paymentMode, setPaymentMode] = useState("")
   const [finalDestination, setFinalDestination] = useState("")
 
@@ -383,6 +384,8 @@ export default function PurchaseOrderForm() {
 
   // Cargo
   const [cargoItems, setCargoItems] = useState<CargoItem[]>([createCargoItem()])
+
+  const [remarks, setRemarks] = useState("")
 
   const [freightSplits, setFreightSplits] = useState<FreightSplit[]>([
     { id: crypto.randomUUID(), method: "sea", quantity: "", dispatchDate: "" },
@@ -456,13 +459,13 @@ export default function PurchaseOrderForm() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
+              {/* <FormField
                 label="Shipping Mode"
                 id="shipping-mode"
                 placeholder="Enter Shipping Mode"
                 value={shippingMode}
                 onChange={setShippingMode}
-              />
+              /> */}
               <FormField
                 label="Payment Mode"
                 id="payment-mode"
@@ -470,16 +473,15 @@ export default function PurchaseOrderForm() {
                 value={paymentMode}
                 onChange={setPaymentMode}
               />
-            </div>
 
-            <FormField
-              label="Final Destination"
-              id="final-destination"
-              placeholder="Enter Final Destination"
-              value={finalDestination}
-              onChange={setFinalDestination}
-              className="max-w-[calc(50%-8px)]"
-            />
+              <FormField
+                label="Final Destination"
+                id="final-destination"
+                placeholder="Enter Final Destination"
+                value={finalDestination}
+                onChange={setFinalDestination}
+              />
+            </div>
           </div>
         </div>
 
@@ -551,15 +553,26 @@ export default function PurchaseOrderForm() {
               item.
             </p>
           </div>
-          <Button
-            onClick={addItem}
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 rounded-md border-zinc-700 bg-zinc-800 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
-          >
-            <IconPlus className="h-3.5 w-3.5" />
-            Add Item
-          </Button>
+          <div className="flex gap-4">
+            <Button
+              onClick={addItem}
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 rounded-md border-zinc-700 bg-zinc-800 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
+            >
+              <IconFileSpreadsheet className="h-3.5 w-3.5" />
+              Upload File
+            </Button>
+            <Button
+              onClick={addItem}
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 rounded-md border-zinc-700 bg-zinc-800 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
+            >
+              <IconPlus className="h-3.5 w-3.5" />
+              Add Item
+            </Button>
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -714,6 +727,30 @@ export default function PurchaseOrderForm() {
               </div>
             </Collapsible>
           ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-1">
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              Additional Information
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Packing lists and carton quantities.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <FormTextarea
+                label="Remarks"
+                value={remarks}
+                onChange={setRemarks}
+                placeholder="Type your message here."
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>

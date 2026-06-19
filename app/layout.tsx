@@ -42,7 +42,9 @@ export default function RootLayout({
               <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
                 <SidebarTrigger className="-ml-1" />
               </header>
-              <main className="relative flex w-full flex-1 flex-col">
+              <main className="relative flex w-full flex-1 flex-col overflow-x-hidden">
+                {" "}
+                {/* changed */}
                 {children}
               </main>
             </ThemeProvider>

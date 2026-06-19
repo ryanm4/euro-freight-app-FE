@@ -23,7 +23,7 @@ export default function HBLHAWBPage() {
   const data: HBL_HAWB[] = [
     {
       id: 1,
-      client_id: 101,
+      client_name: "Koren Spa",
       manufacture_id: 501,
       date: "2025-01-10T09:00:00",
       type: "HBL",
@@ -51,7 +51,7 @@ export default function HBLHAWBPage() {
     },
     {
       id: 2,
-      client_id: 102,
+      client_name: "Lacoste",
       manufacture_id: 502,
       date: "2025-01-20T10:00:00",
       type: "HAWB",
@@ -79,7 +79,7 @@ export default function HBLHAWBPage() {
     },
     {
       id: 3,
-      client_id: 103,
+      client_name: "Tommy Hillfiguer",
       manufacture_id: null,
       date: "2025-02-05T08:00:00",
       type: "HBL",
@@ -107,7 +107,7 @@ export default function HBLHAWBPage() {
     },
     {
       id: 4,
-      client_id: null,
+      client_name: "Ralph Lauren",
       manufacture_id: 503,
       date: "2025-02-18T14:00:00",
       type: "HAWB",
@@ -135,7 +135,7 @@ export default function HBLHAWBPage() {
     },
     {
       id: 5,
-      client_id: 104,
+      client_name: "Polo",
       manufacture_id: 504,
       date: "2025-03-01T10:00:00",
       type: "HBL",

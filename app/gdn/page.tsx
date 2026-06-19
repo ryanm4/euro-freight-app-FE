@@ -23,7 +23,7 @@ export default function GDNPage() {
   const data: GOODS_DELIVER_NOTE[] = [
     {
       id: 1,
-      client_id: 101,
+      client_name: "Stark Industries",
       manufacture_id: 501,
       forwarder_id: 601,
       date: "2025-01-12T09:00:00",
@@ -43,7 +43,7 @@ export default function GDNPage() {
     },
     {
       id: 2,
-      client_id: 102,
+      client_name: "Wayne Industries",
       manufacture_id: 502,
       forwarder_id: null,
       date: "2025-01-20T11:30:00",
@@ -63,7 +63,7 @@ export default function GDNPage() {
     },
     {
       id: 3,
-      client_id: 103,
+      client_name: "Nvidia",
       manufacture_id: null,
       forwarder_id: 602,
       date: "2025-02-05T08:00:00",
@@ -83,7 +83,7 @@ export default function GDNPage() {
     },
     {
       id: 4,
-      client_id: null,
+      client_name: "AWS",
       manufacture_id: 503,
       forwarder_id: 603,
       date: "2025-02-18T14:00:00",
@@ -103,7 +103,7 @@ export default function GDNPage() {
     },
     {
       id: 5,
-      client_id: 104,
+      client_name: "Space X",
       manufacture_id: 504,
       forwarder_id: 604,
       date: null,

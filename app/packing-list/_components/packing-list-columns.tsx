@@ -47,17 +47,17 @@ export const packingListColumns = (
       ),
     },
     {
-      accessorKey: "client_id",
+      accessorKey: "client_name",
       header: ({ column }) => (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Client ID
+          Client
           <IconArrowsSort className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => <div>{row.original.client_id ?? "N/A"}</div>,
+      cell: ({ row }) => <div>{row.original.client_name ?? "N/A"}</div>,
     },
     {
       accessorKey: "date",

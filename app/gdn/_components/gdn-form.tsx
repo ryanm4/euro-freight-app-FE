@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { useState } from "react"
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -75,6 +76,30 @@ function FormSelect({
   )
 }
 
+function FormTextarea({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+}) {
+  return (
+    <div className="flex flex-1 flex-col gap-1.5">
+      <Label className="text-xs font-medium text-foreground">{label}</Label>
+      <Textarea
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"
+      />
+    </div>
+  )
+}
+
 export default function GoodsDispatchNoteForm() {
   const [date, setDate] = useState("")
   const [gdnReference, setGdnReference] = useState("")
@@ -89,6 +114,7 @@ export default function GoodsDispatchNoteForm() {
   const [actualGrossWeight, setActualGrossWeight] = useState("")
   const [grossVolume, setGrossVolume] = useState("")
   const [actualGrossVolume, setActualGrossVolume] = useState("")
+  const [remarks, setRemarks] = useState("")
 
   return (
     <div className="mx-auto space-y-5">
@@ -284,6 +310,30 @@ export default function GoodsDispatchNoteForm() {
                 placeholder="Enter Actual Gross Volume"
                 value={actualGrossVolume}
                 onChange={setActualGrossVolume}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-1">
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              Additional Information
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Packing lists and carton quantities.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <FormTextarea
+                label="Remarks"
+                value={remarks}
+                onChange={setRemarks}
+                placeholder="Type your message here."
               />
             </div>
           </div>

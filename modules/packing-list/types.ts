@@ -1,6 +1,6 @@
 export interface PACKING_LIST {
   id: number
-  client_id?: number | null
+  client_name?: string
   date?: string | null
   gdn_id?: number | null
   grn_id?: number | null

@@ -8,7 +8,7 @@ import { PURCHASE_ORDER } from "@/modules/purchase-order/types"
 import { IconPlus, IconSearch } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { purchaseOrderColumns } from "./_components/purchase-order-columns"
 import { DataTable } from "./_components/purchase-order-table"
 
@@ -17,27 +17,26 @@ export default function PurchaseOrderPage() {
   const [searchValue, setSearchValue] = useState("")
 
   const {
-    data: purchaseorders,
+    data,
     isLoading,
-    error,
+    // error,
   } = useQuery({
     queryKey: ["purchase-orders"],
     queryFn: fetchPurchaseOrders,
   })
 
-  console.log("purchase-orders", purchaseorders)
+  const actions = useMemo(
+    () => ({
+      onEdit: (id: string) => router.push(`/purchase-order/edit/${id}`),
+      onDelete: (id: string) => console.log("Delete", id),
+      onView: (id: string) => router.push(`/purchase-order/view/${id}`),
+      onStatusChange: (id: string, status: string) =>
+        console.log("Status change", id, status),
+    }),
+    [router]
+  )
 
-  const actions = {
-    onEdit: (id: string) => router.push(`/purchase-order/edit/${id}`),
-    onDelete: (id: string) => console.log("Delete", id),
-    onView: (id: string) => router.push(`/purchase-order/view/${id}`),
-    onStatusChange: (id: string, status: string) =>
-      console.log("Status change", id, status),
-  }
-
-  const columns = purchaseOrderColumns(actions)
-
-  const data: PURCHASE_ORDER[] = purchaseorders.data || []
+  const columns = useMemo(() => purchaseOrderColumns(actions), [actions])
 
   return (
     <div className="mt-3 flex flex-1 flex-col gap-4 p-6 pt-0">
@@ -63,7 +62,12 @@ export default function PurchaseOrderPage() {
       </div>
 
       <div className="mt-4">
-        <DataTable columns={columns} data={data} searchValue={searchValue} />
+        <DataTable
+          columns={columns}
+          data={(data?.data ?? []) as PURCHASE_ORDER[]}
+          searchValue={searchValue}
+          isLoading={isLoading}
+        />
       </div>
     </div>
   )

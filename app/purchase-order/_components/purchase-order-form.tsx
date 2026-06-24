@@ -1,21 +1,21 @@
 "use client"
 
+import FreightSplitSection, {
+  FreightSplit,
+} from "@/components/custom/FreightSplitSection"
+import FormDateField from "@/components/shared/FormDateField"
+import FormField from "@/components/shared/FormField"
+import FormFileInput from "@/components/shared/FormFileInput"
+import FormSelect from "@/components/shared/FormSelect"
+import FormTextarea from "@/components/shared/FormTextarea"
 import { Button } from "@/components/ui/button"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
+import { fetchClients } from "@/lib/api/clients"
+import { createPurchaseOrder } from "@/lib/api/purchase-orders"
 import {
   IconChevronDown,
   IconChevronUp,
@@ -23,7 +23,10 @@ import {
   IconPlus,
   IconTrash,
 } from "@tabler/icons-react"
-import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
+import { useMemo, useState } from "react"
+import { v4 as uuidv4 } from "uuid"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -45,18 +48,9 @@ interface CargoItem {
   open: boolean
 }
 
-type FreightMethod = "air" | "sea"
-
-interface FreightSplit {
-  id: string
-  method: FreightMethod
-  quantity: string
-  dispatchDate: string
-}
-
-function createCargoItem(): CargoItem {
+function createCargoItem(id: string): CargoItem {
   return {
-    id: crypto.randomUUID(),
+    id,
     sku: "",
     itemName: "",
     color: "",
@@ -74,324 +68,60 @@ function createCargoItem(): CargoItem {
   }
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function FormField({
-  label,
-  id,
-  placeholder,
-  value,
-  onChange,
-  className = "",
-}: {
-  label: string
-  id: string
-  placeholder: string
-  value: string
-  onChange: (v: string) => void
-  className?: string
-}) {
-  return (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
-      <Label htmlFor={id} className="text-xs font-medium text-foreground">
-        {label}
-      </Label>
-      <Input
-        id={id}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-      />
-    </div>
-  )
-}
-
-function FormSelect({
-  label,
-  value,
-  onValueChange,
-  placeholder,
-  options,
-}: {
-  label: string
-  value: string
-  onValueChange: (v: string) => void
-  placeholder: string
-  options: { value: string; label: string }[]
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label className="text-xs font-medium text-foreground">{label}</Label>
-      <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-          {options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  )
-}
-
-function FormTextarea({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-}) {
-  return (
-    <div className="flex flex-1 flex-col gap-1.5">
-      <Label className="text-xs font-medium text-foreground">{label}</Label>
-      <Textarea
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"
-      />
-    </div>
-  )
-}
-
-function FormFileInput({ label, id }: { label: string; id: string }) {
-  const [fileName, setFileName] = useState<string | null>(null)
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label className="text-xs font-medium text-foreground">{label}</Label>
-      <div className="flex items-center gap-2">
-        <label
-          htmlFor={id}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-neutral-700 bg-[#0A0A0A] px-3 py-1.5 text-xs text-neutral-300 transition-colors hover:bg-neutral-700"
-        >
-          Choose File
-        </label>
-        <input
-          id={id}
-          type="file"
-          className="sr-only"
-          onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
-        />
-        <span className="truncate text-xs text-neutral-500">
-          {fileName ?? "No file chosen"}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-function FormDateField({
-  label,
-  id,
-  value,
-  onChange,
-  disabled = false,
-  className = "",
-}: {
-  label: string
-  id: string
-  value: string
-  onChange: (v: string) => void
-  disabled?: boolean
-  className?: string
-}) {
-  return (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
-      <Label htmlFor={id} className="text-xs font-medium text-foreground">
-        {label}
-      </Label>
-      <Input
-        id={id}
-        type="date"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        className="h-9 rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500 [&::-webkit-calendar-picker-indicator]:invert"
-      />
-    </div>
-  )
-}
-
-function FreightSplitSection({
-  poQuantity,
-  splits,
-  onChange,
-  readOnly = false,
-}: {
-  poQuantity: string
-  splits: FreightSplit[]
-  onChange: (splits: FreightSplit[]) => void
-  readOnly?: boolean
-}) {
-  const total = splits.reduce((sum, s) => sum + (parseInt(s.quantity) || 0), 0)
-  const poQty = parseInt(poQuantity) || 0
-  const remaining = poQty - total
-  const isValid = poQty > 0 && remaining === 0
-
-  const addSplit = () => {
-    onChange([
-      ...splits,
-      {
-        id: crypto.randomUUID(),
-        method: "sea",
-        quantity: "",
-        dispatchDate: "",
-      },
-    ])
-  }
-
-  const removeSplit = (id: string) => {
-    onChange(splits.filter((s) => s.id !== id))
-  }
-
-  const updateSplit = (
-    id: string,
-    field: keyof FreightSplit,
-    value: string
-  ) => {
-    onChange(splits.map((s) => (s.id === id ? { ...s, [field]: value } : s)))
-  }
-
-  return (
-    <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-      <div className="mb-4 flex items-start justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-zinc-100">
-            Order Quantity Split
-          </h2>
-          <p className="mt-0.5 text-xs text-zinc-500">
-            Divide the PO quantity across freight methods. Total must equal PO
-            quantity.
-          </p>
-        </div>
-        {!readOnly && (
-          <Button
-            onClick={addSplit}
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 rounded-md border-zinc-700 bg-zinc-800 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
-          >
-            <IconPlus className="h-3.5 w-3.5" /> Add Split
-          </Button>
-        )}
-      </div>
-
-      <div className="space-y-3">
-        {splits.map((split, index) => (
-          <div
-            key={split.id}
-            className="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-3"
-          >
-            <FormSelect
-              label={index === 0 ? "Freight Method" : ""}
-              value={split.method}
-              onValueChange={(v) => updateSplit(split.id, "method", v)}
-              placeholder="Select Method"
-              options={[
-                { value: "air", label: "Air" },
-                { value: "sea", label: "Sea" },
-              ]}
-              // disabled={readOnly}
-            />
-            <FormField
-              label={index === 0 ? "Quantity" : ""}
-              id={`split-qty-${split.id}`}
-              placeholder="Enter Quantity"
-              value={split.quantity}
-              onChange={(v) => updateSplit(split.id, "quantity", v)}
-              // disabled={readOnly}
-            />
-            <FormDateField
-              label={index === 0 ? "Dispatch Date" : ""}
-              id={`split-date-${split.id}`}
-              value={split.dispatchDate}
-              onChange={(v) => updateSplit(split.id, "dispatchDate", v)}
-              disabled={readOnly}
-            />
-            {!readOnly && (
-              <Button
-                onClick={() => removeSplit(split.id)}
-                variant="ghost"
-                size="icon"
-                className="mb-0 h-9 w-9 text-zinc-500 hover:text-red-400"
-                disabled={splits.length === 1}
-              >
-                <IconTrash className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Summary row */}
-      {poQty > 0 && (
-        <div className="mt-4 flex items-center justify-between rounded-md border border-neutral-700 bg-neutral-800/50 px-4 py-2.5">
-          <div className="flex gap-6 text-xs">
-            <span className="text-zinc-400">
-              PO Quantity:{" "}
-              <span className="font-semibold text-zinc-100">{poQty}</span>
-            </span>
-            <span className="text-zinc-400">
-              Allocated:{" "}
-              <span className="font-semibold text-zinc-100">{total}</span>
-            </span>
-            <span className="text-zinc-400">
-              Remaining:{" "}
-              <span
-                className={`font-semibold ${remaining === 0 ? "text-green-400" : remaining < 0 ? "text-red-400" : "text-yellow-400"}`}
-              >
-                {remaining}
-              </span>
-            </span>
-          </div>
-          <span
-            className={`text-xs font-medium ${isValid ? "text-green-400" : "text-yellow-400"}`}
-          >
-            {isValid ? "✓ Fully allocated" : "Allocation incomplete"}
-          </span>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
-
 export default function PurchaseOrderForm() {
+  const router = useRouter()
+  const [isSaving, setIsSaving] = useState(false)
+
   // PO Info
   const [poNumber, setPoNumber] = useState("")
   const [poQuantity, setPoQuantity] = useState("")
   const [supplier, setSupplier] = useState("")
   const [freightForwarder, setFreightForwarder] = useState("")
-  // const [shippingMode, setShippingMode] = useState("")
   const [paymentMode, setPaymentMode] = useState("")
   const [finalDestination, setFinalDestination] = useState("")
 
   // Timeline
   const [exFactoryDate, setExFactoryDate] = useState("")
-  const [actualDeliveryDate, setActualDeliveryDate] = useState("")
+  // const [actualDeliveryDate, setActualDeliveryDate] = useState("")
   const [instructions, setInstructions] = useState("")
 
   // Cargo
-  const [cargoItems, setCargoItems] = useState<CargoItem[]>([createCargoItem()])
+  const [cargoItems, setCargoItems] = useState<CargoItem[]>([
+    createCargoItem(uuidv4()),
+  ])
 
   const [remarks, setRemarks] = useState("")
 
+  const {
+    data,
+    isLoading,
+    // error,
+  } = useQuery({
+    queryKey: ["clients"],
+    queryFn: fetchClients,
+  })
+
+  console.log("data", data)
+
+  const supplierOptions = useMemo(() => {
+    return data?.data?.filter((client: any) => client.type === "supplier") || []
+  }, [data])
+
+  const manufacturerOptions = useMemo(() => {
+    return (
+      data?.data?.filter((client: any) => client.type === "manufacturer") || []
+    )
+  }, [data])
+
+  console.log("supplierOptions", supplierOptions)
+  console.log("manufacturerOptions", manufacturerOptions)
+
   const [freightSplits, setFreightSplits] = useState<FreightSplit[]>([
-    { id: crypto.randomUUID(), method: "sea", quantity: "", dispatchDate: "" },
+    { id: uuidv4(), method: "sea", quantity: "", dispatchDate: "" },
   ])
 
-  const addItem = () => setCargoItems((prev) => [...prev, createCargoItem()])
+  const addItem = () =>
+    setCargoItems((prev) => [...prev, createCargoItem(uuidv4())])
 
   const deleteItem = (id: string) =>
     setCargoItems((prev) => prev.filter((item) => item.id !== id))
@@ -408,8 +138,47 @@ export default function PurchaseOrderForm() {
       prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
     )
 
+  const handleSave = async () => {
+    try {
+      setIsSaving(true)
+      await createPurchaseOrder({
+        poNumber,
+        poQuantity,
+        supplier,
+        freightForwarder,
+        paymentMode,
+        finalDestination,
+        exFactoryDate,
+        // actualDeliveryDate,
+        instructions,
+        cargoItems,
+        freightSplits,
+        remarks,
+      })
+      router.push("/purchase-order")
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   return (
     <div className="mx-auto space-y-5">
+      <div className="flex justify-end gap-3">
+        <Button
+          variant="outline"
+          className="rounded-md"
+          onClick={() => router.push("/purchase-order")}
+          disabled={isSaving}
+        >
+          Cancel
+        </Button>
+        <Button className="rounded-md" onClick={handleSave} disabled={isSaving}>
+          {isSaving ? "Saving…" : "Save"}
+        </Button>
+      </div>
+
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Purchase Order Information */}
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
@@ -442,30 +211,29 @@ export default function PurchaseOrderForm() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
+              <FormSelect
                 label="Supplier"
-                id="supplier"
-                placeholder="Enter Supplier"
                 value={supplier}
-                onChange={setSupplier}
+                onValueChange={setSupplier}
+                placeholder="Select Supplier"
+                options={supplierOptions.map((s: any) => ({
+                  value: s.id,
+                  label: s.name,
+                }))}
               />
-              <FormField
-                label="Freight Forwarder"
-                id="freight-forwarder"
-                placeholder="Freight Forwarder"
+              <FormSelect
+                label="Manufacturer"
                 value={freightForwarder}
-                onChange={setFreightForwarder}
+                onValueChange={setFreightForwarder}
+                placeholder="Select Manufacturer"
+                options={manufacturerOptions.map((m: any) => ({
+                  value: m.id,
+                  label: m.name,
+                }))}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {/* <FormField
-                label="Shipping Mode"
-                id="shipping-mode"
-                placeholder="Enter Shipping Mode"
-                value={shippingMode}
-                onChange={setShippingMode}
-              /> */}
               <FormField
                 label="Payment Mode"
                 id="payment-mode"
@@ -498,33 +266,16 @@ export default function PurchaseOrderForm() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormSelect
+              <FormDateField
                 label="Ex Factory Date"
+                id={`ex-factory-date`}
                 value={exFactoryDate}
-                onValueChange={setExFactoryDate}
-                placeholder="Ex Factory Date"
-                options={[
-                  { value: "q1", label: "Q1 2025" },
-                  { value: "q2", label: "Q2 2025" },
-                  { value: "q3", label: "Q3 2025" },
-                  { value: "q4", label: "Q4 2025" },
-                ]}
+                onChange={setExFactoryDate}
               />
-              <FormSelect
-                label="Actual Delivery Date"
-                value={actualDeliveryDate}
-                onValueChange={setActualDeliveryDate}
-                placeholder="Actual Delivery Date"
-                options={[
-                  { value: "jan", label: "January 2025" },
-                  { value: "feb", label: "February 2025" },
-                  { value: "mar", label: "March 2025" },
-                ]}
-              />
+              <FormFileInput label="PO Document" id="po-document" />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormFileInput label="PO Document" id="po-document" />
+            <div className="grid grid-cols-1 gap-4">
               <FormTextarea
                 label="Instructions"
                 value={instructions}
@@ -554,15 +305,33 @@ export default function PurchaseOrderForm() {
             </p>
           </div>
           <div className="flex gap-4">
-            <Button
-              onClick={addItem}
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5 rounded-md border-zinc-700 bg-zinc-800 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
-            >
-              <IconFileSpreadsheet className="h-3.5 w-3.5" />
-              Upload File
-            </Button>
+            <>
+              <input
+                id="cargo-file-upload"
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    console.log(file)
+                  }
+                }}
+              />
+              <label htmlFor="cargo-file-upload">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 rounded-md border-zinc-700 bg-zinc-800 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
+                >
+                  <span>
+                    <IconFileSpreadsheet className="h-3.5 w-3.5" />
+                    Upload File
+                  </span>
+                </Button>
+              </label>
+            </>
             <Button
               onClick={addItem}
               variant="outline"

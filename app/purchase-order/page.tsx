@@ -2,9 +2,8 @@
 
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { PURCHASE_ORDER } from "@/modules/purchase-order/types"
-import { IconPlus, IconSearch } from "@tabler/icons-react"
+import { IconPlus } from "@tabler/icons-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { purchaseOrderColumns } from "./_components/purchase-order-columns"
@@ -144,13 +143,13 @@ export default function PurchaseOrderPage() {
   ]
 
   return (
-    <div className="mt-3 flex flex-1 flex-col gap-4 p-[24px] pt-0">
+    <div className="mt-3 flex flex-1 flex-col gap-4 p-6 pt-0">
       <PageTitleWithBreadcrumb
         title="Purchase Order Management"
         breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
       />
-      <div className="flex flex-row justify-end gap-[24px]">
-        <div className="relative w-[320px]">
+      <div className="flex flex-row justify-end gap-6">
+        {/* <div className="relative w-[320px]">
           <IconSearch className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
@@ -159,7 +158,7 @@ export default function PurchaseOrderPage() {
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
           />
-        </div>
+        </div> */}
 
         <Button onClick={() => router.push("/purchase-order/create")}>
           <IconPlus className="mr-2 h-4 w-4" /> Create New

@@ -8,6 +8,7 @@ const FormField = ({
   value,
   onChange,
   className = "",
+  type = "text",
 }: {
   label: string
   id: string
@@ -15,6 +16,7 @@ const FormField = ({
   value: string
   onChange: (v: string) => void
   className?: string
+  type?: string
 }) => {
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
@@ -23,6 +25,7 @@ const FormField = ({
       </Label>
       <Input
         id={id}
+        type={type}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}

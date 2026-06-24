@@ -25,8 +25,7 @@ import {
 } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
-import { v4 as uuidv4 } from "uuid"
+import { useId, useMemo, useState } from "react"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -71,6 +70,7 @@ function createCargoItem(id: string): CargoItem {
 export default function PurchaseOrderForm() {
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
+  const initialCargoId = useId()
 
   // PO Info
   const [poNumber, setPoNumber] = useState("")
@@ -87,7 +87,7 @@ export default function PurchaseOrderForm() {
 
   // Cargo
   const [cargoItems, setCargoItems] = useState<CargoItem[]>([
-    createCargoItem(uuidv4()),
+    createCargoItem(initialCargoId),
   ])
 
   const [remarks, setRemarks] = useState("")
@@ -117,11 +117,11 @@ export default function PurchaseOrderForm() {
   console.log("manufacturerOptions", manufacturerOptions)
 
   const [freightSplits, setFreightSplits] = useState<FreightSplit[]>([
-    { id: uuidv4(), method: "sea", quantity: "", dispatchDate: "" },
+    { id: initialCargoId, method: "sea", quantity: "", dispatchDate: "" },
   ])
 
   const addItem = () =>
-    setCargoItems((prev) => [...prev, createCargoItem(uuidv4())])
+    setCargoItems((prev) => [...prev, createCargoItem(initialCargoId)])
 
   const deleteItem = (id: string) =>
     setCargoItems((prev) => prev.filter((item) => item.id !== id))
@@ -200,6 +200,7 @@ export default function PurchaseOrderForm() {
                 value={poNumber}
                 onChange={setPoNumber}
                 className="col-span-1"
+                type="number"
               />
               <FormField
                 label="PO Quantity"

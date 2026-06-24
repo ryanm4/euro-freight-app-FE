@@ -2,10 +2,9 @@
 
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { fetchPurchaseOrders } from "@/lib/api/purchase-orders"
 import { PURCHASE_ORDER } from "@/modules/purchase-order/types"
-import { IconPlus, IconSearch } from "@tabler/icons-react"
+import { IconPlus } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
@@ -45,7 +44,7 @@ export default function PurchaseOrderPage() {
         breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
       />
       <div className="flex flex-row justify-end gap-6">
-        <div className="relative w-[320px]">
+        {/* <div className="relative w-[320px]">
           <IconSearch className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
@@ -54,7 +53,7 @@ export default function PurchaseOrderPage() {
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
           />
-        </div>
+        </div> */}
 
         <Button onClick={() => router.push("/purchase-order/create")}>
           <IconPlus className="mr-2 h-4 w-4" /> Create New

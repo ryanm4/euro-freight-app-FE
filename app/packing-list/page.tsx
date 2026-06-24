@@ -23,7 +23,7 @@ export default function PackingListPage() {
   const data: PACKING_LIST[] = [
     {
       id: 1,
-      client_id: 101,
+      client_name: "Ralph Lauren",
       date: "2025-01-15T08:30:00",
       gdn_id: 201,
       grn_id: 301,
@@ -35,7 +35,7 @@ export default function PackingListPage() {
     },
     {
       id: 2,
-      client_id: 102,
+      client_name: "Benz",
       date: "2025-01-20T10:00:00",
       gdn_id: 202,
       grn_id: 302,
@@ -47,7 +47,7 @@ export default function PackingListPage() {
     },
     {
       id: 3,
-      client_id: 103,
+      client_name: "Polo",
       date: "2025-02-01T09:15:00",
       gdn_id: 203,
       grn_id: null,
@@ -59,7 +59,7 @@ export default function PackingListPage() {
     },
     {
       id: 4,
-      client_id: 101,
+      client_name: "Apple Inc",
       date: "2025-02-10T11:45:00",
       gdn_id: null,
       grn_id: 303,
@@ -71,7 +71,7 @@ export default function PackingListPage() {
     },
     {
       id: 5,
-      client_id: null,
+      client_name: "Tesla",
       date: "2025-02-18T14:30:00",
       gdn_id: 204,
       grn_id: 304,
@@ -83,7 +83,7 @@ export default function PackingListPage() {
     },
     {
       id: 6,
-      client_id: 104,
+      client_name: "Space X",
       date: "2025-03-05T08:00:00",
       gdn_id: 205,
       grn_id: 305,
@@ -95,7 +95,7 @@ export default function PackingListPage() {
     },
     {
       id: 7,
-      client_id: 105,
+      client_name: "Wayne Industries",
       date: null,
       gdn_id: 206,
       grn_id: null,
@@ -107,7 +107,7 @@ export default function PackingListPage() {
     },
     {
       id: 8,
-      client_id: 102,
+      client_name: "Stark Industries",
       date: "2025-03-20T16:00:00",
       gdn_id: null,
       grn_id: 306,

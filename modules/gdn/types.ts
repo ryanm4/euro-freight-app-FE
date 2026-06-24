@@ -1,6 +1,6 @@
 export interface GOODS_DELIVER_NOTE {
   id: number
-  client_id?: number | null
+  client_name?: string
   manufacture_id?: number | null
   forwarder_id?: number | null
   date?: string | null

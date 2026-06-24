@@ -64,9 +64,9 @@ export const hblHawbColumns = (
       ),
     },
     {
-      accessorKey: "client_id",
-      header: "Client ID",
-      cell: ({ row }) => <div>{row.original.client_id ?? "N/A"}</div>,
+      accessorKey: "client_name",
+      header: "Client",
+      cell: ({ row }) => <div>{row.original.client_name ?? "N/A"}</div>,
     },
     {
       accessorKey: "manufacture_id",

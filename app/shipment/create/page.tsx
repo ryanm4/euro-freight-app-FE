@@ -3,35 +3,32 @@
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import GoodsDispatchNoteForm from "../_components/gdn-form"
+import ShipmentForm from "../_components/ShipmentForm"
 
-export default function PurchaseOrderCreatePage() {
+export default function ShipmentCreatePage() {
   const router = useRouter()
   return (
     <div className="mt-3 flex flex-1 flex-col gap-4 p-6 pt-0">
       <PageTitleWithBreadcrumb
-        title="Create Goods Dispatched Note"
-        breadcrumbs={[
-          { title: "Dashboard", href: "/dashboard" },
-          { title: "Goods Dispatched Note", href: "/gdn" },
-        ]}
+        title="Add"
+        breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
       />
 
       <div className="flex flex-row justify-end gap-6">
         <Button
           variant={"outline"}
           className="rounded-md"
-          onClick={() => router.push("/gdn")}
+          onClick={() => router.push("/shipment")}
         >
           Cancel
         </Button>
-        <Button className="rounded-md" onClick={() => router.push("/gdn")}>
+        <Button className="rounded-md" onClick={() => router.push("/shipment")}>
           Save
         </Button>
       </div>
 
       <div className="mt-4">
-        <GoodsDispatchNoteForm />
+        <ShipmentForm />
       </div>
     </div>
   )

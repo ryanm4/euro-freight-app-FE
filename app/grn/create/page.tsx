@@ -10,11 +10,8 @@ export default function PurchaseOrderCreatePage() {
   return (
     <div className="mt-3 flex flex-1 flex-col gap-4 p-6 pt-0">
       <PageTitleWithBreadcrumb
-        title="Create Goods Received Note"
-        breadcrumbs={[
-          { title: "Dashboard", href: "/dashboard" },
-          { title: "Good received note", href: "/grn" },
-        ]}
+        title="Purchase Order Creation"
+        breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
       />
 
       <div className="flex flex-row justify-end gap-6">

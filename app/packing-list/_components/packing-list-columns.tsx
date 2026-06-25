@@ -32,14 +32,18 @@ export const packingListColumns = (
 
   return [
     {
-      accessorKey: "packing_list_id",
+      accessorKey: "id",
       header: ({ column }) => (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           ID
+          <IconArrowsSort className="ml-2 h-4 w-4" />
         </Button>
+      ),
+      cell: ({ row }) => (
+        <div className="font-semibold">#{row.original.id}</div>
       ),
     },
     {
@@ -53,6 +57,7 @@ export const packingListColumns = (
           <IconArrowsSort className="ml-2 h-4 w-4" />
         </Button>
       ),
+      cell: ({ row }) => <div>{row.original.client_name ?? "N/A"}</div>,
     },
     {
       accessorKey: "date",
@@ -129,19 +134,19 @@ export const packingListColumns = (
               {canModify && (
                 <>
                   <DropdownMenuItem onClick={() => actions.onEdit(id)}>
-                    <IconPencil className="mr-2 h-4 w-4" /> Edit Packing List
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => actions.onView(id)}>
-                    <IconEye className="mr-2 h-4 w-4" /> View Packing List
+                    <IconPencil className="mr-2 h-4 w-4" /> Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     variant="destructive"
                     onClick={() => actions.onDelete(id)}
                   >
-                    <IconTrash className="mr-2 h-4 w-4" /> Delete Packing List
+                    <IconTrash className="mr-2 h-4 w-4" /> Delete
                   </DropdownMenuItem>
                 </>
               )}
+              <DropdownMenuItem onClick={() => actions.onView(id)}>
+                <IconEye className="mr-2 h-4 w-4" /> View
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )

@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils"
 import "./globals.css"
 import { Providers } from "./providers"
 
+import { Toaster } from "sonner"
+
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-sans" })
 
 const fontMono = Geist_Mono({
@@ -49,6 +51,7 @@ export default function RootLayout({
                 </main>
               </SidebarInset>
             </SidebarProvider>
+            <Toaster closeButton richColors theme="dark" />
           </Providers>
         </ThemeProvider>
       </body>

@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const token = cookieStore.get("auth_token")
 
   try {
-    const apiUrl = API_ENDPOINTS.PURCHASE_ORDER.LIST
+    const apiUrl = API_ENDPOINTS.PACKING_LIST.LIST
 
     const response = await fetch(apiUrl, {
       method: "GET",
@@ -29,6 +29,36 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data.data)
   } catch (error) {
     console.error("Customer API Error:", error)
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const response = await fetch(API_ENDPOINTS.PACKING_LIST.CREATE, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    })
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}))
+      return NextResponse.json(
+        { message: errData.message || `Backend error: ${response.status}` },
+        { status: response.status }
+      )
+    }
+
+    const data = await response.json()
+    return NextResponse.json(data)
+  } catch (error) {
+    console.error("Packing List API Error:", error)
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 }

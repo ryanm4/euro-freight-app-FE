@@ -9,4 +9,5 @@ export interface PACKING_LIST {
   created_on?: string | null
   updated_by?: string | null
   updated_on?: string | null
+  additional_info?: string | null
 }

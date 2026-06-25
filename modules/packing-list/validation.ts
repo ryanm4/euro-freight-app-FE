@@ -1,11 +1,7 @@
 import * as z from "zod"
 
 export const packingListSchema = z.object({
-  client_id: z
-    .union([z.string(), z.number()])
-    .refine((val) => String(val).length > 0, {
-      message: "Client is required",
-    }),
+  client_id: z.number().min(1, "Client should be selected"),
 
   date: z.string().min(1, "Date is required"),
 

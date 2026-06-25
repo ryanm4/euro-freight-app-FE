@@ -57,7 +57,7 @@ export default function PackingListForm() {
   type PackingListFormValues = z.infer<typeof packingListSchema>
 
   const baseDefaultValues: PackingListFormValues = {
-    client_id: "",
+    client_id: 0,
     date: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
     created_by: "ryan",
     quantity: 0,
@@ -123,11 +123,7 @@ export default function PackingListForm() {
     let result = activePOs
 
     if (selectedClient) {
-      result = result.filter(
-        (po) =>
-          po.supplier_id &&
-          po.supplier_id.toLowerCase() === selectedClient.name.toLowerCase()
-      )
+      result = result.filter((po) => po.supplier_id)
     }
 
     if (searchQuery) {
@@ -269,11 +265,11 @@ export default function PackingListForm() {
                     <FormLabel className="mb-1">Client Name</FormLabel>
                     <Combobox
                       items={client.map((c: CLIENT_LIST) => ({
-                        value: String(c.id), // stored value
-                        label: c.name, // displayed text
+                        value: String(c.id),
+                        label: c.name,
                       }))}
                       value={field.value ? String(field.value) : ""}
-                      onValueChange={field.onChange}
+                      onValueChange={(val) => field.onChange(Number(val))}
                       placeholder="Client Name"
                     />
                     <FormMessage />

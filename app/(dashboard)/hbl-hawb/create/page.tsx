@@ -3,17 +3,18 @@
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import PackingListForm from "../_components/packing-list-form"
+import HBLHABWForm from "../_components/hbl-hawb-form"
 
-export default function PackingListCreatePage() {
+export default function HBLHAWBCreatePage() {
   const router = useRouter()
   return (
     <div className="mt-3 flex flex-1 flex-col gap-4 p-6 pt-0">
       <PageTitleWithBreadcrumb
-        title="Add"
+        title="HBL/HAWB Creation"
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
-          { title: "Packing List", href: "/packing-list" },
+          { title: "HBL / HAWB", href: "/hbl-hawb" },
+          { title: "Add", href: "/hbl-hawb/create" },
         ]}
       />
 
@@ -21,17 +22,17 @@ export default function PackingListCreatePage() {
         <Button
           variant={"outline"}
           className="rounded-md"
-          onClick={() => router.push("/grn")}
+          onClick={() => router.push("/hbl-hawb")}
         >
           Cancel
         </Button>
-        <Button className="rounded-md" onClick={() => router.push("/grn")}>
+        <Button className="rounded-md" onClick={() => router.push("/hbl-hawb")}>
           Save
         </Button>
       </div>
 
       <div className="mt-4">
-        <PackingListForm />
+        <HBLHABWForm />
       </div>
     </div>
   )

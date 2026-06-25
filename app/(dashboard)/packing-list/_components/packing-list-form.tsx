@@ -82,7 +82,19 @@ export default function PackingListForm() {
       setIsLoading(true)
       const response = await ClientApi.getAll()
       if (response.status === 200) {
-        setClient(response.data)
+        // Backend may return a paginated/wrapped object or a plain array
+        const raw = response.data as unknown
+        if (Array.isArray(raw)) {
+          setClient(raw)
+        } else if (raw && typeof raw === "object") {
+          // Try common wrapper keys: data, clients, results, items
+          const obj = raw as Record<string, unknown>
+          const extracted =
+            obj.data ?? obj.clients ?? obj.results ?? obj.items
+          setClient(Array.isArray(extracted) ? (extracted as CLIENT_LIST[]) : [])
+        } else {
+          setClient([])
+        }
       }
     } catch (error) {
       console.error("Failed to fetch clients", error)
@@ -96,7 +108,19 @@ export default function PackingListForm() {
       setIsPosLoading(true)
       const response = await PurchaseOrderApi.getAll()
       if (response.status === 200) {
-        setPos(response.data)
+        // Backend may return a paginated/wrapped object or a plain array
+        const raw = response.data as unknown
+        if (Array.isArray(raw)) {
+          setPos(raw)
+        } else if (raw && typeof raw === "object") {
+          // Try common wrapper keys: data, purchase_orders, results, items
+          const obj = raw as Record<string, unknown>
+          const extracted =
+            obj.data ?? obj.purchase_orders ?? obj.results ?? obj.items
+          setPos(Array.isArray(extracted) ? (extracted as PURCHASE_ORDER[]) : [])
+        } else {
+          setPos([])
+        }
       }
     } catch (error) {
       console.error("Failed to fetch purchase orders", error)
@@ -123,7 +147,12 @@ export default function PackingListForm() {
     let result = activePOs
 
     if (selectedClient) {
-      result = result.filter((po) => po.supplier_id)
+      result = result.filter(
+        (po) =>
+          po.supplier_id &&
+          String(po.supplier_id).toLowerCase() ===
+            selectedClient.name.toLowerCase()
+      )
     }
 
     if (searchQuery) {
@@ -260,17 +289,19 @@ export default function PackingListForm() {
                 </p>
               </CardHeader>
               <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {renderFormField("client_id", ({ field }) => (
+                {renderFormField("client_id", ({ field }: { field: any }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel className="mb-1">Client Name</FormLabel>
                     <Combobox
-                      items={client.map((c: CLIENT_LIST) => ({
-                        value: String(c.id),
-                        label: c.name,
-                      }))}
+                      items={[
+                        { value: "", label: "Select Client Name" },
+                        ...client.map((c: CLIENT_LIST) => ({
+                          value: String(c.id),
+                          label: c.name,
+                        })),
+                      ]}
                       value={field.value ? String(field.value) : ""}
                       onValueChange={(val) => field.onChange(Number(val))}
-                      placeholder="Client Name"
                     />
                     <FormMessage />
                   </FormItem>

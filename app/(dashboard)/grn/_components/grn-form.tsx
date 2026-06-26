@@ -1,15 +1,11 @@
 "use client"
 
+import FormDateField from "@/components/shared/FormDateField"
+import FormField from "@/components/shared/FormField"
+import FormSelect from "@/components/shared/FormSelect"
+import FormTextarea from "@/components/shared/FormTextarea"
+import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -18,10 +14,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Textarea } from "@/components/ui/textarea"
-import { useState } from "react"
+import { fetchClients } from "@/lib/api/clients"
+import { createGoodsReceiveNote } from "@/lib/api/goods_receive_notes"
+import { fetchPackingLists } from "@/lib/api/packing_lists"
+import { useQuery } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
+import { useMemo, useState } from "react"
 
 interface PackingListRow {
+  id: number
   packingListNo: string
   client: string
   manufacturer: string
@@ -31,98 +32,10 @@ interface PackingListRow {
   status: string
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function FormField({
-  label,
-  id,
-  placeholder,
-  value,
-  onChange,
-  className = "",
-}: {
-  label: string
-  id: string
-  placeholder: string
-  value: string
-  onChange: (v: string) => void
-  className?: string
-}) {
-  return (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
-      <Label htmlFor={id} className="text-xs font-medium text-foreground">
-        {label}
-      </Label>
-      <Input
-        id={id}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-      />
-    </div>
-  )
-}
-
-function FormSelect({
-  label,
-  value,
-  onValueChange,
-  placeholder,
-  options,
-}: {
-  label: string
-  value: string
-  onValueChange: (v: string) => void
-  placeholder: string
-  options: { value: string; label: string }[]
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label className="text-xs font-medium text-foreground">{label}</Label>
-      <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-          {options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  )
-}
-
-function FormTextarea({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-}) {
-  return (
-    <div className="flex flex-1 flex-col gap-1.5">
-      <Label className="text-xs font-medium text-foreground">{label}</Label>
-      <Textarea
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"
-      />
-    </div>
-  )
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
-
 export default function GoodsReceiveNoteForm() {
+  const router = useRouter()
+  const [isSaving, setIsSaving] = useState(false)
+
   const [date, setDate] = useState("")
   const [client, setClient] = useState("")
   const [forwarder, setForwarder] = useState("")
@@ -131,28 +44,104 @@ export default function GoodsReceiveNoteForm() {
   const [packingList, setPackingList] = useState("")
   const [remarks, setRemarks] = useState("")
 
-  const [selectedRows, setSelectedRows] = useState<string[]>([])
+  const [selectedRows, setSelectedRows] = useState<number[]>([])
+  console.log("selectedRows", selectedRows)
 
-  const toggleRow = (id: string) => {
+  const {
+    data,
+    isLoading,
+    // error,
+  } = useQuery({
+    queryKey: ["clients"],
+    queryFn: fetchClients,
+  })
+
+  const { data: packingLists } = useQuery({
+    queryKey: ["packingLists"],
+    queryFn: fetchPackingLists,
+  })
+
+  console.log("data", data)
+
+  const supplierOptions = useMemo(() => {
+    return data?.data?.filter((client: any) => client.type === "supplier") || []
+  }, [data])
+
+  const manufacturerOptions = useMemo(() => {
+    return (
+      data?.data?.filter((client: any) => client.type === "manufacturer") || []
+    )
+  }, [data])
+
+  const forwarderOptions = useMemo(() => {
+    return (
+      data?.data?.filter((client: any) => client.type === "forwarder") || []
+    )
+  }, [data])
+
+  console.log("supplierOptions", supplierOptions)
+  console.log("manufacturerOptions", manufacturerOptions)
+  console.log("forwarderOptions", forwarderOptions)
+
+  const toggleRow = (id: number) => {
     setSelectedRows((prev) =>
       prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
     )
   }
 
-  const rows: PackingListRow[] = [
-    {
-      packingListNo: "W0258",
-      client: "Woxer",
-      manufacturer: "Brandix",
-      date: "28 May 2026",
-      quantity: 300,
-      gdnNo: "SUP-001",
-      status: "Active",
-    },
-  ]
+  const handleSave = async () => {
+    try {
+      setIsSaving(true)
+      await createGoodsReceiveNote({
+        client,
+        manufacturer,
+        forwarder,
+        date,
+        quantity,
+        selectedRows,
+      })
+      router.push("/grn")
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const rows: PackingListRow[] = useMemo(() => {
+    return (
+      packingLists?.data?.map((pl: any) => ({
+        id: pl.packing_list_id,
+        packingListNo: `PL-${pl.packing_list_id}`,
+        client: pl.client_id,
+        manufacturer: pl.grn_id ? `GRN-${pl.grn_id}` : "—",
+        date: new Date(pl.date).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }),
+        quantity: pl.quantity,
+        gdnNo: pl.gdn_id ? `GDN-${pl.gdn_id}` : "—",
+        status: pl.purchase_orders?.[0]?.status ?? "—",
+      })) ?? []
+    )
+  }, [packingLists])
 
   return (
     <div className="mx-auto space-y-5">
+      <div className="flex justify-end gap-3">
+        <Button
+          variant="outline"
+          className="rounded-md"
+          onClick={() => router.push("/grn")}
+          disabled={isSaving}
+        >
+          Cancel
+        </Button>
+        <Button className="rounded-md" disabled={isSaving} onClick={handleSave}>
+          {isSaving ? "Saving…" : "Save"}
+        </Button>
+      </div>
       <div className="grid grid-cols-1 gap-5">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
@@ -167,49 +156,41 @@ export default function GoodsReceiveNoteForm() {
           <div className="space-y-4">
             {/* Row 1: Date, Client, Forwarder, Manufacturer */}
             <div className="grid grid-cols-4 gap-4">
-              <FormSelect
+              <FormDateField
                 label="Date"
+                id={`date`}
                 value={date}
-                onValueChange={setDate}
-                placeholder="Date"
-                options={[
-                  { value: "jan", label: "January 2025" },
-                  { value: "feb", label: "February 2025" },
-                  { value: "mar", label: "March 2025" },
-                ]}
+                onChange={setDate}
               />
               <FormSelect
                 label="Client"
                 value={client}
                 onValueChange={setClient}
                 placeholder="Choose Client"
-                options={[
-                  { value: "client1", label: "Client 1" },
-                  { value: "client2", label: "Client 2" },
-                  { value: "client3", label: "Client 3" },
-                ]}
+                options={supplierOptions.map((s: any) => ({
+                  value: s.id,
+                  label: s.name,
+                }))}
               />
               <FormSelect
                 label="Forwarder"
                 value={forwarder}
                 onValueChange={setForwarder}
                 placeholder="Choose Forwarder"
-                options={[
-                  { value: "forwarder1", label: "Forwarder 1" },
-                  { value: "forwarder2", label: "Forwarder 2" },
-                  { value: "forwarder3", label: "Forwarder 3" },
-                ]}
+                options={forwarderOptions.map((f: any) => ({
+                  value: f.id,
+                  label: f.name,
+                }))}
               />
               <FormSelect
                 label="Manufacturer"
                 value={manufacturer}
                 onValueChange={setManufacturer}
-                placeholder="Choose Manufacturer"
-                options={[
-                  { value: "manufacturer1", label: "Manufacturer 1" },
-                  { value: "manufacturer2", label: "Manufacturer 2" },
-                  { value: "manufacturer3", label: "Manufacturer 3" },
-                ]}
+                placeholder="Select Manufacturer"
+                options={manufacturerOptions.map((m: any) => ({
+                  value: m.id,
+                  label: m.name,
+                }))}
               />
             </div>
 
@@ -222,13 +203,13 @@ export default function GoodsReceiveNoteForm() {
                 value={quantity}
                 onChange={setQuantity}
               />
-              <FormField
+              {/* <FormField
                 label="Packing List"
                 id="packing-list"
                 placeholder="Enter Packing List"
                 value={packingList}
                 onChange={setPackingList}
-              />
+              /> */}
             </div>
           </div>
         </div>
@@ -306,8 +287,8 @@ export default function GoodsReceiveNoteForm() {
                         </TableCell>
                         <TableCell>
                           <Checkbox
-                            checked={selectedRows.includes(`${index}`)}
-                            onCheckedChange={() => toggleRow(`${index}`)}
+                            checked={selectedRows.includes(row.id)}
+                            onCheckedChange={() => toggleRow(row.id)}
                             className="border-neutral-600"
                           />
                         </TableCell>

@@ -13,25 +13,8 @@ export default function PurchaseOrderCreatePage() {
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
           { title: "Purchase Order", href: "/purchase-order" },
-          { title: "Add", href: "/purchase-order/create" },
         ]}
       />
-
-      {/* <div className="flex flex-row justify-end gap-6">
-        <Button
-          variant={"outline"}
-          className="rounded-md"
-          onClick={() => router.push("/purchase-order")}
-        >
-          Cancel
-        </Button>
-        <Button
-          className="rounded-md"
-          onClick={() => router.push("/purchase-order")}
-        >
-          Save
-        </Button>
-      </div> */}
 
       <div className="mt-4">
         <PurchaseOrderForm />

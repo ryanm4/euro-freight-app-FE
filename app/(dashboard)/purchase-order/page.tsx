@@ -40,7 +40,7 @@ export default function PurchaseOrderPage() {
   return (
     <div className="mt-3 flex flex-1 flex-col gap-4 p-6 pt-0">
       <PageTitleWithBreadcrumb
-        title="Purchase Order Management"
+        title="Purchase Order"
         breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
       />
       <div className="flex flex-row justify-end gap-6">

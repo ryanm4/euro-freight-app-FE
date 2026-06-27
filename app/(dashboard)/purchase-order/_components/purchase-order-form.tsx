@@ -44,6 +44,7 @@ interface CargoItem {
   netWeight: string
   ctnDimensions: string
   cbm: string
+  status: string
   open: boolean
 }
 
@@ -63,9 +64,33 @@ function createCargoItem(id: string): CargoItem {
     netWeight: "",
     ctnDimensions: "",
     cbm: "",
+    status: "Pending",
     open: true,
   }
 }
+
+const SHIPPING_MODE_OPTIONS = [
+  { value: "Sea", label: "Sea" },
+  { value: "Air", label: "Air" },
+  { value: "Road", label: "Road" },
+  { value: "Courier", label: "Courier" },
+]
+
+const PAYMENT_MODE_OPTIONS = [
+  { value: "LC/TT", label: "LC/TT" },
+  { value: "T/T", label: "T/T" },
+  { value: "LC", label: "LC" },
+  { value: "CAD", label: "CAD" },
+  { value: "Open Account", label: "Open Account" },
+]
+
+const ITEM_STATUS_OPTIONS = [
+  { value: "Pending", label: "Pending" },
+  { value: "In Production", label: "In Production" },
+  { value: "Ready", label: "Ready" },
+  { value: "Dispatched", label: "Dispatched" },
+  { value: "Completed", label: "Completed" },
+]
 
 export default function PurchaseOrderForm() {
   const router = useRouter()
@@ -79,10 +104,10 @@ export default function PurchaseOrderForm() {
   const [freightForwarder, setFreightForwarder] = useState("")
   const [paymentMode, setPaymentMode] = useState("")
   const [finalDestination, setFinalDestination] = useState("")
+  const [shippingMode, setShippingMode] = useState("")
 
   // Timeline
   const [exFactoryDate, setExFactoryDate] = useState("")
-  // const [actualDeliveryDate, setActualDeliveryDate] = useState("")
   const [instructions, setInstructions] = useState("")
 
   // Cargo
@@ -92,36 +117,29 @@ export default function PurchaseOrderForm() {
 
   const [remarks, setRemarks] = useState("")
 
-  const {
-    data,
-    isLoading,
-    // error,
-  } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["clients"],
     queryFn: fetchClients,
   })
 
-  console.log("data", data)
-
   const supplierOptions = useMemo(() => {
-    return data?.data?.filter((client: any) => client.type === "supplier") || []
-  }, [data])
-
-  const manufacturerOptions = useMemo(() => {
     return (
       data?.data?.filter((client: any) => client.type === "manufacturer") || []
     )
   }, [data])
 
-  console.log("supplierOptions", supplierOptions)
-  console.log("manufacturerOptions", manufacturerOptions)
+  const freightForwarderOptions = useMemo(() => {
+    return (
+      data?.data?.filter((client: any) => client.type === "forwarder") || []
+    )
+  }, [data])
 
   const [freightSplits, setFreightSplits] = useState<FreightSplit[]>([
     { id: initialCargoId, method: "sea", quantity: "", dispatchDate: "" },
   ])
 
   const addItem = () =>
-    setCargoItems((prev) => [...prev, createCargoItem(initialCargoId)])
+    setCargoItems((prev) => [...prev, createCargoItem(crypto.randomUUID())])
 
   const deleteItem = (id: string) =>
     setCargoItems((prev) => prev.filter((item) => item.id !== id))
@@ -148,8 +166,8 @@ export default function PurchaseOrderForm() {
         freightForwarder,
         paymentMode,
         finalDestination,
+        shippingMode,
         exFactoryDate,
-        // actualDeliveryDate,
         instructions,
         cargoItems,
         freightSplits,
@@ -192,6 +210,7 @@ export default function PurchaseOrderForm() {
           </div>
 
           <div className="space-y-4">
+            {/* Row 1: PO Number + PO Quantity */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 label="PO Number"
@@ -200,7 +219,6 @@ export default function PurchaseOrderForm() {
                 value={poNumber}
                 onChange={setPoNumber}
                 className="col-span-1"
-                type="number"
               />
               <FormField
                 label="PO Quantity"
@@ -211,6 +229,7 @@ export default function PurchaseOrderForm() {
               />
             </div>
 
+            {/* Row 2: Supplier + Freight Forwarder */}
             <div className="grid grid-cols-2 gap-4">
               <FormSelect
                 label="Supplier"
@@ -223,26 +242,37 @@ export default function PurchaseOrderForm() {
                 }))}
               />
               <FormSelect
-                label="Manufacturer"
+                label="Freight Forwarder"
                 value={freightForwarder}
                 onValueChange={setFreightForwarder}
-                placeholder="Select Manufacturer"
-                options={manufacturerOptions.map((m: any) => ({
-                  value: m.id,
-                  label: m.name,
+                placeholder="Select Freight Forwarder"
+                options={freightForwarderOptions.map((f: any) => ({
+                  value: f.id,
+                  label: f.name,
                 }))}
               />
             </div>
 
+            {/* Row 3: Payment Mode + Shipping Mode */}
             <div className="grid grid-cols-2 gap-4">
-              <FormField
+              <FormSelect
                 label="Payment Mode"
-                id="payment-mode"
-                placeholder="Enter Payment Mode"
                 value={paymentMode}
-                onChange={setPaymentMode}
+                onValueChange={setPaymentMode}
+                placeholder="Select Payment Mode"
+                options={PAYMENT_MODE_OPTIONS}
               />
+              <FormSelect
+                label="Shipping Mode"
+                value={shippingMode}
+                onValueChange={setShippingMode}
+                placeholder="Select Shipping Mode"
+                options={SHIPPING_MODE_OPTIONS}
+              />
+            </div>
 
+            {/* Row 4: Final Destination */}
+            <div className="grid grid-cols-1 gap-4">
               <FormField
                 label="Final Destination"
                 id="final-destination"
@@ -292,14 +322,13 @@ export default function PurchaseOrderForm() {
         poQuantity={poQuantity}
         splits={freightSplits}
         onChange={setFreightSplits}
-        // readOnly={readOnly}
       />
 
-      {/* ── Row 2: Cargo Items ───────────────────────────────────────────── */}
+      {/* ── Cargo Items ───────────────────────────────────────────────────────── */}
       <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
         <div className="mb-5 flex items-start justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-zinc-100">Cargo Item</h2>
+            <h2 className="text-sm font-semibold text-zinc-100">Cargo Items</h2>
             <p className="mt-0.5 text-xs text-zinc-500">
               Commercial, packaging, and measurement details for this shipment
               item.
@@ -357,7 +386,9 @@ export default function PurchaseOrderForm() {
                 <CollapsibleTrigger asChild>
                   <button className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-zinc-800/50">
                     <span className="text-sm font-medium text-zinc-300">
-                      Cargo Item {index + 1}
+                      {item.itemName
+                        ? `${item.itemName}${item.sku ? ` (${item.sku})` : ""}`
+                        : `Cargo Item ${index + 1}`}
                     </span>
                     {item.open ? (
                       <IconChevronUp className="h-4 w-4 text-zinc-500" />
@@ -370,7 +401,7 @@ export default function PurchaseOrderForm() {
                 {/* Accordion Content */}
                 <CollapsibleContent>
                   <div className="space-y-4 border-t border-zinc-800 px-4 pt-4 pb-4">
-                    {/* Row 1 */}
+                    {/* Row 1: SKU, Item Name, Color, Size */}
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                       <FormField
                         label="SKU"
@@ -402,7 +433,7 @@ export default function PurchaseOrderForm() {
                       />
                     </div>
 
-                    {/* Row 2 */}
+                    {/* Row 2: Country of Origin, Unit Cost, Quantity, Dispatched Qty */}
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                       <FormField
                         label="Country of Origin"
@@ -438,7 +469,7 @@ export default function PurchaseOrderForm() {
                       />
                     </div>
 
-                    {/* Row 3 */}
+                    {/* Row 3: Cartons, Gross Weight, Net Weight, CTN Dimensions */}
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                       <FormField
                         label="Cartons"
@@ -464,7 +495,7 @@ export default function PurchaseOrderForm() {
                       <FormField
                         label="CTN Dimensions"
                         id={`ctn-dims-${item.id}`}
-                        placeholder="Enter CTN Dimensions"
+                        placeholder="e.g. 10x10x10"
                         value={item.ctnDimensions}
                         onChange={(v) =>
                           updateItem(item.id, "ctnDimensions", v)
@@ -472,8 +503,8 @@ export default function PurchaseOrderForm() {
                       />
                     </div>
 
-                    {/* Row 4: CBM + Delete */}
-                    <div className="flex items-end justify-between gap-4">
+                    {/* Row 4: CBM, Status, Delete */}
+                    <div className="flex items-end gap-4">
                       <FormField
                         label="CBM"
                         id={`cbm-${item.id}`}
@@ -482,15 +513,28 @@ export default function PurchaseOrderForm() {
                         onChange={(v) => updateItem(item.id, "cbm", v)}
                         className="w-[calc(25%-12px)]"
                       />
-                      <Button
-                        onClick={() => deleteItem(item.id)}
-                        variant="destructive"
-                        size="sm"
-                        className="mb-0 h-9 gap-1.5 rounded-md bg-red-500! text-xs text-white hover:bg-red-500"
-                      >
-                        <IconTrash className="h-3.5 w-3.5" />
-                        Delete Item
-                      </Button>
+                      <div className="w-[calc(25%-12px)]">
+                        <FormSelect
+                          label="Status"
+                          value={item.status}
+                          onValueChange={(v) =>
+                            updateItem(item.id, "status", v)
+                          }
+                          placeholder="Select Status"
+                          options={ITEM_STATUS_OPTIONS}
+                        />
+                      </div>
+                      <div className="mb-0 ml-auto">
+                        <Button
+                          onClick={() => deleteItem(item.id)}
+                          variant="destructive"
+                          size="sm"
+                          className="h-9 gap-1.5 rounded-md bg-red-500! text-xs text-white hover:bg-red-600"
+                        >
+                          <IconTrash className="h-3.5 w-3.5" />
+                          Delete Item
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CollapsibleContent>
@@ -500,7 +544,7 @@ export default function PurchaseOrderForm() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-1">
+      <div className="grid grid-cols-1 gap-5">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
             <h2 className="text-sm font-semibold text-zinc-100">

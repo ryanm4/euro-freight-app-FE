@@ -36,20 +36,20 @@ export const purchaseOrderColumns = (
     date ? format(new Date(date), "PPP") : "N/A"
 
   return [
-    {
-      accessorKey: "id",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          ID <IconArrowsSort className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => (
-        <div className="font-semibold">#{row.original.id}</div>
-      ),
-    },
+    // {
+    //   accessorKey: "id",
+    //   header: ({ column }) => (
+    //     <Button
+    //       variant="ghost"
+    //       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+    //     >
+    //       ID <IconArrowsSort className="ml-2 h-4 w-4" />
+    //     </Button>
+    //   ),
+    //   cell: ({ row }) => (
+    //     <div className="font-semibold">#{row.original.id}</div>
+    //   ),
+    // },
     {
       accessorKey: "po_number",
       header: ({ column }) => (
@@ -84,26 +84,26 @@ export const purchaseOrderColumns = (
       header: "Shipping Mode",
       cell: ({ row }) => <div>{row.original.shipping_mode ?? "N/A"}</div>,
     },
-    {
-      accessorKey: "payment_mode",
-      header: "Payment Mode",
-      cell: ({ row }) => <div>{row.original.payment_mode ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "final_destination",
-      header: "Final Destination",
-      cell: ({ row }) => <div>{row.original.final_destination ?? "N/A"}</div>,
-    },
+    // {
+    //   accessorKey: "payment_mode",
+    //   header: "Payment Mode",
+    //   cell: ({ row }) => <div>{row.original.payment_mode ?? "N/A"}</div>,
+    // },
+    // {
+    //   accessorKey: "final_destination",
+    //   header: "Final Destination",
+    //   cell: ({ row }) => <div>{row.original.final_destination ?? "N/A"}</div>,
+    // },
     {
       accessorKey: "ex_factory_date",
       header: "Ex-Factory Date",
       cell: ({ row }) => formatDate(row.original.ex_factory_date),
     },
-    {
-      accessorKey: "cargo_dispatch_date",
-      header: "Cargo Dispatch Date",
-      cell: ({ row }) => formatDate(row.original.cargo_dispatch_date),
-    },
+    // {
+    //   accessorKey: "cargo_dispatch_date",
+    //   header: "Cargo Dispatch Date",
+    //   cell: ({ row }) => formatDate(row.original.cargo_dispatch_date),
+    // },
     {
       accessorKey: "dc_inhouse_date",
       header: "DC Inhouse Date",
@@ -124,29 +124,29 @@ export const purchaseOrderColumns = (
       header: "Packing List ID",
       cell: ({ row }) => <div>{row.original.packing_list_id ?? "N/A"}</div>,
     },
-    {
-      accessorKey: "instructions",
-      header: "Instructions",
-      cell: ({ row }) => <div>{row.original.instructions ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "PO_url",
-      header: "PO Document",
-      cell: ({ row }) => {
-        const url = row.original.PO_url
-        if (!url) return <span className="text-zinc-500">N/A</span>
-        return (
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center text-blue-400 hover:underline"
-          >
-            <IconLink className="mr-1 h-4 w-4" /> View
-          </a>
-        )
-      },
-    },
+    // {
+    //   accessorKey: "instructions",
+    //   header: "Instructions",
+    //   cell: ({ row }) => <div>{row.original.instructions ?? "N/A"}</div>,
+    // },
+    // {
+    //   accessorKey: "PO_url",
+    //   header: "PO Document",
+    //   cell: ({ row }) => {
+    //     const url = row.original.PO_url
+    //     if (!url) return <span className="text-zinc-500">N/A</span>
+    //     return (
+    //       <a
+    //         href={url}
+    //         target="_blank"
+    //         rel="noopener noreferrer"
+    //         className="inline-flex items-center text-blue-400 hover:underline"
+    //       >
+    //         <IconLink className="mr-1 h-4 w-4" /> View
+    //       </a>
+    //     )
+    //   },
+    // },
     {
       accessorKey: "status",
       header: "Status",
@@ -157,26 +157,26 @@ export const purchaseOrderColumns = (
         />
       ),
     },
-    {
-      accessorKey: "created_by",
-      header: "Created By",
-      cell: ({ row }) => <div>{row.original.created_by ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "created_on",
-      header: "Created On",
-      cell: ({ row }) => formatDate(row.original.created_on),
-    },
-    {
-      accessorKey: "updated_by",
-      header: "Updated By",
-      cell: ({ row }) => <div>{row.original.updated_by ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "updated_on",
-      header: "Updated On",
-      cell: ({ row }) => formatDate(row.original.updated_on),
-    },
+    // {
+    //   accessorKey: "created_by",
+    //   header: "Created By",
+    //   cell: ({ row }) => <div>{row.original.created_by ?? "N/A"}</div>,
+    // },
+    // {
+    //   accessorKey: "created_on",
+    //   header: "Created On",
+    //   cell: ({ row }) => formatDate(row.original.created_on),
+    // },
+    // {
+    //   accessorKey: "updated_by",
+    //   header: "Updated By",
+    //   cell: ({ row }) => <div>{row.original.updated_by ?? "N/A"}</div>,
+    // },
+    // {
+    //   accessorKey: "updated_on",
+    //   header: "Updated On",
+    //   cell: ({ row }) => formatDate(row.original.updated_on),
+    // },
     {
       id: "actions",
       enableHiding: false,

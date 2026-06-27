@@ -32,7 +32,7 @@ export const packingListColumns = (
 
   return [
     {
-      accessorKey: "id",
+      accessorKey: "packing_list_id",
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -42,12 +42,9 @@ export const packingListColumns = (
           <IconArrowsSort className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => (
-        <div className="font-semibold">#{row.original.id}</div>
-      ),
     },
     {
-      accessorKey: "client_name",
+      accessorKey: "client_id",
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -57,7 +54,6 @@ export const packingListColumns = (
           <IconArrowsSort className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => <div>{row.original.client_name ?? "N/A"}</div>,
     },
     {
       accessorKey: "date",

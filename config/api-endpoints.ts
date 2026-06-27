@@ -2,14 +2,14 @@ const API_BASE_URL = process.env.BACKEND_URL
 const NEXTJS_API_BASE = "/api"
 export const API_ENDPOINTS = {
   PACKING_LIST: {
-    LIST: `${API_BASE_URL}/v1/packing_lists`,
-    CREATE: `${API_BASE_URL}/packing_lists`,
+    LIST: `${API_BASE_URL}/api/v1/packing_lists`,
+    CREATE: `${API_BASE_URL}/api/v1/packing_lists`,
     GET: (item_id: number | string) =>
-      `${API_BASE_URL}/packing_lists/${item_id}`,
+      `${API_BASE_URL}/api/v1/packing_lists/${item_id}`,
     UPDATE: (item_id: number | string) =>
-      `${API_BASE_URL}/packing_lists/${item_id}`,
+      `${API_BASE_URL}/api/v1/packing_lists/${item_id}`,
     DELETE: (item_id: number | string) =>
-      `${API_BASE_URL}/packing_lists/${item_id}`,
+      `${API_BASE_URL}/api/v1/packing_lists/${item_id}`,
   },
 
   CLIENTS: {
@@ -21,7 +21,7 @@ export const API_ENDPOINTS = {
 
   RELATIVE: {
     PACKING_LIST: {
-      LIST: `${NEXTJS_API_BASE}/vi/packing-list`,
+      LIST: `${NEXTJS_API_BASE}/packing-list`,
       CREATE: `${NEXTJS_API_BASE}/packing-list`,
       UPDATE: (poId: number | string) =>
         `${NEXTJS_API_BASE}/packing-list/${poId}`,

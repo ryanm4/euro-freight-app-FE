@@ -18,19 +18,6 @@ export default function PurchaseOrderCreatePage() {
         ]}
       />
 
-      <div className="flex flex-row justify-end gap-6">
-        <Button
-          variant={"outline"}
-          className="rounded-md"
-          onClick={() => router.push("/gdn")}
-        >
-          Cancel
-        </Button>
-        <Button className="rounded-md" onClick={() => router.push("/gdn")}>
-          Save
-        </Button>
-      </div>
-
       <div className="mt-4">
         <GoodsDispatchNoteForm />
       </div>

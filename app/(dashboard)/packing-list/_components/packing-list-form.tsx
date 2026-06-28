@@ -43,6 +43,8 @@ import { Input } from "@/components/ui/input"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { toast } from "sonner"
 import { PurchaseOrderApi } from "@/modules/purchase-order/api"
+import { packingListApi } from "@/modules/packing-list/api"
+import { CREATE_PACKING_LIST } from "@/modules/packing-list/types"
 
 export default function PackingListForm() {
   const router = useRouter()
@@ -89,9 +91,10 @@ export default function PackingListForm() {
         } else if (raw && typeof raw === "object") {
           // Try common wrapper keys: data, clients, results, items
           const obj = raw as Record<string, unknown>
-          const extracted =
-            obj.data ?? obj.clients ?? obj.results ?? obj.items
-          setClient(Array.isArray(extracted) ? (extracted as CLIENT_LIST[]) : [])
+          const extracted = obj.data ?? obj.clients ?? obj.results ?? obj.items
+          setClient(
+            Array.isArray(extracted) ? (extracted as CLIENT_LIST[]) : []
+          )
         } else {
           setClient([])
         }
@@ -117,7 +120,9 @@ export default function PackingListForm() {
           const obj = raw as Record<string, unknown>
           const extracted =
             obj.data ?? obj.purchase_orders ?? obj.results ?? obj.items
-          setPos(Array.isArray(extracted) ? (extracted as PURCHASE_ORDER[]) : [])
+          setPos(
+            Array.isArray(extracted) ? (extracted as PURCHASE_ORDER[]) : []
+          )
         } else {
           setPos([])
         }
@@ -198,35 +203,32 @@ export default function PackingListForm() {
     form.setValue("quantity", totalQty, { shouldValidate: true })
   }
 
-  const onSubmit: SubmitHandler<PackingListFormValues> = async (data) => {
+  async function onSubmit(values: PackingListFormValues) {
     try {
       setIsLoading(true)
-      const response = await fetch("/api/packing-list", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          client_id: Number(data.client_id),
-          date: data.date,
-          created_by: "ryan",
-          quantity: data.quantity,
-          po_detail_ids: data.po_detail_ids,
-          additional_info: data.additional_info || "",
-        }),
+
+      const payload: CREATE_PACKING_LIST = {
+        client_id: Number(values.client_id),
+        date: values.date,
+        created_by: "User",
+        quantity: values.quantity,
+        po_detail_ids: values.po_detail_ids,
+      }
+
+      const response = await packingListApi.create({
+        ...payload,
+        client_id: String(payload.client_id),
       })
 
-      const resData = await response.json()
-
-      if (response.ok && resData.success) {
-        toast.success("Packing list created successfully!")
+      if (response.status === 200 || response.status === 201) {
+        toast.success("Packing List created successfully")
         router.push("/packing-list")
-      } else {
-        toast.error(resData.message || "Failed to create packing list")
       }
     } catch (error) {
-      console.error("Error creating packing list:", error)
-      toast.error("Failed to create packing list due to a server error")
+      console.error("Failed to create Packing List:", error)
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create Packing List"
+      )
     } finally {
       setIsLoading(false)
     }
@@ -294,7 +296,6 @@ export default function PackingListForm() {
                     <FormLabel className="mb-1">Client Name</FormLabel>
                     <Combobox
                       items={[
-                        { value: "", label: "Select Client Name" },
                         ...client.map((c: CLIENT_LIST) => ({
                           value: String(c.id),
                           label: c.name,

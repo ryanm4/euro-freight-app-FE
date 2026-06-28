@@ -12,6 +12,11 @@ export const API_ENDPOINTS = {
       `${API_BASE_URL}/api/v1/packing_lists/${item_id}`,
   },
 
+  GDN: {
+    LIST: `${API_BASE_URL}/api/v1/goods_dispatch_notes`,
+    CREATE: `${API_BASE_URL}/api/v1/goods_dispatch_notes`,
+  },
+
   CLIENTS: {
     LIST: `${API_BASE_URL}/clients`,
   },
@@ -34,6 +39,11 @@ export const API_ENDPOINTS = {
     },
     PURCHASE_ORDER: {
       LIST: `${NEXTJS_API_BASE}/purchase-orders`,
+    },
+
+    GDN: {
+      LIST: `${NEXTJS_API_BASE}/goods_delivered_notes`,
+      CREATE: `${NEXTJS_API_BASE}/goods_delivered_notes`,
     },
   },
 } as const

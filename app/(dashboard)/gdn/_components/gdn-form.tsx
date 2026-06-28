@@ -1,344 +1,597 @@
 "use client"
 
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
 import { Textarea } from "@/components/ui/textarea"
-import { useState } from "react"
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-function FormField({
-  label,
-  id,
-  placeholder,
-  value,
-  onChange,
-  className = "",
-}: {
-  label: string
-  id: string
-  placeholder: string
-  value: string
-  onChange: (v: string) => void
-  className?: string
-}) {
-  return (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
-      <Label htmlFor={id} className="text-xs font-medium text-foreground">
-        {label}
-      </Label>
-      <Input
-        id={id}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-      />
-    </div>
-  )
-}
-
-function FormSelect({
-  label,
-  value,
-  onValueChange,
-  placeholder,
-  options,
-}: {
-  label: string
-  value: string
-  onValueChange: (v: string) => void
-  placeholder: string
-  options: { value: string; label: string }[]
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label className="text-xs font-medium text-foreground">{label}</Label>
-      <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-          {options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  )
-}
-
-function FormTextarea({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-}) {
-  return (
-    <div className="flex flex-1 flex-col gap-1.5">
-      <Label className="text-xs font-medium text-foreground">{label}</Label>
-      <Textarea
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"
-      />
-    </div>
-  )
-}
+import { goodsDispatchNoteSchema } from "@/modules/gdn/validation"
+import { useEffect, useMemo, useState } from "react"
+import { FieldPath, useForm, SubmitHandler } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import z from "zod"
+import { cn } from "@/lib/utils"
+import { format } from "date-fns"
+import { CLIENT_LIST } from "@/modules/clients/types"
+import { useRouter } from "next/navigation"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Button } from "@/components/ui/button"
+import { IconCalendarFilled } from "@tabler/icons-react"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxCollection,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox"
+import {
+  GET_ALL_PACKING_LIST,
+  PACKING_LIST,
+} from "@/modules/packing-list/types"
+import { gdnListApi } from "@/modules/gdn/api"
+import { toast } from "sonner"
+import { CREATE_GOODS_DISPATCH_NOTE } from "@/modules/gdn/types"
+import { ClientApi } from "@/modules/clients/api"
+import { getErrorMessage } from "@/lib/error-utils"
+import { useQuery } from "@tanstack/react-query"
+import { fetchClients } from "@/lib/api/clients"
+import { packingListApi } from "@/modules/packing-list/api"
 
 export default function GoodsDispatchNoteForm() {
-  const [date, setDate] = useState("")
-  const [gdnReference, setGdnReference] = useState("")
-  const [vehicleNo, setVehicleNo] = useState("")
-  const [client, setClient] = useState("")
-  const [manufacturer, setManufacturer] = useState("")
-  const [forwarder, setForwarder] = useState("")
-  const [packingList, setPackingList] = useState("")
-  const [cartons, setCartons] = useState("")
-  const [actualCartons, setActualCartons] = useState("")
-  const [grossWeight, setGrossWeight] = useState("")
-  const [actualGrossWeight, setActualGrossWeight] = useState("")
-  const [grossVolume, setGrossVolume] = useState("")
-  const [actualGrossVolume, setActualGrossVolume] = useState("")
-  const [remarks, setRemarks] = useState("")
+  const router = useRouter()
+
+  const [packingList, setPackingList] = useState<PACKING_LIST[]>([])
+
+  const [isClientLoading, setIsLoading] = useState(false)
+
+  type GDNListFormValues = z.infer<typeof goodsDispatchNoteSchema>
+  const baseDefaultValues: GDNListFormValues = {
+    client_id: 0,
+    manufacture_id: 0,
+    forwarder_id: 0,
+    date: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
+    packing_list_ids: [],
+    cartoons: "",
+    actual_cartoons: "",
+    gross_weight: "",
+    actual_gross_weight: "",
+    gross_volume: "",
+    actual_gross_volume: "",
+    status: "Pending",
+    created_by: "admin",
+    gdn_grn_ref: "",
+    vehicle_no: "",
+    remarks: "",
+  }
+
+  const form = useForm<GDNListFormValues>({
+    resolver: zodResolver(goodsDispatchNoteSchema),
+    defaultValues: baseDefaultValues,
+  })
+
+  const renderFormField = <TName extends FieldPath<GDNListFormValues>>(
+    name: TName,
+    render: Parameters<
+      typeof FormField<GDNListFormValues, TName>
+    >["0"]["render"]
+  ) => <FormField control={form.control} name={name} render={render} />
+
+  const formatDateValue = (val?: string) => {
+    if (!val) return ""
+    try {
+      // Replace space with T to make it standard ISO parser friendly
+      const parsable = val.includes(" ") ? val.replace(" ", "T") : val
+      return format(new Date(parsable), "PPP")
+    } catch {
+      return val
+    }
+  }
+
+  const getCalendarSelectedDate = (val?: string) => {
+    if (!val) return undefined
+    try {
+      const parsable = val.includes(" ") ? val.replace(" ", "T") : val
+      return new Date(parsable)
+    } catch {
+      return undefined
+    }
+  }
+
+  const onSubmit: SubmitHandler<GDNListFormValues> = async (values) => {
+    try {
+      setIsLoading(true)
+      console.log(values)
+      const payload: CREATE_GOODS_DISPATCH_NOTE = {
+        client_id: Number(values.client_id),
+        manufacture_id: Number(values.manufacture_id),
+        forwarder_id: Number(values.forwarder_id),
+
+        date: values.date,
+
+        packing_list_ids: values.packing_list_ids,
+
+        cartoons: values.cartoons,
+        actual_cartoons: values.actual_cartoons,
+
+        gross_weight: values.gross_weight,
+        actual_gross_weight: values.actual_gross_weight,
+
+        gross_volume: values.gross_volume,
+        actual_gross_volume: values.actual_gross_volume,
+
+        status: values.status,
+        created_by: "User",
+
+        gdn_grn_ref: values.gdn_grn_ref,
+        vehicle_no: values.vehicle_no,
+      }
+
+      const response = await gdnListApi.create(payload)
+
+      if (response.status === 200 || response.status === 201) {
+        toast.success("Goods Dispatch Note created successfully")
+        router.push("/gdn")
+      }
+    } catch (error) {
+      console.error("Failed to create Goods Dispatch Note:", error)
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create Packing List"
+      )
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["clients"],
+    queryFn: fetchClients,
+  })
+
+  const client = useMemo(() => {
+    return data?.data?.filter((c: CLIENT_LIST) => c.type === "client") || []
+  }, [data])
+
+  const manufacturer = useMemo(() => {
+    return (
+      data?.data?.filter((c: CLIENT_LIST) => c.type === "manufacturer") || []
+    )
+  }, [data])
+
+  const forwarder = useMemo(() => {
+    return data?.data?.filter((c: CLIENT_LIST) => c.type === "forwarder") || []
+  }, [data])
+
+  const comboboxItems = client.map((s: CLIENT_LIST) => ({
+    value: String(s.id),
+    label: s.name,
+  }))
+
+  const manufacturerOptions = manufacturer.map((m: CLIENT_LIST) => ({
+    value: String(m.id),
+    label: m.name,
+  }))
+
+  const forwarderOptions = forwarder.map((f: CLIENT_LIST) => ({
+    value: String(f.id),
+    label: f.name,
+  }))
+
+  const packingListOptions = useMemo(() => {
+    return packingList.map((p) => ({
+      value: String(p.packing_list_id),
+      label: `${p.client_id} — PL #${p.packing_list_id} (Qty: ${p.quantity})`,
+    }))
+  }, [packingList])
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+  const fetchData = async () => {
+    try {
+      setIsLoading(true)
+      const response = await packingListApi.getAll()
+      if (response.status === 200) {
+        setPackingList(response.data)
+        console.log("packingList response.data:", response.data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch jobs", error)
+      toast(getErrorMessage(error, "Failed to fetch jobs"))
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <div className="mx-auto space-y-5">
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-zinc-100">
-              Shipment Details
-            </h2>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Core shipment and transport information.
-            </p>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-0">
+          <div className="mt-6 flex w-full items-center justify-end gap-[16px] sm:justify-end">
+            <Button
+              size="lg"
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/packing-list")}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              type="submit"
+              className="bg-primary text-white"
+              disabled={isLoading}
+            >
+              {isLoading ? "Creating..." : "Create GDN"}
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-2">
+            {/* Card 1 - Shipment Details */}
+            <Card className="flex w-full flex-col shadow-sm transition-shadow hover:shadow-md">
+              <CardHeader className="flex flex-col gap-[0.5px]">
+                <h3 className="text-md mb-2 font-medium">Shipment Details</h3>
+                <p className="mb-4 text-xs text-muted-foreground">
+                  Core shipment and transport information.
+                </p>
+              </CardHeader>
+
+              <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {renderFormField("date", ({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel className="mb-1">Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "h-9 w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value
+                              ? formatDateValue(field.value)
+                              : format(new Date(), "PPP")}
+                            <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={getCalendarSelectedDate(field.value)}
+                          onSelect={(selectedDate) => {
+                            if (selectedDate) {
+                              field.onChange(
+                                format(selectedDate, "yyyy-MM-dd HH:mm:ss")
+                              )
+                            }
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+
+                    <FormMessage />
+                  </FormItem>
+                ))}
+
+                {renderFormField("gdn_grn_ref", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>GDN / GRN Reference</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter GDN / GRN Reference"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+
+                {renderFormField("vehicle_no", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Vehicle No</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter Vehicle Number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Card 2 - Business Partners */}
+            <Card className="flex w-full flex-col shadow-sm transition-shadow hover:shadow-md">
+              <CardHeader className="flex flex-col gap-[0.5px]">
+                <h3 className="text-md mb-2 font-medium">Business Partners</h3>
+                <p className="mb-4 text-xs text-muted-foreground">
+                  Organizations involved in the shipment.
+                </p>
+              </CardHeader>
+
+              <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {renderFormField("client_id", ({ field }: { field: any }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Client</FormLabel>
+                    <Combobox
+                      items={comboboxItems}
+                      value={field.value ? String(field.value) : null}
+                      onValueChange={(val: string | null) =>
+                        field.onChange(val ? Number(val) : 0)
+                      }
+                    >
+                      <ComboboxInput placeholder="Select client..." />
+                      <ComboboxContent>
+                        <ComboboxList>
+                          <ComboboxCollection>
+                            {(item: { value: string; label: string }) => (
+                              <ComboboxItem key={item.value} value={item.value}>
+                                {item.label}
+                              </ComboboxItem>
+                            )}
+                          </ComboboxCollection>
+                          <ComboboxEmpty>No clients found.</ComboboxEmpty>
+                        </ComboboxList>
+                      </ComboboxContent>
+                    </Combobox>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+
+                {renderFormField(
+                  "manufacture_id",
+                  ({ field }: { field: any }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Manufacturer</FormLabel>
+                      <Combobox
+                        items={manufacturerOptions}
+                        value={field.value ? String(field.value) : null}
+                        onValueChange={(val: string | null) =>
+                          field.onChange(val ? Number(val) : 0)
+                        }
+                      >
+                        <ComboboxInput placeholder="Select manufacturer..." />
+                        <ComboboxContent>
+                          <ComboboxList>
+                            <ComboboxCollection>
+                              {(item: { value: string; label: string }) => (
+                                <ComboboxItem
+                                  key={item.value}
+                                  value={item.value}
+                                >
+                                  {item.label}
+                                </ComboboxItem>
+                              )}
+                            </ComboboxCollection>
+                            <ComboboxEmpty>
+                              No manufacturers found.
+                            </ComboboxEmpty>
+                          </ComboboxList>
+                        </ComboboxContent>
+                      </Combobox>
+                      <FormMessage />
+                    </FormItem>
+                  )
+                )}
+
+                {renderFormField(
+                  "forwarder_id",
+                  ({ field }: { field: any }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Forwarder</FormLabel>
+                      <Combobox
+                        items={forwarderOptions}
+                        value={field.value ? String(field.value) : null}
+                        onValueChange={(val: string | null) =>
+                          field.onChange(val ? Number(val) : 0)
+                        }
+                      >
+                        <ComboboxInput placeholder="Select forwarder..." />
+                        <ComboboxContent>
+                          <ComboboxList>
+                            <ComboboxCollection>
+                              {(item: { value: string; label: string }) => (
+                                <ComboboxItem
+                                  key={item.value}
+                                  value={item.value}
+                                >
+                                  {item.label}
+                                </ComboboxItem>
+                              )}
+                            </ComboboxCollection>
+                            <ComboboxEmpty>No forwarders found.</ComboboxEmpty>
+                          </ComboboxList>
+                        </ComboboxContent>
+                      </Combobox>
+                      <FormMessage />
+                    </FormItem>
+                  )
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-2">
+            {/* Card 3 - Packing Information */}
+            <Card className="flex w-full flex-col shadow-sm transition-shadow hover:shadow-md">
+              <CardHeader className="flex flex-col gap-[0.5px]">
+                <h3 className="text-md mb-2 font-medium">
+                  Packing Information
+                </h3>
+                <p className="mb-4 text-xs text-muted-foreground">
+                  Packing lists and carton quantities.
+                </p>
+              </CardHeader>
+
+              <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {renderFormField("packing_list_ids", ({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Packing List</FormLabel>
+                    <Combobox
+                      items={packingListOptions}
+                      multiple
+                      value={field.value?.map(String) ?? []}
+                      onValueChange={(vals: string[]) =>
+                        field.onChange(vals.map(Number))
+                      }
+                    >
+                      <ComboboxChips>
+                        {field.value?.map((id) => {
+                          const opt = packingListOptions.find(
+                            (o) => o.value === String(id)
+                          )
+                          return (
+                            <ComboboxChip key={id}>
+                              {opt?.label ?? id}
+                            </ComboboxChip>
+                          )
+                        })}
+                        <ComboboxChipsInput placeholder="Select packing lists..." />
+                      </ComboboxChips>
+                      <ComboboxContent>
+                        <ComboboxList>
+                          <ComboboxCollection>
+                            {(item: { value: string; label: string }) => (
+                              <ComboboxItem key={item.value} value={item.value}>
+                                {item.label}
+                              </ComboboxItem>
+                            )}
+                          </ComboboxCollection>
+                          <ComboboxEmpty>No packing lists found.</ComboboxEmpty>
+                        </ComboboxList>
+                      </ComboboxContent>
+                    </Combobox>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("cartoons", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cartons</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter Cartons" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+
+                {renderFormField("actual_cartoons", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Actual Cartons</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter Actual Cartons" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Card 4 - Shipment Measurements */}
+            <Card className="flex w-full flex-col shadow-sm transition-shadow hover:shadow-md">
+              <CardHeader className="flex flex-col gap-[0.5px]">
+                <h3 className="text-md mb-2 font-medium">
+                  Shipment Measurements
+                </h3>
+                <p className="mb-4 text-xs text-muted-foreground">
+                  Planned versus actual shipment measurements.
+                </p>
+              </CardHeader>
+
+              <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {renderFormField("gross_weight", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Gross Weight</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter Gross Weight" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+
+                {renderFormField("actual_gross_weight", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Actual Gross Weight</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter Actual Gross Weight"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+
+                {renderFormField("gross_volume", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Gross Volume</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter Gross Volume" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+
+                {renderFormField("actual_gross_volume", ({ field }) => (
+                  <FormItem>
+                    <FormLabel>Actual Gross Volume</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter Actual Gross Volume"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+              </CardContent>
+            </Card>
           </div>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormSelect
-                label="Date"
-                value={date}
-                onValueChange={setDate}
-                placeholder="Date"
-                options={[
-                  { value: "jan", label: "January 2025" },
-                  { value: "feb", label: "February 2025" },
-                  { value: "mar", label: "March 2025" },
-                ]}
-              />
+          {/* Card 5 - Additional Information */}
+          <Card className="flex w-full flex-col shadow-sm transition-shadow hover:shadow-md">
+            <CardHeader className="flex flex-col gap-[0.5px]">
+              <h3 className="text-md mb-2 font-medium">
+                Additional Information
+              </h3>
+              <p className="mb-4 text-xs text-muted-foreground">
+                Additional shipment remarks.
+              </p>
+            </CardHeader>
 
-              <FormField
-                label="GDN/GRN Reference"
-                id="gdn-reference"
-                placeholder="Enter GDN/GRN Reference"
-                value={gdnReference}
-                onChange={setGdnReference}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Vehicle No"
-                id="vehicle-no"
-                placeholder="Enter Vehicle No"
-                value={vehicleNo}
-                onChange={setVehicleNo}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-zinc-100">
-              Business Partners
-            </h2>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Organizations involved in the shipment.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormSelect
-                label="Client"
-                value={client}
-                onValueChange={setClient}
-                placeholder="Choose Client"
-                options={[
-                  { value: "c1", label: "Client 1" },
-                  { value: "c2", label: "Client 2" },
-                  { value: "c3", label: "Client 3" },
-                  { value: "c4", label: "Client 4" },
-                ]}
-              />
-              <FormSelect
-                label="Manufacturer"
-                value={manufacturer}
-                onValueChange={setManufacturer}
-                placeholder="Choose Manufacturer"
-                options={[
-                  { value: "m1", label: "Manufacturer 1" },
-                  { value: "m2", label: "Manufacturer 2" },
-                  { value: "m3", label: "Manufacturer 3" },
-                  { value: "m4", label: "Manufacturer 4" },
-                ]}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormSelect
-                label="Forwarder"
-                value={forwarder}
-                onValueChange={setForwarder}
-                placeholder="Choose Forwarder"
-                options={[
-                  { value: "f1", label: "Forwarder 1" },
-                  { value: "f2", label: "Forwarder 2" },
-                  { value: "f3", label: "Forwarder 3" },
-                  { value: "f4", label: "Forwarder 4" },
-                ]}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-zinc-100">
-              Packing Information
-            </h2>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Packing lists and carton quantities.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormSelect
-                label="Packing List"
-                value={packingList}
-                onValueChange={setPackingList}
-                placeholder="Choose Packing List"
-                options={[
-                  { value: "p1", label: "List 1" },
-                  { value: "p2", label: "List 2" },
-                  { value: "p3", label: "List 3" },
-                ]}
-              />
-
-              <FormField
-                label="Cartons"
-                id="cartons"
-                placeholder="Enter Cartons"
-                value={cartons}
-                onChange={setCartons}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Actual Cartons"
-                id="actual-cartons"
-                placeholder="Enter Actual Cartons"
-                value={actualCartons}
-                onChange={setActualCartons}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-zinc-100">
-              Shipment Measurements
-            </h2>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Planned versus actual shipment measurements.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Gross Weight"
-                id="gross-weight"
-                placeholder="Enter Gross Weight"
-                value={grossWeight}
-                onChange={setGrossWeight}
-              />
-
-              <FormField
-                label="Actual Gross Weight"
-                id="actual-gross-weight"
-                placeholder="Enter Actual Gross Weight"
-                value={actualGrossWeight}
-                onChange={setActualGrossWeight}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Gross Volume"
-                id="gross-volume"
-                placeholder="Enter Gross Volume"
-                value={grossVolume}
-                onChange={setGrossVolume}
-              />
-
-              <FormField
-                label="Actual Gross Volume"
-                id="actual-gross-volume"
-                placeholder="Enter Actual Gross Volume"
-                value={actualGrossVolume}
-                onChange={setActualGrossVolume}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-1">
-        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-zinc-100">
-              Additional Information
-            </h2>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Packing lists and carton quantities.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-4">
-              <FormTextarea
-                label="Remarks"
-                value={remarks}
-                onChange={setRemarks}
-                placeholder="Type your message here."
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+            <CardContent>
+              {renderFormField("remarks", ({ field }) => (
+                <FormItem>
+                  <FormLabel>Remarks</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Type your message here."
+                      className="min-h-[120px] resize-none"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              ))}
+            </CardContent>
+          </Card>
+        </form>
+      </Form>
     </div>
   )
 }

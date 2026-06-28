@@ -215,7 +215,10 @@ export default function PackingListForm() {
         po_detail_ids: values.po_detail_ids,
       }
 
-      const response = await packingListApi.create(payload)
+      const response = await packingListApi.create({
+        ...payload,
+        client_id: String(payload.client_id),
+      })
 
       if (response.status === 200 || response.status === 201) {
         toast.success("Packing List created successfully")

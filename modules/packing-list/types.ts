@@ -13,7 +13,7 @@ export interface PACKING_LIST {
   updated_on?: string | null
 }
 export interface CREATE_PACKING_LIST {
-  client_id: number
+  client_id: number | string
   date: string
   // gdn_id?: number
   created_by: string

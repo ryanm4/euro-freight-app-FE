@@ -1,4 +1,4 @@
-interface GRN {
+export interface GRN {
   id: number
   client_id: string
   manufacture_id: string

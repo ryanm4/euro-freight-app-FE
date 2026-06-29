@@ -1,11 +1,16 @@
+import FormDateField from "@/components/shared/FormDateField"
 import FormField from "@/components/shared/FormField"
 import FormSelect from "@/components/shared/FormSelect"
 import FormTextarea from "@/components/shared/FormTextarea"
 import { Button } from "@/components/ui/button"
+import { createBillOfLading } from "@/lib/api/bill_of_lading"
+import { fetchClients } from "@/lib/api/clients"
+import { fetchGRNs } from "@/lib/api/goods_receive_notes"
 import { IconPlus, IconTrash } from "@tabler/icons-react"
+import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
-import GRNTable from "./GRNTable"
+import { useMemo, useState } from "react"
+import GRNTable, { GRN } from "./GRNTable"
 
 interface Port {
   id: number
@@ -41,6 +46,35 @@ export default function HBLHABWForm() {
   const [selectedGrnIds, setSelectedGrnIds] = useState<Set<number>>(new Set())
 
   const [ports, setPorts] = useState<Port[]>([{ id: 1, value: "" }])
+
+  const {
+    data,
+    isLoading,
+    // error,
+  } = useQuery({
+    queryKey: ["clients"],
+    queryFn: fetchClients,
+  })
+
+  const {
+    data: grnData,
+    // isLoading,
+    // error,
+  } = useQuery({
+    queryKey: ["grns"],
+    queryFn: fetchGRNs,
+  })
+  // data={(data?.data ?? []) as GOODS_RECEIVE_NOTE[]}
+
+  const supplierOptions = useMemo(() => {
+    return data?.data?.filter((client: any) => client.type === "supplier") || []
+  }, [data])
+
+  const manufacturerOptions = useMemo(() => {
+    return (
+      data?.data?.filter((client: any) => client.type === "manufacturer") || []
+    )
+  }, [data])
 
   const toggleGrn = (id: number) => {
     setSelectedGrnIds((prev) => {
@@ -94,7 +128,37 @@ export default function HBLHABWForm() {
     setPorts((prev) => prev.map((p) => (p.id === id ? { ...p, value } : p)))
   }
 
-  const handleSave = async () => {}
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      await createBillOfLading({
+        client,
+        manufacturer,
+        date,
+        type,
+        vesselName,
+        voyageNo,
+        estimatedTimeOfDelivery,
+        estimatedTimeOfArrival,
+        arrivalPort,
+        inlandLocation,
+        mblMawbNo,
+        noOfPieces,
+        grossWeight,
+        chargeableWeight,
+        cmb,
+        containerSealNo,
+        onboardedDate,
+        selectedGrnIds,
+        ports,
+      })
+      router.push("/hbl-hawb")
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   return (
     <div className="mx-auto space-y-5">
@@ -130,22 +194,16 @@ export default function HBLHABWForm() {
                 onValueChange={setType}
                 placeholder="Choose Type"
                 options={[
-                  { value: "jan", label: "January 2025" },
-                  { value: "feb", label: "February 2025" },
-                  { value: "mar", label: "March 2025" },
+                  { value: "SEA", label: "Sea" },
+                  { value: "AIR", label: "Air" },
                 ]}
               />
 
-              <FormSelect
+              <FormDateField
                 label="Date"
+                id={`date`}
                 value={date}
-                onValueChange={setDate}
-                placeholder="Date"
-                options={[
-                  { value: "jan", label: "January 2025" },
-                  { value: "feb", label: "February 2025" },
-                  { value: "mar", label: "March 2025" },
-                ]}
+                onChange={setDate}
               />
             </div>
           </div>
@@ -168,12 +226,10 @@ export default function HBLHABWForm() {
                 value={client}
                 onValueChange={setClient}
                 placeholder="Choose Client"
-                options={[
-                  { value: "c1", label: "Client 1" },
-                  { value: "c2", label: "Client 2" },
-                  { value: "c3", label: "Client 3" },
-                  { value: "c4", label: "Client 4" },
-                ]}
+                options={supplierOptions.map((s: any) => ({
+                  value: s.id,
+                  label: s.name,
+                }))}
               />
 
               <FormSelect
@@ -181,12 +237,10 @@ export default function HBLHABWForm() {
                 value={manufacturer}
                 onValueChange={setManufacturer}
                 placeholder="Choose Manufacturer"
-                options={[
-                  { value: "m1", label: "Manufacturer 1" },
-                  { value: "m2", label: "Manufacturer 2" },
-                  { value: "m3", label: "Manufacturer 3" },
-                  { value: "m4", label: "Manufacturer 4" },
-                ]}
+                options={manufacturerOptions.map((m: any) => ({
+                  value: m.id,
+                  label: m.name,
+                }))}
               />
 
               <FormField
@@ -213,7 +267,7 @@ export default function HBLHABWForm() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
               <GRNTable
-                grns={availableGrns}
+                grns={(grnData?.data ?? []) as GRN[]}
                 selectedIds={selectedGrnIds}
                 onToggle={toggleGrn}
               />
@@ -251,52 +305,32 @@ export default function HBLHABWForm() {
                 onChange={setVoyageNo}
               />
 
-              <FormSelect
+              <FormDateField
                 label="Estimated Time of Delivery"
+                id={`estimated-time-of-delivery`}
                 value={estimatedTimeOfDelivery}
-                onValueChange={setEstimatedTimeOfDelivery}
-                placeholder="Choose Estimated Time of Delivery"
-                options={[
-                  { value: "p1", label: "List 1" },
-                  { value: "p2", label: "List 2" },
-                  { value: "p3", label: "List 3" },
-                ]}
+                onChange={setEstimatedTimeOfDelivery}
               />
 
-              <FormSelect
+              <FormDateField
                 label="Estimated Time of Arrival"
+                id={`estimated-time-of-arrival`}
                 value={estimatedTimeOfArrival}
-                onValueChange={setEstimatedTimeOfArrival}
-                placeholder="Choose Estimated Time of Arrival"
-                options={[
-                  { value: "p1", label: "List 1" },
-                  { value: "p2", label: "List 2" },
-                  { value: "p3", label: "List 3" },
-                ]}
+                onChange={setEstimatedTimeOfArrival}
               />
 
-              <FormSelect
+              <FormDateField
                 label="Actual Time of Delivery"
+                id={`actual-time-of-delivery`}
                 value={actualTimeOfDelivery}
-                onValueChange={setActualTimeOfDelivery}
-                placeholder="Choose Actual Time of Delivery"
-                options={[
-                  { value: "p1", label: "List 1" },
-                  { value: "p2", label: "List 2" },
-                  { value: "p3", label: "List 3" },
-                ]}
+                onChange={setActualTimeOfDelivery}
               />
 
-              <FormSelect
+              <FormDateField
                 label="Actual Time of Arrival"
+                id={`actual-time-of-arrival`}
                 value={actualTimeOfArrival}
-                onValueChange={setActualTimeOfArrival}
-                placeholder="Choose Actual Time of Arrival"
-                options={[
-                  { value: "p1", label: "List 1" },
-                  { value: "p2", label: "List 2" },
-                  { value: "p3", label: "List 3" },
-                ]}
+                onChange={setActualTimeOfArrival}
               />
             </div>
           </div>
@@ -370,16 +404,11 @@ export default function HBLHABWForm() {
                 onChange={setContainerSealNo}
               />
 
-              <FormSelect
+              <FormDateField
                 label="Onboarded date"
+                id={`onboarded-date`}
                 value={onboardedDate}
-                onValueChange={setOnboardedDate}
-                placeholder="Choose Onboarded date"
-                options={[
-                  { value: "p1", label: "List 1" },
-                  { value: "p2", label: "List 2" },
-                  { value: "p3", label: "List 3" },
-                ]}
+                onChange={setOnboardedDate}
               />
             </div>
           </div>

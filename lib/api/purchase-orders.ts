@@ -9,13 +9,14 @@ export async function createPurchaseOrder(data: any) {
     po_number: data.poNumber,
     po_quantity: parseInt(data.poQuantity),
     ex_factory_date: data.exFactoryDate,
+    shipping_mode: data.shippingMode,
     final_destination: data.finalDestination,
     supplier_id: parseInt(data.supplier),
     freight_forwarder: parseInt(data.freightForwarder),
     payment_mode: data.paymentMode,
     instructions: data.instructions,
     PO_url: data.poDocumentUrl ?? "",
-    status: "Pending",
+    status: "Open",
     created_by: "admin",
     items: data.cargoItems.map((item: any) => ({
       sku: item.sku,
@@ -31,7 +32,7 @@ export async function createPurchaseOrder(data: any) {
       ctn_demi: item.ctnDimensions,
       cbm: item.cbm,
       dispatched_quantity: parseInt(item.dispatchedQuantity) || 0,
-      status: "Pending",
+      status: item.status || "Pending",
     })),
   }
 

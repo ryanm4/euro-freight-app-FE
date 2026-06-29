@@ -1,5 +1,12 @@
-import { Input } from "../ui/input"
+"use client"
+
+import { format, parse, isValid } from "date-fns"
+import { IconCalendarFilled } from "@tabler/icons-react"
+import { Calendar } from "../ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
+import { Button } from "../ui/button"
 import { Label } from "../ui/label"
+import { cn } from "@/lib/utils"
 
 const FormDateField = ({
   label,
@@ -16,19 +23,56 @@ const FormDateField = ({
   disabled?: boolean
   className?: string
 }) => {
+  // Parse the stored string value (yyyy-MM-dd or yyyy-MM-dd HH:mm:ss) into a Date
+  const parseDate = (val: string): Date | undefined => {
+    if (!val) return undefined
+    // Try yyyy-MM-dd HH:mm:ss
+    let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
+    if (isValid(d)) return d
+    // Try yyyy-MM-dd
+    d = parse(val, "yyyy-MM-dd", new Date())
+    if (isValid(d)) return d
+    return undefined
+  }
+
+  const selectedDate = parseDate(value)
+  const displayLabel = selectedDate ? format(selectedDate, "PPP") : "Pick a date"
+
   return (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
-      <Label htmlFor={id} className="text-xs font-medium text-foreground">
-        {label}
-      </Label>
-      <Input
-        id={id}
-        type="date"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        className="h-9 rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500 [&::-webkit-calendar-picker-indicator]:invert"
-      />
+    <div className={cn("flex flex-col gap-1.5", className)}>
+      {label && (
+        <Label htmlFor={id} className="text-xs font-medium text-foreground">
+          {label}
+        </Label>
+      )}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            id={id}
+            variant="outline"
+            disabled={disabled}
+            className={cn(
+              "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+              !value && "text-zinc-500"
+            )}
+          >
+            {displayLabel}
+            <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={(date) => {
+              if (date) {
+                onChange(format(date, "yyyy-MM-dd"))
+              }
+            }}
+            captionLayout="dropdown"
+          />
+        </PopoverContent>
+      </Popover>
     </div>
   )
 }

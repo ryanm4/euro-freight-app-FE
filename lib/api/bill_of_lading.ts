@@ -104,3 +104,9 @@ export async function createBillOfLading(input: CreateBillOfLadingInput) {
 
   return res.json()
 }
+
+export async function fetchBillOfLadingById(id: string) {
+  const res = await fetch(`/api/hbl_hawbs/${id}`)
+  if (!res.ok) throw new Error("Failed to fetch bill of lading by ID")
+  return res.json()
+}

@@ -84,38 +84,6 @@ export default function HBLHABWForm() {
     })
   }
 
-  const availableGrns: any[] = [
-    {
-      id: 1,
-      client_id: "ACME Apparel (Pvt) Ltd",
-      manufacture_id: "Global Freight Services",
-      forwarder_id: "Anupa and Sons",
-      date: "2026-06-17T05:00:00.000Z",
-      quantity: 2000,
-      status: "Pending",
-      bill_id: null,
-      comments: null,
-      created_by: "Ryan",
-      created_on: "2026-06-24T17:38:55.000Z",
-      updated_by: null,
-      updated_on: null,
-      packing_lists: [
-        {
-          id: 1,
-          client_id: 1,
-          date: "2026-06-03T05:00:00.000Z",
-          gdn_id: null,
-          grn_id: 1,
-          quantity: 2000,
-          created_by: "ryan",
-          created_on: "2026-06-24T17:38:37.000Z",
-          updated_by: "Ryan",
-          updated_on: "2026-06-24T17:38:55.000Z",
-        },
-      ],
-    },
-  ]
-
   const addPort = () => {
     setPorts((prev) => [...prev, { id: Date.now(), value: "" }])
   }

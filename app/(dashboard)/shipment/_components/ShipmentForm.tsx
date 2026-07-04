@@ -2,20 +2,25 @@
 
 import FormField from "@/components/shared/FormField"
 import FormTextarea from "@/components/shared/FormTextarea"
+import { Button } from "@/components/ui/button"
 import { fetchHBLHAWBs } from "@/lib/api/bill_of_lading"
 import { useQuery } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 import HBLTable from "./HBLTable"
 
 export default function ShipmentForm() {
+  const router = useRouter()
   const [vesselName, setVesselName] = useState("")
   const [remarks, setRemarks] = useState("")
   const [selectedHBLIds, setSelectedHBLIds] = useState<Set<number>>(new Set())
 
-  const { data: hbls } = useQuery({
+  const { data: hblsRes } = useQuery({
     queryKey: ["hbl-hawbs"],
     queryFn: fetchHBLHAWBs,
   })
+
+  const hbls = hblsRes?.data ?? []
 
   const toggleHblRow = (id: number) => {
     setSelectedHBLIds((prev) =>
@@ -27,6 +32,18 @@ export default function ShipmentForm() {
 
   return (
     <div className="mx-auto space-y-5">
+      <div className="flex justify-end gap-3">
+        <Button
+          variant={"outline"}
+          className="rounded-md"
+          onClick={() => router.push("/shipment")}
+        >
+          Cancel
+        </Button>
+        <Button className="rounded-md" onClick={() => router.push("/shipment")}>
+          Save
+        </Button>
+      </div>
       <div className="grid grid-cols-1 gap-5">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
@@ -64,7 +81,7 @@ export default function ShipmentForm() {
           <div className="space-y-4">
             <div className="overflow-x-auto rounded-md border border-neutral-700">
               <HBLTable
-                hbls={hbls.data ?? []}
+                hbls={(hbls ?? []) as any[]}
                 selectedIds={selectedHBLIds}
                 onToggle={toggleHblRow}
               />

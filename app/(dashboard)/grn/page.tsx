@@ -27,7 +27,7 @@ export default function GRNPage() {
   const actions = {
     onEdit: (id: string) => router.push(`/grn/edit/${id}`),
     onDelete: (id: string) => console.log("Delete", id),
-    onView: (id: string) => router.push(`/grn/view/${id}`),
+    onView: (id: string) => router.push(`/grn/${id}`),
   }
 
   const columns = goodsReceiveNoteColumns(actions)

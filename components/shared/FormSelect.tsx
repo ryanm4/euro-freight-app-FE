@@ -1,3 +1,5 @@
+"use client"
+
 import { Label } from "../ui/label"
 import {
   Select,
@@ -13,17 +15,26 @@ const FormSelect = ({
   onValueChange,
   placeholder,
   options,
+  readOnly = false,
 }: {
   label: string
   value: string
-  onValueChange: (v: string) => void
+  onValueChange?: (v: string) => void
   placeholder: string
   options: { value: string; label: string }[]
+  readOnly?: boolean
 }) => {
   return (
     <div className="flex flex-col gap-1.5">
       <Label className="text-xs font-medium text-foreground">{label}</Label>
-      <Select value={value} onValueChange={onValueChange}>
+      <Select
+        value={value}
+        onValueChange={onValueChange}
+        open={readOnly ? false : undefined}
+        onOpenChange={(open) => {
+          if (readOnly && open) return
+        }}
+      >
         <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>

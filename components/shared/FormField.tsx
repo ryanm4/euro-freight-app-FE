@@ -1,3 +1,5 @@
+"use client"
+
 import { Input } from "../ui/input"
 import { Label } from "../ui/label"
 
@@ -9,14 +11,16 @@ const FormField = ({
   onChange,
   className = "",
   type = "text",
+  readOnly = false,
 }: {
   label: string
   id: string
-  placeholder: string
+  placeholder?: string
   value: string
-  onChange: (v: string) => void
+  onChange?: (v: string) => void
   className?: string
   type?: string
+  readOnly?: boolean
 }) => {
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
@@ -28,7 +32,8 @@ const FormField = ({
         type={type}
         placeholder={placeholder}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        readOnly={readOnly}
+        onChange={(e) => onChange && onChange(e.target.value)}
         className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
       />
     </div>

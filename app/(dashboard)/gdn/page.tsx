@@ -16,7 +16,7 @@ export default function GDNPage() {
   const actions = {
     onEdit: (id: string) => router.push(`/gdn/edit/${id}`),
     onDelete: (id: string) => console.log("Delete", id),
-    onView: (id: string) => router.push(`/gdn/view/${id}`),
+    onView: (id: string) => router.push(`/gdn/${id}`),
   }
 
   const columns = goodsDeliverNoteColumns(actions)

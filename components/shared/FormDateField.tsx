@@ -26,16 +26,23 @@ const FormDateField = ({
   className?: string
 }) => {
   // Parse the stored string value (yyyy-MM-dd or yyyy-MM-dd HH:mm:ss) into a Date
-  const parseDate = (val: string): Date | undefined => {
-    if (!val) return undefined
-    // Try yyyy-MM-dd HH:mm:ss
-    let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-    if (isValid(d)) return d
-    // Try yyyy-MM-dd
-    d = parse(val, "yyyy-MM-dd", new Date())
-    if (isValid(d)) return d
-    return undefined
-  }
+const parseDate = (val: string): Date | undefined => {
+  if (!val) return undefined
+
+  // Try yyyy-MM-dd HH:mm:ss
+  let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
+  if (isValid(d)) return d
+
+  // Try yyyy-MM-dd
+  d = parse(val, "yyyy-MM-dd", new Date())
+  if (isValid(d)) return d
+
+  // Try native ISO parsing (handles "2026-07-30T18:30:00.000Z" etc.)
+  d = new Date(val)
+  if (isValid(d)) return d
+
+  return undefined
+}
 
   const selectedDate = parseDate(value)
   const displayLabel = selectedDate

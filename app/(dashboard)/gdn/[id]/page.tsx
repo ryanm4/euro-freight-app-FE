@@ -19,13 +19,7 @@ import { useParams } from "next/navigation"
 
 const createGDNObject = (gdn: any) => {
   return {
-    date: gdn.date
-      ? new Date(gdn.date).toLocaleDateString("en-GB", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        })
-      : "—",
+    date: gdn.date ?? "—",
     gdnReference: gdn.gdn_grn_ref ?? "—",
     vehicleNo: gdn.vehicle_no ?? "—",
     client: gdn.client_id ?? "—",

@@ -26,3 +26,9 @@ export async function createGoodsReceiveNote(data: any) {
   if (!res.ok) throw new Error("Failed to create goods receive note")
   return res.json()
 }
+
+export async function fetchGoodsReceiveNoteById(id: string) {
+  const res = await fetch(`/api/goods_receive_notes/${id}`)
+  if (!res.ok) throw new Error("Failed to fetch goods receive note by ID")
+  return res.json()
+}

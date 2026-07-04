@@ -1,12 +1,12 @@
 "use client"
 
-import { format, parse, isValid } from "date-fns"
-import { IconCalendarFilled } from "@tabler/icons-react"
-import { Calendar } from "../ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
-import { Button } from "../ui/button"
-import { Label } from "../ui/label"
 import { cn } from "@/lib/utils"
+import { IconCalendarFilled } from "@tabler/icons-react"
+import { format, isValid, parse } from "date-fns"
+import { Button } from "../ui/button"
+import { Calendar } from "../ui/calendar"
+import { Label } from "../ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 
 const FormDateField = ({
   label,
@@ -14,13 +14,15 @@ const FormDateField = ({
   value,
   onChange,
   disabled = false,
+  readOnly = false,
   className = "",
 }: {
   label: string
   id: string
   value: string
-  onChange: (v: string) => void
+  onChange?: (v: string) => void
   disabled?: boolean
+  readOnly?: boolean
   className?: string
 }) => {
   // Parse the stored string value (yyyy-MM-dd or yyyy-MM-dd HH:mm:ss) into a Date
@@ -36,7 +38,9 @@ const FormDateField = ({
   }
 
   const selectedDate = parseDate(value)
-  const displayLabel = selectedDate ? format(selectedDate, "PPP") : "Pick a date"
+  const displayLabel = selectedDate
+    ? format(selectedDate, "PPP")
+    : "Pick a date"
 
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
@@ -53,7 +57,9 @@ const FormDateField = ({
             disabled={disabled}
             className={cn(
               "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-              !value && "text-zinc-500"
+              !value && "text-zinc-500",
+              readOnly &&
+                "cursor-default hover:bg-[#0A0A0A] hover:text-zinc-100"
             )}
           >
             {displayLabel}
@@ -66,7 +72,7 @@ const FormDateField = ({
             selected={selectedDate}
             onSelect={(date) => {
               if (date) {
-                onChange(format(date, "yyyy-MM-dd"))
+                onChange && onChange(format(date, "yyyy-MM-dd"))
               }
             }}
             captionLayout="dropdown"

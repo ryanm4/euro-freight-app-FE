@@ -40,13 +40,7 @@ interface GrnData {
 
 const createGRNObject = (grn: any): GrnData => {
   return {
-    date: grn.date
-      ? new Date(grn.date).toLocaleDateString("en-GB", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        })
-      : "—",
+    date: grn.date ?? "—",
     client: grn.client_id ?? "—",
     forwarder: grn.forwarder_id ?? "—",
     manufacturer: grn.manufacture_id ?? "—",
@@ -74,7 +68,6 @@ const createGRNObject = (grn: any): GrnData => {
 
 export default function GrnByID() {
   const { id } = useParams<{ id: string }>()
-  // const { id } = await params
   const {
     data: res,
     isLoading,

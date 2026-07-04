@@ -52,24 +52,24 @@ const data = {
       icon: <IconListCheck />,
     },
     {
-      title: "Good Received Notes",
-      url: "/grn",
-      icon: <IconFileCheck />,
-    },
-    {
       title: "Goods Dispatched Notes",
       url: "/gdn",
       icon: <IconTruckDelivery />,
     },
     {
-      title: "Shipment",
-      url: "/shipment",
-      icon: <IconShip />,
+      title: "Good Received Notes",
+      url: "/grn",
+      icon: <IconFileCheck />,
     },
     {
       title: "HBL/HAWB",
       url: "/hbl-hawb",
       icon: <IconFileInvoice />,
+    },
+    {
+      title: "Shipment",
+      url: "/shipment",
+      icon: <IconShip />,
     },
     {
       title: "Clients",

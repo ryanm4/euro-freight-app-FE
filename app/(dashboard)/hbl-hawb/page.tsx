@@ -58,6 +58,7 @@ export default function HBLHAWBPage() {
           columns={columns}
           data={(data?.data ?? []) as HBL_HAWB[]}
           searchValue={searchValue}
+          isLoading={isLoading}
         />
       </div>
     </div>

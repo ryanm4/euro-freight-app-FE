@@ -1,109 +1,49 @@
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
+"use client"
+
+import FormField from "@/components/shared/FormField"
+import FormTextarea from "@/components/shared/FormTextarea"
+import { Button } from "@/components/ui/button"
+import { fetchHBLHAWBs } from "@/lib/api/bill_of_lading"
+import { useQuery } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 import { useState } from "react"
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-function FormField({
-  label,
-  id,
-  placeholder,
-  value,
-  onChange,
-  className = "",
-}: {
-  label: string
-  id: string
-  placeholder: string
-  value: string
-  onChange: (v: string) => void
-  className?: string
-}) {
-  return (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
-      <Label htmlFor={id} className="text-xs font-medium text-foreground">
-        {label}
-      </Label>
-      <Input
-        id={id}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-      />
-    </div>
-  )
-}
-
-function FormSelect({
-  label,
-  value,
-  onValueChange,
-  placeholder,
-  options,
-}: {
-  label: string
-  value: string
-  onValueChange: (v: string) => void
-  placeholder: string
-  options: { value: string; label: string }[]
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label className="text-xs font-medium text-foreground">{label}</Label>
-      <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-          {options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  )
-}
-
-function FormTextarea({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-}) {
-  return (
-    <div className="flex flex-1 flex-col gap-1.5">
-      <Label className="text-xs font-medium text-foreground">{label}</Label>
-      <Textarea
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"
-      />
-    </div>
-  )
-}
+import HBLTable from "./HBLTable"
 
 export default function ShipmentForm() {
+  const router = useRouter()
   const [vesselName, setVesselName] = useState("")
-  const [hbls, setHbls] = useState("")
   const [remarks, setRemarks] = useState("")
+  const [selectedHBLIds, setSelectedHBLIds] = useState<Set<number>>(new Set())
+
+  const { data: hblsRes } = useQuery({
+    queryKey: ["hbl-hawbs"],
+    queryFn: fetchHBLHAWBs,
+  })
+
+  const hbls = hblsRes?.data ?? []
+
+  const toggleHblRow = (id: number) => {
+    setSelectedHBLIds((prev) =>
+      prev.has(id)
+        ? new Set([...prev].filter((r) => r !== id))
+        : new Set([...prev, id])
+    )
+  }
+
   return (
     <div className="mx-auto space-y-5">
+      <div className="flex justify-end gap-3">
+        <Button
+          variant={"outline"}
+          className="rounded-md"
+          onClick={() => router.push("/shipment")}
+        >
+          Cancel
+        </Button>
+        <Button className="rounded-md" onClick={() => router.push("/shipment")}>
+          Save
+        </Button>
+      </div>
       <div className="grid grid-cols-1 gap-5">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
@@ -124,17 +64,26 @@ export default function ShipmentForm() {
                 value={vesselName}
                 onChange={setVesselName}
               />
+            </div>
+          </div>
+        </div>
 
-              <FormSelect
-                label="HBLs"
-                value={hbls}
-                onValueChange={setHbls}
-                placeholder="Choose HBLs"
-                options={[
-                  { value: "jan", label: "January 2025" },
-                  { value: "feb", label: "February 2025" },
-                  { value: "mar", label: "March 2025" },
-                ]}
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              HBL / HAWB Information
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Manage HBL / HAWB details and associated shipments
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="overflow-x-auto rounded-md border border-neutral-700">
+              <HBLTable
+                hbls={(hbls ?? []) as any[]}
+                selectedIds={selectedHBLIds}
+                onToggle={toggleHblRow}
               />
             </div>
           </div>

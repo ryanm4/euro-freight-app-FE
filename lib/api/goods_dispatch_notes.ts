@@ -32,3 +32,9 @@ export async function createGoodsDispatchNote(data: any) {
   if (!res.ok) throw new Error("Failed to create goods dispatch note")
   return res.json()
 }
+
+export async function fetchGoodsDispatchNoteById(id: string) {
+  const res = await fetch(`/api/goods_dispatch_notes/${id}`)
+  if (!res.ok) throw new Error("Failed to fetch goods dispatch note by ID")
+  return res.json()
+}

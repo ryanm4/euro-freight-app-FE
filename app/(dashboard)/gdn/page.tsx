@@ -2,7 +2,7 @@
 
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
-import { fetchGRNs } from "@/lib/api/goods_receive_notes"
+import { fetchGDNs } from "@/lib/api/goods_dispatch_notes"
 import { GOODS_DELIVER_NOTE } from "@/modules/gdn/types"
 import { IconPlus } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
@@ -21,7 +21,7 @@ export default function GDNPage() {
     // error,
   } = useQuery({
     queryKey: ["gdns"],
-    queryFn: fetchGRNs,
+    queryFn: fetchGDNs,
   })
 
   const actions = {

@@ -1,118 +1,31 @@
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { useState } from "react"
-import { PortMultiSelect } from "./port-multi-select"
+import FormDateField from "@/components/shared/FormDateField"
+import FormField from "@/components/shared/FormField"
+import FormSelect from "@/components/shared/FormSelect"
+import FormTextarea from "@/components/shared/FormTextarea"
+import { Button } from "@/components/ui/button"
+import { createBillOfLading } from "@/lib/api/bill_of_lading"
+import { fetchClients } from "@/lib/api/clients"
+import { fetchGRNs } from "@/lib/api/goods_receive_notes"
+import { IconPlus, IconTrash } from "@tabler/icons-react"
+import { useQuery } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
+import { useMemo, useState } from "react"
+import GRNTable, { GRN } from "./GRNTable"
 
-export interface Port {
+interface Port {
+  id: number
   value: string
-  label: string
-  country?: string
-  code?: string
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-function FormField({
-  label,
-  id,
-  placeholder,
-  value,
-  onChange,
-  className = "",
-}: {
-  label: string
-  id: string
-  placeholder: string
-  value: string
-  onChange: (v: string) => void
-  className?: string
-}) {
-  return (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
-      <Label htmlFor={id} className="text-xs font-medium text-foreground">
-        {label}
-      </Label>
-      <Input
-        id={id}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-      />
-    </div>
-  )
-}
-
-function FormSelect({
-  label,
-  value,
-  onValueChange,
-  placeholder,
-  options,
-}: {
-  label: string
-  value: string
-  onValueChange: (v: string) => void
-  placeholder: string
-  options: { value: string; label: string }[]
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label className="text-xs font-medium text-foreground">{label}</Label>
-      <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-          {options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  )
-}
-
-function FormTextarea({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-}) {
-  return (
-    <div className="flex flex-1 flex-col gap-1.5">
-      <Label className="text-xs font-medium text-foreground">{label}</Label>
-      <Textarea
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"
-      />
-    </div>
-  )
 }
 
 export default function HBLHABWForm() {
+  const router = useRouter()
+  const [isSaving, setIsSaving] = useState(false)
+
   const [type, setType] = useState("")
   const [date, setDate] = useState("")
   const [client, setClient] = useState("")
   const [manufacturer, setManufacturer] = useState("")
   const [mblMawbNo, setMblMawbNo] = useState("")
-  const [grn, setGrn] = useState("")
   const [vesselName, setVesselName] = useState("")
   const [estimatedTimeOfDelivery, setEstimatedTimeOfDelivery] = useState("")
   const [voyageNo, setVoyageNo] = useState("")
@@ -128,19 +41,140 @@ export default function HBLHABWForm() {
   const [containerSealNo, setContainerSealNo] = useState("")
   const [onboardedDate, setOnboardedDate] = useState("")
   const [remarks, setRemarks] = useState("")
-  const [arrivalPorts, setArrivalPorts] = useState<Port[]>([])
+  // const [arrivalPorts, setArrivalPorts] = useState<Port[]>([])
 
-  const availablePorts: Port[] = [
-    { value: "cmb", label: "Colombo", code: "CMB", country: "Sri Lanka" },
-    { value: "sin", label: "Singapore", code: "SIN", country: "Singapore" },
-    { value: "dxb", label: "Dubai", code: "DXB", country: "UAE" },
-    { value: "sha", label: "Shanghai", code: "SHA", country: "China" },
-    { value: "klang", label: "Port Klang", code: "PKG", country: "Malaysia" },
-    { value: "jfk", label: "New York JFK", code: "JFK", country: "USA" },
+  const [selectedGrnIds, setSelectedGrnIds] = useState<Set<number>>(new Set())
+
+  const [ports, setPorts] = useState<Port[]>([{ id: 1, value: "" }])
+
+  const {
+    data,
+    isLoading,
+    // error,
+  } = useQuery({
+    queryKey: ["clients"],
+    queryFn: fetchClients,
+  })
+
+  const {
+    data: grnData,
+    // isLoading,
+    // error,
+  } = useQuery({
+    queryKey: ["grns"],
+    queryFn: fetchGRNs,
+  })
+  // data={(data?.data ?? []) as GOODS_RECEIVE_NOTE[]}
+
+  const supplierOptions = useMemo(() => {
+    return data?.data?.filter((client: any) => client.type === "supplier") || []
+  }, [data])
+
+  const manufacturerOptions = useMemo(() => {
+    return (
+      data?.data?.filter((client: any) => client.type === "manufacturer") || []
+    )
+  }, [data])
+
+  const toggleGrn = (id: number) => {
+    setSelectedGrnIds((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const availableGrns: any[] = [
+    {
+      id: 1,
+      client_id: "ACME Apparel (Pvt) Ltd",
+      manufacture_id: "Global Freight Services",
+      forwarder_id: "Anupa and Sons",
+      date: "2026-06-17T05:00:00.000Z",
+      quantity: 2000,
+      status: "Pending",
+      bill_id: null,
+      comments: null,
+      created_by: "Ryan",
+      created_on: "2026-06-24T17:38:55.000Z",
+      updated_by: null,
+      updated_on: null,
+      packing_lists: [
+        {
+          id: 1,
+          client_id: 1,
+          date: "2026-06-03T05:00:00.000Z",
+          gdn_id: null,
+          grn_id: 1,
+          quantity: 2000,
+          created_by: "ryan",
+          created_on: "2026-06-24T17:38:37.000Z",
+          updated_by: "Ryan",
+          updated_on: "2026-06-24T17:38:55.000Z",
+        },
+      ],
+    },
   ]
+
+  const addPort = () => {
+    setPorts((prev) => [...prev, { id: Date.now(), value: "" }])
+  }
+
+  const removePort = (id: number) => {
+    setPorts((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  const updatePort = (id: number, value: string) => {
+    setPorts((prev) => prev.map((p) => (p.id === id ? { ...p, value } : p)))
+  }
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      await createBillOfLading({
+        client,
+        manufacturer,
+        date,
+        type,
+        vesselName,
+        voyageNo,
+        estimatedTimeOfDelivery,
+        estimatedTimeOfArrival,
+        arrivalPort,
+        inlandLocation,
+        mblMawbNo,
+        noOfPieces,
+        grossWeight,
+        chargeableWeight,
+        cmb,
+        containerSealNo,
+        onboardedDate,
+        selectedGrnIds,
+        ports,
+      })
+      router.push("/hbl-hawb")
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   return (
     <div className="mx-auto space-y-5">
+      <div className="flex justify-end gap-3">
+        <Button
+          variant="outline"
+          className="rounded-md"
+          onClick={() => router.push("/hbl-hawb")}
+          disabled={isSaving}
+        >
+          Cancel
+        </Button>
+        <Button className="rounded-md" disabled={isSaving} onClick={handleSave}>
+          {isSaving ? "Saving…" : "Save"}
+        </Button>
+      </div>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
@@ -160,22 +194,16 @@ export default function HBLHABWForm() {
                 onValueChange={setType}
                 placeholder="Choose Type"
                 options={[
-                  { value: "jan", label: "January 2025" },
-                  { value: "feb", label: "February 2025" },
-                  { value: "mar", label: "March 2025" },
+                  { value: "SEA", label: "Sea" },
+                  { value: "AIR", label: "Air" },
                 ]}
               />
 
-              <FormSelect
+              <FormDateField
                 label="Date"
+                id={`date`}
                 value={date}
-                onValueChange={setDate}
-                placeholder="Date"
-                options={[
-                  { value: "jan", label: "January 2025" },
-                  { value: "feb", label: "February 2025" },
-                  { value: "mar", label: "March 2025" },
-                ]}
+                onChange={setDate}
               />
             </div>
           </div>
@@ -198,12 +226,10 @@ export default function HBLHABWForm() {
                 value={client}
                 onValueChange={setClient}
                 placeholder="Choose Client"
-                options={[
-                  { value: "c1", label: "Client 1" },
-                  { value: "c2", label: "Client 2" },
-                  { value: "c3", label: "Client 3" },
-                  { value: "c4", label: "Client 4" },
-                ]}
+                options={supplierOptions.map((s: any) => ({
+                  value: s.id,
+                  label: s.name,
+                }))}
               />
 
               <FormSelect
@@ -211,12 +237,10 @@ export default function HBLHABWForm() {
                 value={manufacturer}
                 onValueChange={setManufacturer}
                 placeholder="Choose Manufacturer"
-                options={[
-                  { value: "m1", label: "Manufacturer 1" },
-                  { value: "m2", label: "Manufacturer 2" },
-                  { value: "m3", label: "Manufacturer 3" },
-                  { value: "m4", label: "Manufacturer 4" },
-                ]}
+                options={manufacturerOptions.map((m: any) => ({
+                  value: m.id,
+                  label: m.name,
+                }))}
               />
 
               <FormField
@@ -226,18 +250,26 @@ export default function HBLHABWForm() {
                 value={mblMawbNo}
                 onChange={setMblMawbNo}
               />
+            </div>
+          </div>
+        </div>
+      </div>
 
-              <FormSelect
-                label="GRN"
-                value={grn}
-                onValueChange={setGrn}
-                placeholder="Choose GRN"
-                options={[
-                  { value: "g1", label: "GRN 1" },
-                  { value: "g2", label: "GRN 2" },
-                  { value: "g3", label: "GRN 3" },
-                  { value: "g4", label: "GRN 4" },
-                ]}
+      <div className="grid grid-cols-1 gap-5">
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-zinc-100">GRNs</h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              List of available Goods Received Notes
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <GRNTable
+                grns={(grnData?.data ?? []) as GRN[]}
+                selectedIds={selectedGrnIds}
+                onToggle={toggleGrn}
               />
             </div>
           </div>
@@ -273,52 +305,32 @@ export default function HBLHABWForm() {
                 onChange={setVoyageNo}
               />
 
-              <FormSelect
+              <FormDateField
                 label="Estimated Time of Delivery"
+                id={`estimated-time-of-delivery`}
                 value={estimatedTimeOfDelivery}
-                onValueChange={setEstimatedTimeOfDelivery}
-                placeholder="Choose Estimated Time of Delivery"
-                options={[
-                  { value: "p1", label: "List 1" },
-                  { value: "p2", label: "List 2" },
-                  { value: "p3", label: "List 3" },
-                ]}
+                onChange={setEstimatedTimeOfDelivery}
               />
 
-              <FormSelect
+              <FormDateField
                 label="Estimated Time of Arrival"
+                id={`estimated-time-of-arrival`}
                 value={estimatedTimeOfArrival}
-                onValueChange={setEstimatedTimeOfArrival}
-                placeholder="Choose Estimated Time of Arrival"
-                options={[
-                  { value: "p1", label: "List 1" },
-                  { value: "p2", label: "List 2" },
-                  { value: "p3", label: "List 3" },
-                ]}
+                onChange={setEstimatedTimeOfArrival}
               />
 
-              <FormSelect
+              <FormDateField
                 label="Actual Time of Delivery"
+                id={`actual-time-of-delivery`}
                 value={actualTimeOfDelivery}
-                onValueChange={setActualTimeOfDelivery}
-                placeholder="Choose Actual Time of Delivery"
-                options={[
-                  { value: "p1", label: "List 1" },
-                  { value: "p2", label: "List 2" },
-                  { value: "p3", label: "List 3" },
-                ]}
+                onChange={setActualTimeOfDelivery}
               />
 
-              <FormSelect
+              <FormDateField
                 label="Actual Time of Arrival"
+                id={`actual-time-of-arrival`}
                 value={actualTimeOfArrival}
-                onValueChange={setActualTimeOfArrival}
-                placeholder="Choose Actual Time of Arrival"
-                options={[
-                  { value: "p1", label: "List 1" },
-                  { value: "p2", label: "List 2" },
-                  { value: "p3", label: "List 3" },
-                ]}
+                onChange={setActualTimeOfArrival}
               />
             </div>
           </div>
@@ -336,23 +348,20 @@ export default function HBLHABWForm() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <PortMultiSelect
+              <FormField
                 label="Arrival Port"
-                selected={arrivalPorts}
-                onChange={setArrivalPorts}
-                ports={availablePorts}
+                id="arrival-port"
+                placeholder="Enter Arrival Port"
+                value={arrivalPort}
+                onChange={setArrivalPort}
               />
 
-              <FormSelect
+              <FormField
                 label="Inland Location"
+                id="inland-location"
+                placeholder="Enter Inland Location"
                 value={inlandLocation}
-                onValueChange={setInlandLocation}
-                placeholder="Choose Inland Location"
-                options={[
-                  { value: "p1", label: "List 1" },
-                  { value: "p2", label: "List 2" },
-                  { value: "p3", label: "List 3" },
-                ]}
+                onChange={setInlandLocation}
               />
 
               <FormField
@@ -395,23 +404,18 @@ export default function HBLHABWForm() {
                 onChange={setContainerSealNo}
               />
 
-              <FormSelect
+              <FormDateField
                 label="Onboarded date"
+                id={`onboarded-date`}
                 value={onboardedDate}
-                onValueChange={setOnboardedDate}
-                placeholder="Choose Onboarded date"
-                options={[
-                  { value: "p1", label: "List 1" },
-                  { value: "p2", label: "List 2" },
-                  { value: "p3", label: "List 3" },
-                ]}
+                onChange={setOnboardedDate}
               />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-1">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
             <h2 className="text-sm font-semibold text-zinc-100">
@@ -430,6 +434,50 @@ export default function HBLHABWForm() {
                 onChange={setRemarks}
                 placeholder="Type your message here."
               />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4 flex items-start justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-zinc-100">
+                Additional Port Information
+              </h2>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Packing lists and carton quantities.
+              </p>
+            </div>
+            <button
+              onClick={addPort}
+              className="flex items-center gap-1.5 rounded-md border border-neutral-600 bg-neutral-800 px-3 py-1.5 text-xs text-zinc-100 transition-colors hover:bg-neutral-700"
+            >
+              <IconPlus size={13} />
+              Add Port
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-3">
+              {ports.map((port) => (
+                <div key={port.id} className="flex items-end gap-2">
+                  <FormField
+                    label="Arrival Port"
+                    id={`port-${port.id}`}
+                    placeholder="Enter port name"
+                    value={port.value}
+                    onChange={(v) => updatePort(port.id, v)}
+                    className="flex-1"
+                  />
+                  <button
+                    onClick={() => removePort(port.id)}
+                    disabled={ports.length === 1}
+                    className="mb-0.5 flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 p-2 text-zinc-400 transition-colors hover:bg-neutral-700 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <IconTrash size={15} />
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         </div>

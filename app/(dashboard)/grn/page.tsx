@@ -21,7 +21,7 @@ export default function GRNPage() {
     // error,
   } = useQuery({
     queryKey: ["grns"],
-    queryFn: fetchGRNs,
+    queryFn: fetchGRNs, 
   })
 
   const actions = {

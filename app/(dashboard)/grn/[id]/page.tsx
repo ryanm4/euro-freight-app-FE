@@ -74,7 +74,6 @@ const createGRNObject = (grn: any): GrnData => {
 
 export default function GrnByID() {
   const { id } = useParams<{ id: string }>()
-  // const { id } = await params
   const {
     data: res,
     isLoading,

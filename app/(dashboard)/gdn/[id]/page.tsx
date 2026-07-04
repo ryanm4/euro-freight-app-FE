@@ -1,10 +1,7 @@
-export default async function GdnByID({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await params
-  console.log("GDN By ID Page Params:", id)
+import { useParams } from "next/navigation"
+
+export default async function GdnByID() {
+  const { id } = useParams<{ id: string }>()
   return (
     <div>
       <h1>GDN By ID</h1>

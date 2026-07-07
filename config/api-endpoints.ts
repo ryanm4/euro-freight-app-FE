@@ -35,5 +35,10 @@ export const API_ENDPOINTS = {
     PURCHASE_ORDER: {
       LIST: `${NEXTJS_API_BASE}/purchase-orders`,
     },
+    SHIPMENT: {
+      LIST: `${NEXTJS_API_BASE}/shipments`,
+      CREATE: `${NEXTJS_API_BASE}/shipments`,
+      GET: (id: number | string) => `${NEXTJS_API_BASE}/shipments/${id}`,
+    },
   },
 } as const

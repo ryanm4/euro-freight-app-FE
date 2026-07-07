@@ -248,9 +248,9 @@ export default function HBLHAWBByID() {
               />
 
               <FormField
-                label="CMB"
-                id="cmb"
-                placeholder="Enter CMB"
+                label="CBM"
+                id="cbm"
+                placeholder="Enter CBM"
                 value={data.cbm}
                 readOnly={true}
               />

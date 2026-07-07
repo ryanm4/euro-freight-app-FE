@@ -37,7 +37,7 @@ export default function HBLHABWForm() {
   const [noOfPieces, setNoOfPieces] = useState("")
   const [grossWeight, setGrossWeight] = useState("")
   const [chargeableWeight, setChargeableWeight] = useState("")
-  const [cmb, setCmb] = useState("")
+  const [cbm, setCbm] = useState("")
   const [containerSealNo, setContainerSealNo] = useState("")
   const [onboardedDate, setOnboardedDate] = useState("")
   const [remarks, setRemarks] = useState("")
@@ -114,7 +114,7 @@ export default function HBLHABWForm() {
         noOfPieces,
         grossWeight,
         chargeableWeight,
-        cmb,
+        cbm,
         containerSealNo,
         onboardedDate,
         selectedGrnIds,
@@ -357,11 +357,11 @@ export default function HBLHABWForm() {
               />
 
               <FormField
-                label="CMB"
-                id="cmb"
-                placeholder="Enter CMB"
-                value={cmb}
-                onChange={setCmb}
+                label="CBM"
+                id="cbm"
+                placeholder="Enter CBM"
+                value={cbm}
+                onChange={setCbm}
               />
 
               <FormField

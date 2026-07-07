@@ -27,7 +27,7 @@ export default function ShipmentPage() {
   const actions = {
     onEdit: (id: string) => router.push(`/shipment/edit/${id}`),
     onDelete: (id: string) => console.log("Delete", id),
-    onView: (id: string) => router.push(`/shipment/view/${id}`),
+    onView: (id: string) => router.push(`/shipment/${id}`),
   }
 
   const columns = shipmentColumns(actions)

@@ -48,7 +48,7 @@ export interface CreateBillOfLadingInput {
   noOfPieces: string
   grossWeight: string
   chargeableWeight: string
-  cmb: string
+  cbm: string
   containerSealNo: string
   onboardedDate: string
   selectedGrnIds: Set<number>
@@ -77,7 +77,7 @@ function buildBillOfLadingPayload(
     no_pieces: Number(input.noOfPieces),
     gross_weight: input.grossWeight,
     chargeable_weight: input.chargeableWeight,
-    cbm: input.cmb,
+    cbm: input.cbm,
     container_seal_no: input.containerSealNo,
     onboard_date: formatDate(input.onboardedDate),
     created_by: "admin",

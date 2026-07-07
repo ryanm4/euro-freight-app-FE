@@ -14,13 +14,27 @@ export interface HBL {
   manufacture_id: string
   date: string
   type: string
-  house_bl_no: string | null
-  mbl_mawb_no: string | null
-  etd: string | null
-  eta: string | null
-  arrival_port: string | null
-  no_pieces: number
-  status: string
+  shipment_id?: number | null
+  planned_vessel_name?: string | null
+  voyage_no?: string | null
+  etd?: string | null
+  eta?: string | null
+  actual_etd?: string | null
+  actual_eta?: string | null
+  arrival_port?: string | null
+  inland_location?: string | null
+  mbl_mawb_no?: string | null
+  status?: string | null
+  no_pieces?: number | null
+  gross_weight?: string | null
+  chargeable_weight?: string | null
+  cbm?: string | null
+  container_seal_no?: string | null
+  onboard_date?: string | null
+  created_by?: string | null
+  created_on?: string | null
+  updated_by?: string | null
+  updated_on?: string | null
 }
 
 function formatDate(value?: string | null) {
@@ -38,11 +52,13 @@ export default function HBLTable({
   hbls,
   selectedIds,
   onToggle,
+  onRowClick,
   readOnly = false,
 }: {
   hbls: HBL[]
   selectedIds?: Set<number>
   onToggle?: (id: number) => void
+  onRowClick?: (hbl: HBL) => void
   readOnly?: boolean
 }) {
   const headers = [
@@ -78,10 +94,13 @@ export default function HBLTable({
           hbls.map((hbl) => (
             <TableRow
               key={hbl.id}
-              className="border-neutral-800 hover:bg-neutral-800/40"
+              className={`border-neutral-800 hover:bg-neutral-800/40 ${
+                onRowClick ? "cursor-pointer" : ""
+              }`}
+              onClick={() => onRowClick?.(hbl)}
             >
               <TableCell className="text-sm text-zinc-100">
-                {hbl.house_bl_no ?? `HBL-${hbl.id}`}
+                {`HBL-${hbl.id}`}
               </TableCell>
               <TableCell className="text-sm text-zinc-300">
                 {hbl.client_id}

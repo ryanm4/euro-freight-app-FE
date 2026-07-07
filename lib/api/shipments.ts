@@ -4,6 +4,12 @@ export async function fetchShipments() {
   return res.json()
 }
 
+export async function fetchShipmentById(id: string) {
+  const res = await fetch(`/api/shipments/${id}`)
+  if (!res.ok) throw new Error("Failed to fetch shipment by ID")
+  return res.json()
+}
+
 export interface CreateShipmentPayload {
   vessel_name: string
   status: string

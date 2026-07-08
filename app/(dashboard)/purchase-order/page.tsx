@@ -28,7 +28,7 @@ export default function PurchaseOrderPage() {
     () => ({
       onEdit: (id: string) => router.push(`/purchase-order/edit/${id}`),
       onDelete: (id: string) => console.log("Delete", id),
-      onView: (id: string) => router.push(`/purchase-order/view/${id}`),
+      onView: (id: string) => router.push(`/purchase-order/${id}`),
       onStatusChange: (id: string, status: string) =>
         console.log("Status change", id, status),
     }),

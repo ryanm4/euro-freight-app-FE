@@ -2,45 +2,38 @@
 
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
+import { fetchPackingLists } from "@/lib/api/packing_lists"
 import { PACKING_LIST } from "@/modules/packing-list/types"
 import { IconPlus } from "@tabler/icons-react"
+import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 import { packingListColumns } from "./_components/packing-list-columns"
 import { DataTable } from "./_components/packing-list-table"
-import { packingListApi } from "@/modules/packing-list/api"
 
 export default function PackingListPage() {
   const router = useRouter()
   const [searchValue, setSearchValue] = useState("")
-  const [data, setData] = useState<PACKING_LIST[]>([])
-  const [isLoading, setIsLoading] = useState(false)
 
-  const actions = {
-    onEdit: (id: string) => router.push(`/packing-list/edit/${id}`),
-    onDelete: (id: string) => console.log("Delete", id),
-    onView: (id: string) => router.push(`/packing-list/view/${id}`),
-  }
+  const actions = useMemo(
+    () => ({
+      onEdit: (id: string) => router.push(`/packing-list/edit/${id}`),
+      onDelete: (id: string) => console.log("Delete", id),
+      onView: (id: string) => router.push(`/packing-list/view/${id}`),
+    }),
+    [router]
+  )
 
-  useEffect(() => {
-    fetchData()
-  }, [])
+  const {
+    data,
+    isLoading,
+    // error,
+  } = useQuery({
+    queryKey: ["packing-lists"],
+    queryFn: fetchPackingLists,
+  })
 
-  const fetchData = async () => {
-    try {
-      setIsLoading(true)
-      const response = await packingListApi.getAll()
-
-      if (response.status === 200) {
-        setData(response.data)
-      }
-    } catch (error) {
-      console.error("Failed to fetch inventory")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-  const columns = packingListColumns(actions)
+  const columns = useMemo(() => packingListColumns(actions), [actions])
 
   return (
     <div className="mt-3 flex flex-1 flex-col gap-4 p-6 pt-0">
@@ -64,7 +57,12 @@ export default function PackingListPage() {
         </Button>
       </div>
       <div className="mt-4">
-        <DataTable columns={columns} data={data} searchValue={searchValue} />
+        <DataTable
+          columns={columns}
+          data={(data?.data ?? []) as PACKING_LIST[]}
+          searchValue={searchValue}
+          isLoading={isLoading}
+        />
       </div>
     </div>
   )

@@ -17,6 +17,7 @@ import {
 } from "@tabler/icons-react"
 import { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
+import { useRouter } from "next/navigation"
 
 interface GoodsDeliverNoteTableActions {
   onEdit: (id: string) => void
@@ -110,7 +111,23 @@ export const goodsDeliverNoteColumns = (
     {
       accessorKey: "gdn_grn_ref",
       header: "GDN/GRN Ref",
-      cell: ({ row }) => <div>{row.original.gdn_grn_ref ?? "N/A"}</div>,
+      cell: ({ row }) => {
+        const router = useRouter()
+        const ref = row.original.gdn_grn_ref ?? "N/A"
+
+        return (
+          <button
+            type="button"
+            className="text-primary underline-offset-4 hover:underline"
+            onClick={(e) => {
+              e.stopPropagation() // prevents any row-level click handler from also firing
+              router.push(`/packing-list/${ref}`)
+            }}
+          >
+            {ref}
+          </button>
+        )
+      },
     },
     {
       accessorKey: "vehicle_no",

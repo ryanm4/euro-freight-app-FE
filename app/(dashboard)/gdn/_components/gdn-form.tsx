@@ -43,7 +43,7 @@ export default function GoodsDispatchNoteForm() {
   const [manufacturer, setManufacturer] = useState("")
   const [forwarder, setForwarder] = useState("")
   const [cartons, setCartons] = useState("")
-  const [actualCartons, setActualCartons] = useState("")
+  // const [actualCartons, setActualCartons] = useState("")
   const [grossWeight, setGrossWeight] = useState("")
   const [actualGrossWeight, setActualGrossWeight] = useState("")
   const [grossVolume, setGrossVolume] = useState("")
@@ -120,7 +120,7 @@ export default function GoodsDispatchNoteForm() {
         date,
         selectedRows,
         cartons,
-        actualCartons,
+        // actualCartons,
         grossWeight,
         actualGrossWeight,
         grossVolume,
@@ -265,13 +265,13 @@ export default function GoodsDispatchNoteForm() {
                 onChange={setCartons}
               />
 
-              <FormField
+              {/* <FormField
                 label="Actual Cartons"
                 id="actual-cartons"
                 placeholder="Enter Actual Cartons"
                 value={actualCartons}
                 onChange={setActualCartons}
-              />
+              /> */}
             </div>
           </div>
         </div>

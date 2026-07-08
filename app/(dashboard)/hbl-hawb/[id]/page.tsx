@@ -28,8 +28,6 @@ export default function HBLHAWBByID() {
 
   const data = res.data
 
-  console.log("data", data)
-
   return (
     <div className="mx-6 space-y-5">
       <div className="mt-3">

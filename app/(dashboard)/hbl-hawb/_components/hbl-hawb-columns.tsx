@@ -18,6 +18,7 @@ import {
 } from "@tabler/icons-react"
 import { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
+import { useRouter } from "next/navigation"
 
 interface HBLHAWBTableActions {
   onEdit: (id: string) => void
@@ -86,7 +87,24 @@ export const hblHawbColumns = (
     {
       accessorKey: "shipment_id",
       header: "Shipment ID",
-      cell: ({ row }) => <div>{row.original.shipment_id ?? "N/A"}</div>,
+      // cell: ({ row }) => <div>{row.original.shipment_id ?? "N/A"}</div>,
+      cell: ({ row }) => {
+        const router = useRouter()
+        const ref = row.original.shipment_id ?? "N/A"
+
+        return (
+          <button
+            type="button"
+            className="text-primary underline-offset-4 hover:underline"
+            onClick={(e) => {
+              e.stopPropagation() // prevents any row-level click handler from also firing
+              router.push(`/grn/${ref}`)
+            }}
+          >
+            {ref}
+          </button>
+        )
+      },
     },
     {
       accessorKey: "planned_vessel_name",

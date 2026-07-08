@@ -29,7 +29,7 @@ import { useId, useMemo, useState } from "react"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface CargoItem {
+export interface CargoItem {
   id: string
   sku: string
   itemName: string
@@ -48,7 +48,7 @@ interface CargoItem {
   open: boolean
 }
 
-function createCargoItem(id: string): CargoItem {
+export function createCargoItem(id: string): CargoItem {
   return {
     id,
     sku: "",

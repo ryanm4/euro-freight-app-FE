@@ -1,7 +1,6 @@
 "use client"
 
 import FormField from "@/components/shared/FormField"
-import FormTextarea from "@/components/shared/FormTextarea"
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
 import { fetchShipmentById } from "@/lib/api/shipments"
@@ -37,7 +36,8 @@ export default function ShipmentByID() {
     <div className="mx-6 space-y-5">
       <div className="mt-3">
         <PageTitleWithBreadcrumb
-          title={`Shipment-${id}`}
+          // title={`Shipment-${id}`}
+          title={`Shipment`}
           breadcrumbs={[
             { title: "Dashboard", href: "/dashboard" },
             { title: "Shipment", href: "/shipment" },
@@ -91,7 +91,8 @@ export default function ShipmentByID() {
               HBL / HAWB Information
             </h2>
             <p className="mt-0.5 text-xs text-zinc-500">
-              List of associated House Bill of Lading / House Air Waybill records
+              List of associated House Bill of Lading / House Air Waybill
+              records
             </p>
           </div>
 

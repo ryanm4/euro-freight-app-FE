@@ -88,7 +88,8 @@ export default function GrnByID() {
     <div className="mx-6 space-y-5">
       <div className="mt-3">
         <PageTitleWithBreadcrumb
-          title={`GRN-${id}`}
+          // title={`GRN-${id}`}
+          title={`GRN`}
           breadcrumbs={[
             { title: "Dashboard", href: "/dashboard" },
             { title: "GRN", href: "/grn" },

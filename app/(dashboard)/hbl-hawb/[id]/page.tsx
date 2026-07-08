@@ -28,13 +28,12 @@ export default function HBLHAWBByID() {
 
   const data = res.data
 
-  console.log("data", data)
-
   return (
     <div className="mx-6 space-y-5">
       <div className="mt-3">
         <PageTitleWithBreadcrumb
-          title={`HBL/HAWB-${id}`}
+          // title={`HBL/HAWB-${id}`}
+          title={`HBL/HAWB`}
           breadcrumbs={[
             { title: "Dashboard", href: "/dashboard" },
             { title: "HBL / HAWB", href: "/hbl-hawb" },

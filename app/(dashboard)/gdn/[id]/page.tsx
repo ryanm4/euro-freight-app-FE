@@ -26,7 +26,7 @@ const createGDNObject = (gdn: any) => {
     manufacturer: gdn.manufacture_id ?? "—",
     forwarder: gdn.forwarder_id ?? "—",
     cartons: gdn.cartoons ?? "—",
-    actualCartons: gdn.actual_cartoons ?? "—",
+    // actualCartons: gdn.actual_cartoons ?? "—",
     grossWeight: gdn.gross_weight ?? "—",
     actualGrossWeight: gdn.actual_gross_weight ?? "—",
     grossVolume: gdn.gross_volume ?? "—",
@@ -72,7 +72,8 @@ export default function GdnByID() {
     <div className="mx-6 space-y-5">
       <div className="mt-3">
         <PageTitleWithBreadcrumb
-          title={`GDN-${id}`}
+          // title={`GDN-${id}`}
+          title={`GDN`}
           breadcrumbs={[
             { title: "Dashboard", href: "/dashboard" },
             { title: "GDN", href: "/gdn" },
@@ -189,13 +190,13 @@ export default function GdnByID() {
                 readOnly={true}
               />
 
-              <FormField
+              {/* <FormField
                 label="Actual Cartons"
                 id="actual-cartons"
                 placeholder="Enter Actual Cartons"
                 value={gdn.actualCartons}
                 readOnly={true}
-              />
+              /> */}
             </div>
           </div>
         </div>

@@ -64,7 +64,7 @@ export default function GoodsReceiveNoteForm() {
   console.log("data", data)
 
   const supplierOptions = useMemo(() => {
-    return data?.data?.filter((client: any) => client.type === "supplier") || []
+    return data?.data?.filter((client: any) => client.type === "client") || []
   }, [data])
 
   const manufacturerOptions = useMemo(() => {

@@ -67,7 +67,7 @@ export default function HBLHABWForm() {
   // data={(data?.data ?? []) as GOODS_RECEIVE_NOTE[]}
 
   const supplierOptions = useMemo(() => {
-    return data?.data?.filter((client: any) => client.type === "supplier") || []
+    return data?.data?.filter((client: any) => client.type === "client") || []
   }, [data])
 
   const manufacturerOptions = useMemo(() => {

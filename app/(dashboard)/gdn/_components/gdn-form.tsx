@@ -63,7 +63,7 @@ export default function GoodsDispatchNoteForm() {
   })
 
   const supplierOptions = useMemo(() => {
-    return data?.data?.filter((c: any) => c.type === "supplier") || []
+    return data?.data?.filter((c: any) => c.type === "client") || []
   }, [data])
 
   const manufacturerOptions = useMemo(() => {

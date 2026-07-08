@@ -45,3 +45,9 @@ export async function createPurchaseOrder(data: any) {
   if (!res.ok) throw new Error("Failed to create purchase order")
   return res.json()
 }
+
+export async function fetchPurchaseOrderById(id: string) {
+  const res = await fetch(`/api/purchase-orders/${id}`)
+  if (!res.ok) throw new Error("Failed to fetch purchase order by ID")
+  return res.json()
+}

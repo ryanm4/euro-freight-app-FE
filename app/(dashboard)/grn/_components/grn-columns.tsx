@@ -17,6 +17,7 @@ import {
 } from "@tabler/icons-react"
 import { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
+import { useRouter } from "next/navigation"
 
 interface GoodsReceiveNoteTableActions {
   onEdit: (id: string) => void
@@ -93,7 +94,24 @@ export const goodsReceiveNoteColumns = (
     {
       accessorKey: "bill_id",
       header: "Bill ID",
-      cell: ({ row }) => <div>{row.original.bill_id ?? "N/A"}</div>,
+      // cell: ({ row }) => <div>{row.original.bill_id ?? "N/A"}</div>,
+      cell: ({ row }) => {
+        const router = useRouter()
+        const ref = row.original.bill_id ?? "N/A"
+
+        return (
+          <button
+            type="button"
+            className="text-primary underline-offset-4 hover:underline"
+            onClick={(e) => {
+              e.stopPropagation() // prevents any row-level click handler from also firing
+              router.push(`/gdn/${ref}`)
+            }}
+          >
+            {ref}
+          </button>
+        )
+      },
     },
     {
       accessorKey: "status",

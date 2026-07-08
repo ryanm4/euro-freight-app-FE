@@ -72,7 +72,8 @@ export default function GdnByID() {
     <div className="mx-6 space-y-5">
       <div className="mt-3">
         <PageTitleWithBreadcrumb
-          title={`GDN-${id}`}
+          // title={`GDN-${id}`}
+          title={`GDN`}
           breadcrumbs={[
             { title: "Dashboard", href: "/dashboard" },
             { title: "GDN", href: "/gdn" },

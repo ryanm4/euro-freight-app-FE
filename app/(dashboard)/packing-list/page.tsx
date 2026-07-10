@@ -19,7 +19,7 @@ export default function PackingListPage() {
     () => ({
       onEdit: (id: string) => router.push(`/packing-list/edit/${id}`),
       onDelete: (id: string) => console.log("Delete", id),
-      onView: (id: string) => router.push(`/packing-list/view/${id}`),
+      onView: (id: string) => router.push(`/packing-list/${id}`),
     }),
     [router]
   )

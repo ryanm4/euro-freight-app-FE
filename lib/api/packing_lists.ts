@@ -3,3 +3,9 @@ export async function fetchPackingLists() {
   if (!res.ok) throw new Error("Failed to fetch packing lists")
   return res.json()
 }
+
+export async function fetchPackingListById(id: string) {
+  const res = await fetch(`/api/packing_lists/${id}`)
+  if (!res.ok) throw new Error("Failed to fetch packing list by ID")
+  return res.json()
+}

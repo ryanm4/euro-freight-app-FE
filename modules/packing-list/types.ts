@@ -1,5 +1,5 @@
 export interface PACKING_LIST {
-  id: number
+  packing_list_id: number
   client_name?: string
   date?: string | null
   gdn_id?: number | null

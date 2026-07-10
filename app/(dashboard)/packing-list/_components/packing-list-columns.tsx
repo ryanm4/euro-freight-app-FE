@@ -116,8 +116,8 @@ export const packingListColumns = (
       id: "actions",
       enableHiding: false,
       cell: ({ row }) => {
-        const id = String(row.original.id)
-
+        const id = String(row.original.packing_list_id)
+        
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

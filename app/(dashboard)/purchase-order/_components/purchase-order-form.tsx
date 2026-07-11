@@ -3,26 +3,40 @@
 import FreightSplitSection, {
   FreightSplit,
 } from "@/components/custom/FreightSplitSection"
-import FormDateField from "@/components/shared/FormDateField"
-import FormField from "@/components/shared/FormField"
-import FormFileInput from "@/components/shared/FormFileInput"
-import FormSelect from "@/components/shared/FormSelect"
-import FormTextarea from "@/components/shared/FormTextarea"
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import { cn } from "@/lib/utils"
 import { fetchClients } from "@/lib/api/clients"
 import { createPurchaseOrder } from "@/lib/api/purchase-orders"
 import {
+  IconCalendarFilled,
   IconChevronDown,
   IconChevronUp,
   IconFileSpreadsheet,
   IconPlus,
   IconTrash,
 } from "@tabler/icons-react"
+import { format, isValid, parse } from "date-fns"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useId, useMemo, useState } from "react"
@@ -212,74 +226,120 @@ export default function PurchaseOrderForm() {
           <div className="space-y-4">
             {/* Row 1: PO Number + PO Quantity */}
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="PO Number"
-                id="po-number"
-                placeholder="Enter PO Number"
-                value={poNumber}
-                onChange={setPoNumber}
-                className="col-span-1"
-              />
-              <FormField
-                label="PO Quantity"
-                id="po-quantity"
-                placeholder="Enter PO Quantity"
-                value={poQuantity}
-                onChange={setPoQuantity}
-              />
+              <div className="flex flex-col gap-1.5 col-span-1">
+                <Label htmlFor="po-number" className="text-xs font-medium text-foreground">PO Number</Label>
+                <Input
+                  id="po-number"
+                  placeholder="Enter PO Number"
+                  value={poNumber}
+                  onChange={(e) => setPoNumber(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="po-quantity" className="text-xs font-medium text-foreground">PO Quantity</Label>
+                <Input
+                  id="po-quantity"
+                  placeholder="Enter PO Quantity"
+                  value={poQuantity}
+                  onChange={(e) => setPoQuantity(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
 
             {/* Row 2: Supplier + Freight Forwarder */}
             <div className="grid grid-cols-2 gap-4">
-              <FormSelect
-                label="Supplier"
-                value={supplier}
-                onValueChange={setSupplier}
-                placeholder="Select Supplier"
-                options={supplierOptions.map((s: any) => ({
-                  value: s.id,
-                  label: s.name,
-                }))}
-              />
-              <FormSelect
-                label="Freight Forwarder"
-                value={freightForwarder}
-                onValueChange={setFreightForwarder}
-                placeholder="Select Freight Forwarder"
-                options={freightForwarderOptions.map((f: any) => ({
-                  value: f.id,
-                  label: f.name,
-                }))}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">Supplier</Label>
+                <Select
+                  value={supplier}
+                  onValueChange={setSupplier}
+                >
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Select Supplier" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {supplierOptions.map((s: any) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">Freight Forwarder</Label>
+                <Select
+                  value={freightForwarder}
+                  onValueChange={setFreightForwarder}
+                >
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Select Freight Forwarder" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {freightForwarderOptions.map((f: any) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Row 3: Payment Mode + Shipping Mode */}
             <div className="grid grid-cols-2 gap-4">
-              <FormSelect
-                label="Payment Mode"
-                value={paymentMode}
-                onValueChange={setPaymentMode}
-                placeholder="Select Payment Mode"
-                options={PAYMENT_MODE_OPTIONS}
-              />
-              <FormSelect
-                label="Shipping Mode"
-                value={shippingMode}
-                onValueChange={setShippingMode}
-                placeholder="Select Shipping Mode"
-                options={SHIPPING_MODE_OPTIONS}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">Payment Mode</Label>
+                <Select
+                  value={paymentMode}
+                  onValueChange={setPaymentMode}
+                >
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Select Payment Mode" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {PAYMENT_MODE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">Shipping Mode</Label>
+                <Select
+                  value={shippingMode}
+                  onValueChange={setShippingMode}
+                >
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Select Shipping Mode" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {SHIPPING_MODE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Row 4: Final Destination */}
             <div className="grid grid-cols-1 gap-4">
-              <FormField
-                label="Final Destination"
-                id="final-destination"
-                placeholder="Enter Final Destination"
-                value={finalDestination}
-                onChange={setFinalDestination}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="final-destination" className="text-xs font-medium text-foreground">Final Destination</Label>
+                <Input
+                  id="final-destination"
+                  placeholder="Enter Final Destination"
+                  value={finalDestination}
+                  onChange={(e) => setFinalDestination(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -297,22 +357,92 @@ export default function PurchaseOrderForm() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormDateField
-                label="Ex Factory Date"
-                id={`ex-factory-date`}
-                value={exFactoryDate}
-                onChange={setExFactoryDate}
-              />
-              <FormFileInput label="PO Document" id="po-document" />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="ex-factory-date" className="text-xs font-medium text-foreground">Ex Factory Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="ex-factory-date"
+                      variant="outline"
+                      className={cn(
+                        "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                        !exFactoryDate && "text-zinc-500"
+                      )}
+                    >
+                     .{exFactoryDate ? (() => {
+                        const parseDate = (val: string): Date | undefined => {
+                          if (!val) return undefined
+                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
+                          if (isValid(d)) return d
+                          d = parse(val, "yyyy-MM-dd", new Date())
+                          if (isValid(d)) return d
+                          d = new Date(val)
+                          if (isValid(d)) return d
+                          return undefined
+                        }
+                        const selectedDate = parseDate(exFactoryDate)
+                        return selectedDate ? format(selectedDate, "PPP") : "Pick a date"
+                      })() : "Pick a date"}
+                      <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={(() => {
+                        const parseDate = (val: string): Date | undefined => {
+                          if (!val) return undefined
+                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
+                          if (isValid(d)) return d
+                          d = parse(val, "yyyy-MM-dd", new Date())
+                          if (isValid(d)) return d
+                          d = new Date(val)
+                          if (isValid(d)) return d
+                          return undefined
+                        }
+                        return parseDate(exFactoryDate)
+                      })()}
+                      onSelect={(date) => {
+                        if (date) {
+                          setExFactoryDate(format(date, "yyyy-MM-dd"))
+                        }
+                      }}
+                      captionLayout="dropdown"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">PO Document</Label>
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="po-document"
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-neutral-700 bg-[#0A0A0A] px-3 py-1.5 text-xs text-neutral-300 transition-colors hover:bg-neutral-700"
+                  >
+                    Choose File
+                  </label>
+                  <input
+                    id="po-document"
+                    type="file"
+                    className="sr-only"
+                  />
+                  <span className="truncate text-xs text-neutral-500">
+                    No file chosen
+                  </span>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4">
-              <FormTextarea
-                label="Instructions"
-                value={instructions}
-                onChange={setInstructions}
-                placeholder="Type your message here."
-              />
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">Instructions</Label>
+                <Textarea
+                  placeholder="Type your message here."
+                  value={instructions}
+                  onChange={(e) => setInstructions(e.target.value)}
+                  className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -403,126 +533,165 @@ export default function PurchaseOrderForm() {
                   <div className="space-y-4 border-t border-zinc-800 px-4 pt-4 pb-4">
                     {/* Row 1: SKU, Item Name, Color, Size */}
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                      <FormField
-                        label="SKU"
-                        id={`sku-${item.id}`}
-                        placeholder="Enter SKU"
-                        value={item.sku}
-                        onChange={(v) => updateItem(item.id, "sku", v)}
-                      />
-                      <FormField
-                        label="Item Name"
-                        id={`item-name-${item.id}`}
-                        placeholder="Enter Item Name"
-                        value={item.itemName}
-                        onChange={(v) => updateItem(item.id, "itemName", v)}
-                      />
-                      <FormField
-                        label="Color"
-                        id={`color-${item.id}`}
-                        placeholder="Enter Color"
-                        value={item.color}
-                        onChange={(v) => updateItem(item.id, "color", v)}
-                      />
-                      <FormField
-                        label="Size"
-                        id={`size-${item.id}`}
-                        placeholder="Enter Size"
-                        value={item.size}
-                        onChange={(v) => updateItem(item.id, "size", v)}
-                      />
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`sku-${item.id}`} className="text-xs font-medium text-foreground">SKU</Label>
+                        <Input
+                          id={`sku-${item.id}`}
+                          placeholder="Enter SKU"
+                          value={item.sku}
+                          onChange={(e) => updateItem(item.id, "sku", e.target.value)}
+                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`item-name-${item.id}`} className="text-xs font-medium text-foreground">Item Name</Label>
+                        <Input
+                          id={`item-name-${item.id}`}
+                          placeholder="Enter Item Name"
+                          value={item.itemName}
+                          onChange={(e) => updateItem(item.id, "itemName", e.target.value)}
+                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`color-${item.id}`} className="text-xs font-medium text-foreground">Color</Label>
+                        <Input
+                          id={`color-${item.id}`}
+                          placeholder="Enter Color"
+                          value={item.color}
+                          onChange={(e) => updateItem(item.id, "color", e.target.value)}
+                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`size-${item.id}`} className="text-xs font-medium text-foreground">Size</Label>
+                        <Input
+                          id={`size-${item.id}`}
+                          placeholder="Enter Size"
+                          value={item.size}
+                          onChange={(e) => updateItem(item.id, "size", e.target.value)}
+                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                        />
+                      </div>
                     </div>
 
                     {/* Row 2: Country of Origin, Unit Cost, Quantity, Dispatched Qty */}
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                      <FormField
-                        label="Country of Origin"
-                        id={`coo-${item.id}`}
-                        placeholder="Enter Country of Origin"
-                        value={item.countryOfOrigin}
-                        onChange={(v) =>
-                          updateItem(item.id, "countryOfOrigin", v)
-                        }
-                      />
-                      <FormField
-                        label="Unit Cost"
-                        id={`unit-cost-${item.id}`}
-                        placeholder="Enter Unit Cost"
-                        value={item.unitCost}
-                        onChange={(v) => updateItem(item.id, "unitCost", v)}
-                      />
-                      <FormField
-                        label="Quantity"
-                        id={`quantity-${item.id}`}
-                        placeholder="Enter Quantity"
-                        value={item.quantity}
-                        onChange={(v) => updateItem(item.id, "quantity", v)}
-                      />
-                      <FormField
-                        label="Dispatched Quantity"
-                        id={`dispatched-${item.id}`}
-                        placeholder="Enter Dispatched Quantity"
-                        value={item.dispatchedQuantity}
-                        onChange={(v) =>
-                          updateItem(item.id, "dispatchedQuantity", v)
-                        }
-                      />
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`coo-${item.id}`} className="text-xs font-medium text-foreground">Country of Origin</Label>
+                        <Input
+                          id={`coo-${item.id}`}
+                          placeholder="Enter Country of Origin"
+                          value={item.countryOfOrigin}
+                          onChange={(e) => updateItem(item.id, "countryOfOrigin", e.target.value)}
+                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`unit-cost-${item.id}`} className="text-xs font-medium text-foreground">Unit Cost</Label>
+                        <Input
+                          id={`unit-cost-${item.id}`}
+                          placeholder="Enter Unit Cost"
+                          value={item.unitCost}
+                          onChange={(e) => updateItem(item.id, "unitCost", e.target.value)}
+                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`quantity-${item.id}`} className="text-xs font-medium text-foreground">Quantity</Label>
+                        <Input
+                          id={`quantity-${item.id}`}
+                          placeholder="Enter Quantity"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(item.id, "quantity", e.target.value)}
+                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`dispatched-${item.id}`} className="text-xs font-medium text-foreground">Dispatched Quantity</Label>
+                        <Input
+                          id={`dispatched-${item.id}`}
+                          placeholder="Enter Dispatched Quantity"
+                          value={item.dispatchedQuantity}
+                          onChange={(e) => updateItem(item.id, "dispatchedQuantity", e.target.value)}
+                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                        />
+                      </div>
                     </div>
 
                     {/* Row 3: Cartons, Gross Weight, Net Weight, CTN Dimensions */}
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                      <FormField
-                        label="Cartons"
-                        id={`cartons-${item.id}`}
-                        placeholder="Enter Cartons"
-                        value={item.cartons}
-                        onChange={(v) => updateItem(item.id, "cartons", v)}
-                      />
-                      <FormField
-                        label="Gross Weight"
-                        id={`gross-weight-${item.id}`}
-                        placeholder="Enter Gross Weight"
-                        value={item.grossWeight}
-                        onChange={(v) => updateItem(item.id, "grossWeight", v)}
-                      />
-                      <FormField
-                        label="Net Weight"
-                        id={`net-weight-${item.id}`}
-                        placeholder="Enter Net Weight"
-                        value={item.netWeight}
-                        onChange={(v) => updateItem(item.id, "netWeight", v)}
-                      />
-                      <FormField
-                        label="CTN Dimensions"
-                        id={`ctn-dims-${item.id}`}
-                        placeholder="e.g. 10x10x10"
-                        value={item.ctnDimensions}
-                        onChange={(v) =>
-                          updateItem(item.id, "ctnDimensions", v)
-                        }
-                      />
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`cartons-${item.id}`} className="text-xs font-medium text-foreground">Cartons</Label>
+                        <Input
+                          id={`cartons-${item.id}`}
+                          placeholder="Enter Cartons"
+                          value={item.cartons}
+                          onChange={(e) => updateItem(item.id, "cartons", e.target.value)}
+                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`gross-weight-${item.id}`} className="text-xs font-medium text-foreground">Gross Weight</Label>
+                        <Input
+                          id={`gross-weight-${item.id}`}
+                          placeholder="Enter Gross Weight"
+                          value={item.grossWeight}
+                          onChange={(e) => updateItem(item.id, "grossWeight", e.target.value)}
+                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`net-weight-${item.id}`} className="text-xs font-medium text-foreground">Net Weight</Label>
+                        <Input
+                          id={`net-weight-${item.id}`}
+                          placeholder="Enter Net Weight"
+                          value={item.netWeight}
+                          onChange={(e) => updateItem(item.id, "netWeight", e.target.value)}
+                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`ctn-dims-${item.id}`} className="text-xs font-medium text-foreground">CTN Dimensions</Label>
+                        <Input
+                          id={`ctn-dims-${item.id}`}
+                          placeholder="e.g. 10x10x10"
+                          value={item.ctnDimensions}
+                          onChange={(e) => updateItem(item.id, "ctnDimensions", e.target.value)}
+                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                        />
+                      </div>
                     </div>
 
                     {/* Row 4: CBM, Status, Delete */}
                     <div className="flex items-end gap-4">
-                      <FormField
-                        label="CBM"
-                        id={`cbm-${item.id}`}
-                        placeholder="Enter CBM"
-                        value={item.cbm}
-                        onChange={(v) => updateItem(item.id, "cbm", v)}
-                        className="w-[calc(25%-12px)]"
-                      />
-                      <div className="w-[calc(25%-12px)]">
-                        <FormSelect
-                          label="Status"
-                          value={item.status}
-                          onValueChange={(v) =>
-                            updateItem(item.id, "status", v)
-                          }
-                          placeholder="Select Status"
-                          options={ITEM_STATUS_OPTIONS}
+                      <div className="flex flex-col gap-1.5 w-[calc(25%-12px)]">
+                        <Label htmlFor={`cbm-${item.id}`} className="text-xs font-medium text-foreground">CBM</Label>
+                        <Input
+                          id={`cbm-${item.id}`}
+                          placeholder="Enter CBM"
+                          value={item.cbm}
+                          onChange={(e) => updateItem(item.id, "cbm", e.target.value)}
+                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                         />
+                      </div>
+                      <div className="flex flex-col gap-1.5 w-[calc(25%-12px)]">
+                        <Label className="text-xs font-medium text-foreground">Status</Label>
+                        <Select
+                          value={item.status}
+                          onValueChange={(v) => updateItem(item.id, "status", v)}
+                        >
+                          <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                            <SelectValue placeholder="Select Status" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                            {ITEM_STATUS_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="mb-0 ml-auto">
                         <Button
@@ -557,12 +726,15 @@ export default function PurchaseOrderForm() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
-              <FormTextarea
-                label="Remarks"
-                value={remarks}
-                onChange={setRemarks}
-                placeholder="Type your message here."
-              />
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">Remarks</Label>
+                <Textarea
+                  placeholder="Type your message here."
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"
+                />
+              </div>
             </div>
           </div>
         </div>

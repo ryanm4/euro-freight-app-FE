@@ -8,11 +8,12 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import "./globals.css"
 import { Providers } from "./providers"
 
-const manrope = Manrope({ subsets: ["latin"], variable: "--font-sans" })
+const manrope = Manrope({subsets:['latin'],variable:'--font-sans'})
 
 const fontMono = Geist_Mono({
   subsets: ["latin"],
@@ -37,19 +38,21 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider defaultTheme="dark">
-          <Providers>
-            <SidebarProvider>
-              <AppSidebar />
-              <SidebarInset>
-                <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-                  <SidebarTrigger className="-ml-1" />
-                </header>
-                <main className="relative flex w-full flex-1 flex-col">
-                  {children}
-                </main>
-              </SidebarInset>
-            </SidebarProvider>
-          </Providers>
+          <TooltipProvider>
+            <Providers>
+              <SidebarProvider>
+                <AppSidebar />
+                <SidebarInset>
+                  <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+                    <SidebarTrigger className="-ml-1" />
+                  </header>
+                  <main className="relative flex w-full flex-1 flex-col">
+                    {children}
+                  </main>
+                </SidebarInset>
+              </SidebarProvider>
+            </Providers>
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

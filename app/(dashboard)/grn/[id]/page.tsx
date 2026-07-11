@@ -1,10 +1,10 @@
 "use client"
 
-import FormDateField from "@/components/shared/FormDateField"
-import FormField from "@/components/shared/FormField"
-import FormTextarea from "@/components/shared/FormTextarea"
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Table,
   TableBody,
@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { fetchGoodsReceiveNoteById } from "@/lib/api/goods_receive_notes"
+import { format } from "date-fns"
 import { useQuery } from "@tanstack/react-query"
 import { useParams } from "next/navigation"
 
@@ -77,6 +78,16 @@ export default function GrnByID() {
     queryFn: () => fetchGoodsReceiveNoteById(id),
   })
 
+  const formatDateValue = (val?: string) => {
+    if (!val) return ""
+    try {
+      const parsable = val.includes(" ") ? val.replace(" ", "T") : val
+      return format(new Date(parsable), "PPP")
+    } catch {
+      return val
+    }
+  }
+
   if (isLoading) return <div>Loading…</div>
   if (isError || !res?.data) return <>Not found</>
 
@@ -117,41 +128,60 @@ export default function GrnByID() {
           <div className="space-y-4">
             {/* Row 1: Date, Client, Forwarder, Manufacturer */}
             <div className="grid grid-cols-4 gap-4">
-              <FormDateField
-                label="Date"
-                id={`date`}
-                value={grn.date}
-                readOnly={true}
-              />
-              <FormField
-                label="Client"
-                value={grn.client}
-                readOnly={true}
-                id="client"
-              />
-              <FormField
-                label="Forwarder"
-                value={grn.forwarder}
-                readOnly={true}
-                id="forwarder"
-              />
-              <FormField
-                label="Manufacturer"
-                value={grn.manufacturer}
-                readOnly={true}
-                id="manufacturer"
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="date" className="text-xs font-medium text-foreground">Date</Label>
+                <Input
+                  id="date"
+                  placeholder="Enter Date"
+                  value={formatDateValue(grn.date)}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="client" className="text-xs font-medium text-foreground">Client</Label>
+                <Input
+                  id="client"
+                  placeholder="Enter Client"
+                  value={grn.client}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="forwarder" className="text-xs font-medium text-foreground">Forwarder</Label>
+                <Input
+                  id="forwarder"
+                  placeholder="Enter Forwarder"
+                  value={grn.forwarder}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="manufacturer" className="text-xs font-medium text-foreground">Manufacturer</Label>
+                <Input
+                  id="manufacturer"
+                  placeholder="Enter Manufacturer"
+                  value={grn.manufacturer}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
 
             {/* Row 2: Quantity, Packing List */}
             <div className="grid grid-cols-4 gap-4">
-              <FormField
-                label="Quantity"
-                id="quantity"
-                placeholder="Enter Quantity"
-                value={grn.quantity}
-                readOnly={true}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="quantity" className="text-xs font-medium text-foreground">Quantity</Label>
+                <Input
+                  id="quantity"
+                  placeholder="Enter Quantity"
+                  value={grn.quantity}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -255,12 +285,15 @@ export default function GrnByID() {
 
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4">
-                <FormTextarea
-                  label="Remarks"
-                  value={grn.remarks}
-                  placeholder="Type your message here."
-                  readOnly
-                />
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-foreground">Remarks</Label>
+                  <Textarea
+                    placeholder="Type your message here."
+                    value={grn.remarks}
+                    disabled
+                    className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"
+                  />
+                </div>
               </div>
             </div>
           </div>

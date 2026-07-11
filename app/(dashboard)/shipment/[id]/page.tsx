@@ -1,6 +1,5 @@
 "use client"
 
-import FormField from "@/components/shared/FormField"
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
 import { fetchShipmentById } from "@/lib/api/shipments"
@@ -8,6 +7,8 @@ import { SHIPMENT } from "@/modules/shipment/types"
 import { useQuery } from "@tanstack/react-query"
 import { useParams } from "next/navigation"
 import HBLTable from "../_components/HBLTable"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 
 export default function ShipmentByID() {
   const { id } = useParams<{ id: string }>()
@@ -64,21 +65,37 @@ export default function ShipmentByID() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
-              <FormField
-                label="Vessel Name"
-                id="vessel-name"
-                placeholder="Enter Vessel Name"
-                value={data.vessel_name ?? ""}
-                readOnly={true}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="vessel-name"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Vessel Name
+                </Label>
+                <Input
+                  id="vessel-name"
+                  placeholder="Enter Vessel Name"
+                  value={data.vessel_name ?? ""}
+                  readOnly={true}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
 
-              <FormField
-                label="Status"
-                id="status"
-                placeholder="Enter Status"
-                value={data.status ?? ""}
-                readOnly={true}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="status"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Status
+                </Label>
+                <Input
+                  id="status"
+                  placeholder="Enter Status"
+                  value={data.status ?? ""}
+                  readOnly={true}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
           </div>
         </div>

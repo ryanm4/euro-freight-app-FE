@@ -1,8 +1,22 @@
-import { IconPlus, IconTrash } from "@tabler/icons-react"
-import FormDateField from "../shared/FormDateField"
-import FormField from "../shared/FormField"
-import FormSelect from "../shared/FormSelect"
-import { Button } from "../ui/button"
+import { IconCalendarFilled, IconPlus, IconTrash } from "@tabler/icons-react"
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { format, isValid, parse } from "date-fns"
+import { cn } from "@/lib/utils"
 
 export interface FreightSplit {
   id: string
@@ -27,7 +41,7 @@ const FreightSplitSection = ({
   const total = splits.reduce((sum, s) => sum + (parseInt(s.quantity) || 0), 0)
   const poQty = parseInt(poQuantity) || 0
   const remaining = poQty - total
-  const isValid = poQty > 0 && remaining === 0
+  const isAllocationValid = poQty > 0 && remaining === 0
 
   const addSplit = () => {
     onChange([
@@ -83,32 +97,94 @@ const FreightSplitSection = ({
             key={split.id}
             className="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-3"
           >
-            <FormSelect
-              label={index === 0 ? "Freight Method" : ""}
-              value={split.method}
-              onValueChange={(v) => updateSplit(split.id, "method", v)}
-              placeholder="Select Method"
-              options={[
-                { value: "air", label: "Air" },
-                { value: "sea", label: "Sea" },
-              ]}
-              // disabled={readOnly}
-            />
-            <FormField
-              label={index === 0 ? "Quantity" : ""}
-              id={`split-qty-${split.id}`}
-              placeholder="Enter Quantity"
-              value={split.quantity}
-              onChange={(v) => updateSplit(split.id, "quantity", v)}
-              // disabled={readOnly}
-            />
-            <FormDateField
-              label={index === 0 ? "Dispatch Date" : ""}
-              id={`split-date-${split.id}`}
-              value={split.dispatchDate}
-              onChange={(v) => updateSplit(split.id, "dispatchDate", v)}
-              disabled={readOnly}
-            />
+            <div className="flex flex-col gap-1.5">
+              {index === 0 && (
+                <Label className="text-xs font-medium text-foreground">Freight Method</Label>
+              )}
+              <Select
+                value={split.method}
+                onValueChange={(v) => updateSplit(split.id, "method", v)}
+              >
+                <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                  <SelectValue placeholder="Select Method" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                  <SelectItem value="air">Air</SelectItem>
+                  <SelectItem value="sea">Sea</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {index === 0 && (
+                <Label htmlFor={`split-qty-${split.id}`} className="text-xs font-medium text-foreground">Quantity</Label>
+              )}
+              <Input
+                id={`split-qty-${split.id}`}
+                placeholder="Enter Quantity"
+                value={split.quantity}
+                onChange={(e) => updateSplit(split.id, "quantity", e.target.value)}
+                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {index === 0 && (
+                <Label htmlFor={`split-date-${split.id}`} className="text-xs font-medium text-foreground">Dispatch Date</Label>
+              )}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id={`split-date-${split.id}`}
+                    variant="outline"
+                    disabled={readOnly}
+                    className={cn(
+                      "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                      !split.dispatchDate && "text-zinc-500"
+                    )}
+                  >
+                    {split.dispatchDate ? (() => {
+                      const parseDate = (val: string): Date | undefined => {
+                        if (!val) return undefined
+                        let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
+                        if (isValid(d)) return d
+                        d = parse(val, "yyyy-MM-dd", new Date())
+                        if (isValid(d)) return d
+                        d = new Date(val)
+                        if (isValid(d)) return d
+                        return undefined
+                      }
+                      const selectedDate = parseDate(split.dispatchDate)
+                      return selectedDate ? format(selectedDate, "PPP") : "Pick a date"
+                    })() : "Pick a date"}
+                    <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={(() => {
+                      const parseDate = (val: string): Date | undefined => {
+                        if (!val) return undefined
+                        let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
+                        if (isValid(d)) return d
+                        d = parse(val, "yyyy-MM-dd", new Date())
+                        if (isValid(d)) return d
+                        d = new Date(val)
+                        if (isValid(d)) return d
+                        return undefined
+                      }
+                      return parseDate(split.dispatchDate)
+                    })()}
+                    onSelect={(selectedDate) => {
+                      if (selectedDate) {
+                        updateSplit(split.id, "dispatchDate", format(selectedDate, "yyyy-MM-dd"))
+                      }
+                    }}
+                    captionLayout="dropdown"
+                    disabled={readOnly}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
             {!readOnly && (
               <Button
                 onClick={() => removeSplit(split.id)}
@@ -146,9 +222,9 @@ const FreightSplitSection = ({
             </span>
           </div>
           <span
-            className={`text-xs font-medium ${isValid ? "text-green-400" : "text-yellow-400"}`}
+            className={`text-xs font-medium ${isAllocationValid ? "text-green-400" : "text-yellow-400"}`}
           >
-            {isValid ? "✓ Fully allocated" : "Allocation incomplete"}
+            {isAllocationValid ? "✓ Fully allocated" : "Allocation incomplete"}
           </span>
         </div>
       )}

@@ -1,10 +1,22 @@
 "use client"
 
-import FormDateField from "@/components/shared/FormDateField"
-import FormField from "@/components/shared/FormField"
-import FormSelect from "@/components/shared/FormSelect"
-import FormTextarea from "@/components/shared/FormTextarea"
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
@@ -17,6 +29,9 @@ import {
 import { fetchClients } from "@/lib/api/clients"
 import { createGoodsDispatchNote } from "@/lib/api/goods_dispatch_notes"
 import { fetchPackingLists } from "@/lib/api/packing_lists"
+import { IconCalendarFilled } from "@tabler/icons-react"
+import { format, isValid, parse } from "date-fns"
+import { cn } from "@/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
@@ -166,30 +181,85 @@ export default function GoodsDispatchNoteForm() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormDateField
-                label="Date"
-                id={`date`}
-                value={date}
-                onChange={setDate}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="date" className="text-xs font-medium text-foreground">Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="date"
+                      variant="outline"
+                      className={cn(
+                        "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                        !date && "text-zinc-500"
+                      )}
+                    >
+                      {date ? (() => {
+                        const parseDate = (val: string): Date | undefined => {
+                          if (!val) return undefined
+                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
+                          if (isValid(d)) return d
+                          d = parse(val, "yyyy-MM-dd", new Date())
+                          if (isValid(d)) return d
+                          d = new Date(val)
+                          if (isValid(d)) return d
+                          return undefined
+                        }
+                        const selectedDate = parseDate(date)
+                        return selectedDate ? format(selectedDate, "PPP") : "Pick a date"
+                      })() : "Pick a date"}
+                      <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={(() => {
+                        const parseDate = (val: string): Date | undefined => {
+                          if (!val) return undefined
+                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
+                          if (isValid(d)) return d
+                          d = parse(val, "yyyy-MM-dd", new Date())
+                          if (isValid(d)) return d
+                          d = new Date(val)
+                          if (isValid(d)) return d
+                          return undefined
+                        }
+                        return parseDate(date)
+                      })()}
+                      onSelect={(selectedDate) => {
+                        if (selectedDate) {
+                          setDate(format(selectedDate, "yyyy-MM-dd"))
+                        }
+                      }}
+                      captionLayout="dropdown"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-              <FormField
-                label="GDN/GRN Reference"
-                id="gdn-reference"
-                placeholder="Enter GDN/GRN Reference"
-                value={gdnReference}
-                onChange={setGdnReference}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="gdn-reference" className="text-xs font-medium text-foreground">GDN/GRN Reference</Label>
+                <Input
+                  id="gdn-reference"
+                  placeholder="Enter GDN/GRN Reference"
+                  value={gdnReference}
+                  onChange={(e) => setGdnReference(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Vehicle No"
-                id="vehicle-no"
-                placeholder="Enter Vehicle No"
-                value={vehicleNo}
-                onChange={setVehicleNo}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="vehicle-no" className="text-xs font-medium text-foreground">Vehicle No</Label>
+                <Input
+                  id="vehicle-no"
+                  placeholder="Enter Vehicle No"
+                  value={vehicleNo}
+                  onChange={(e) => setVehicleNo(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -206,39 +276,63 @@ export default function GoodsDispatchNoteForm() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormSelect
-                label="Client"
-                value={client}
-                onValueChange={setClient}
-                placeholder="Choose Client"
-                options={supplierOptions.map((c: any) => ({
-                  value: c.id,
-                  label: c.name,
-                }))}
-              />
-              <FormSelect
-                label="Manufacturer"
-                value={manufacturer}
-                onValueChange={setManufacturer}
-                placeholder="Choose Manufacturer"
-                options={manufacturerOptions.map((c: any) => ({
-                  value: c.id,
-                  label: c.name,
-                }))}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">Client</Label>
+                <Select
+                  value={client}
+                  onValueChange={setClient}
+                >
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Choose Client" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {supplierOptions.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">Manufacturer</Label>
+                <Select
+                  value={manufacturer}
+                  onValueChange={setManufacturer}
+                >
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Choose Manufacturer" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {manufacturerOptions.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <FormSelect
-                label="Forwarder"
-                value={forwarder}
-                onValueChange={setForwarder}
-                placeholder="Choose Forwarder"
-                options={forwarderOptions.map((c: any) => ({
-                  value: c.id,
-                  label: c.name,
-                }))}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">Forwarder</Label>
+                <Select
+                  value={forwarder}
+                  onValueChange={setForwarder}
+                >
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Choose Forwarder" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {forwarderOptions.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </div>
@@ -257,21 +351,27 @@ export default function GoodsDispatchNoteForm() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Cartons"
-                id="cartons"
-                placeholder="Enter Cartons"
-                value={cartons}
-                onChange={setCartons}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="cartons" className="text-xs font-medium text-foreground">Cartons</Label>
+                <Input
+                  id="cartons"
+                  placeholder="Enter Cartons"
+                  value={cartons}
+                  onChange={(e) => setCartons(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
 
-              {/* <FormField
-                label="Actual Cartons"
-                id="actual-cartons"
-                placeholder="Enter Actual Cartons"
-                value={actualCartons}
-                onChange={setActualCartons}
-              /> */}
+              {/* <div className="flex flex-col gap-1.5">
+                <Label htmlFor="actual-cartons" className="text-xs font-medium text-foreground">Actual Cartons</Label>
+                <Input
+                  id="actual-cartons"
+                  placeholder="Enter Actual Cartons"
+                  value={actualCartons}
+                  onChange={(e) => setActualCartons(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div> */}
             </div>
           </div>
         </div>
@@ -288,39 +388,51 @@ export default function GoodsDispatchNoteForm() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Gross Weight"
-                id="gross-weight"
-                placeholder="Enter Gross Weight"
-                value={grossWeight}
-                onChange={setGrossWeight}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="gross-weight" className="text-xs font-medium text-foreground">Gross Weight</Label>
+                <Input
+                  id="gross-weight"
+                  placeholder="Enter Gross Weight"
+                  value={grossWeight}
+                  onChange={(e) => setGrossWeight(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
 
-              <FormField
-                label="Actual Gross Weight"
-                id="actual-gross-weight"
-                placeholder="Enter Actual Gross Weight"
-                value={actualGrossWeight}
-                onChange={setActualGrossWeight}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="actual-gross-weight" className="text-xs font-medium text-foreground">Actual Gross Weight</Label>
+                <Input
+                  id="actual-gross-weight"
+                  placeholder="Enter Actual Gross Weight"
+                  value={actualGrossWeight}
+                  onChange={(e) => setActualGrossWeight(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Gross Volume"
-                id="gross-volume"
-                placeholder="Enter Gross Volume"
-                value={grossVolume}
-                onChange={setGrossVolume}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="gross-volume" className="text-xs font-medium text-foreground">Gross Volume</Label>
+                <Input
+                  id="gross-volume"
+                  placeholder="Enter Gross Volume"
+                  value={grossVolume}
+                  onChange={(e) => setGrossVolume(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
 
-              <FormField
-                label="Actual Gross Volume"
-                id="actual-gross-volume"
-                placeholder="Enter Actual Gross Volume"
-                value={actualGrossVolume}
-                onChange={setActualGrossVolume}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="actual-gross-volume" className="text-xs font-medium text-foreground">Actual Gross Volume</Label>
+                <Input
+                  id="actual-gross-volume"
+                  placeholder="Enter Actual Gross Volume"
+                  value={actualGrossVolume}
+                  onChange={(e) => setActualGrossVolume(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -438,12 +550,15 @@ export default function GoodsDispatchNoteForm() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
-              <FormTextarea
-                label="Remarks"
-                value={remarks}
-                onChange={setRemarks}
-                placeholder="Type your message here."
-              />
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">Remarks</Label>
+                <Textarea
+                  placeholder="Type your message here."
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"
+                />
+              </div>
             </div>
           </div>
         </div>

@@ -1,10 +1,10 @@
 "use client"
 
-import FormDateField from "@/components/shared/FormDateField"
-import FormField from "@/components/shared/FormField"
-import FormTextarea from "@/components/shared/FormTextarea"
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Table,
   TableBody,
@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { fetchGoodsDispatchNoteById } from "@/lib/api/goods_dispatch_notes"
+import { format } from "date-fns"
 import { useQuery } from "@tanstack/react-query"
 import { useParams } from "next/navigation"
 
@@ -58,6 +59,16 @@ export default function GdnByID() {
     queryFn: () => fetchGoodsDispatchNoteById(id),
   })
 
+  const formatDateValue = (val?: string) => {
+    if (!val) return ""
+    try {
+      const parsable = val.includes(" ") ? val.replace(" ", "T") : val
+      return format(new Date(parsable), "PPP")
+    } catch {
+      return val
+    }
+  }
+
   if (isLoading) return <div>Loading…</div>
   if (isError || !res?.data) return <>Not found</>
 
@@ -100,30 +111,40 @@ export default function GdnByID() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormDateField
-                label="Date"
-                id={`date`}
-                value={gdn.date}
-                readOnly={true}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="date" className="text-xs font-medium text-foreground">Date</Label>
+                <Input
+                  id="date"
+                  placeholder="Enter Date"
+                  value={formatDateValue(gdn.date)}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
 
-              <FormField
-                label="GDN/GRN Reference"
-                id="gdn-reference"
-                placeholder="Enter GDN/GRN Reference"
-                value={gdn.gdnReference}
-                readOnly={true}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="gdn-reference" className="text-xs font-medium text-foreground">GDN/GRN Reference</Label>
+                <Input
+                  id="gdn-reference"
+                  placeholder="Enter GDN/GRN Reference"
+                  value={gdn.gdnReference}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Vehicle No"
-                id="vehicle-no"
-                placeholder="Enter Vehicle No"
-                value={gdn.vehicleNo}
-                readOnly={true}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="vehicle-no" className="text-xs font-medium text-foreground">Vehicle No</Label>
+                <Input
+                  id="vehicle-no"
+                  placeholder="Enter Vehicle No"
+                  value={gdn.vehicleNo}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -140,30 +161,39 @@ export default function GdnByID() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Client"
-                id="client"
-                placeholder="Enter Client"
-                value={gdn.client}
-                readOnly={true}
-              />
-              <FormField
-                label="Manufacturer"
-                id="manufacturer"
-                placeholder="Enter Manufacturer"
-                value={gdn.manufacturer}
-                readOnly={true}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="client" className="text-xs font-medium text-foreground">Client</Label>
+                <Input
+                  id="client"
+                  placeholder="Enter Client"
+                  value={gdn.client}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="manufacturer" className="text-xs font-medium text-foreground">Manufacturer</Label>
+                <Input
+                  id="manufacturer"
+                  placeholder="Enter Manufacturer"
+                  value={gdn.manufacturer}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Forwarder"
-                id="forwarder"
-                placeholder="Enter Forwarder"
-                value={gdn.forwarder}
-                readOnly={true}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="forwarder" className="text-xs font-medium text-foreground">Forwarder</Label>
+                <Input
+                  id="forwarder"
+                  placeholder="Enter Forwarder"
+                  value={gdn.forwarder}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -182,21 +212,27 @@ export default function GdnByID() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Cartons"
-                id="cartons"
-                placeholder="Enter Cartons"
-                value={gdn.cartons}
-                readOnly={true}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="cartons" className="text-xs font-medium text-foreground">Cartons</Label>
+                <Input
+                  id="cartons"
+                  placeholder="Enter Cartons"
+                  value={gdn.cartons}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
 
-              {/* <FormField
-                label="Actual Cartons"
-                id="actual-cartons"
-                placeholder="Enter Actual Cartons"
-                value={gdn.actualCartons}
-                readOnly={true}
-              /> */}
+              {/* <div className="flex flex-col gap-1.5">
+                <Label htmlFor="actual-cartons" className="text-xs font-medium text-foreground">Actual Cartons</Label>
+                <Input
+                  id="actual-cartons"
+                  placeholder="Enter Actual Cartons"
+                  value={gdn.actualCartons}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div> */}
             </div>
           </div>
         </div>
@@ -213,39 +249,51 @@ export default function GdnByID() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Gross Weight"
-                id="gross-weight"
-                placeholder="Enter Gross Weight"
-                value={gdn.grossWeight}
-                readOnly={true}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="gross-weight" className="text-xs font-medium text-foreground">Gross Weight</Label>
+                <Input
+                  id="gross-weight"
+                  placeholder="Enter Gross Weight"
+                  value={gdn.grossWeight}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
 
-              <FormField
-                label="Actual Gross Weight"
-                id="actual-gross-weight"
-                placeholder="Enter Actual Gross Weight"
-                value={gdn.actualGrossWeight}
-                readOnly={true}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="actual-gross-weight" className="text-xs font-medium text-foreground">Actual Gross Weight</Label>
+                <Input
+                  id="actual-gross-weight"
+                  placeholder="Enter Actual Gross Weight"
+                  value={gdn.actualGrossWeight}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Gross Volume"
-                id="gross-volume"
-                placeholder="Enter Gross Volume"
-                value={gdn.grossVolume}
-                readOnly={true}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="gross-volume" className="text-xs font-medium text-foreground">Gross Volume</Label>
+                <Input
+                  id="gross-volume"
+                  placeholder="Enter Gross Volume"
+                  value={gdn.grossVolume}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
 
-              <FormField
-                label="Actual Gross Volume"
-                id="actual-gross-volume"
-                placeholder="Enter Actual Gross Volume"
-                value={gdn.actualGrossVolume}
-                readOnly={true}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="actual-gross-volume" className="text-xs font-medium text-foreground">Actual Gross Volume</Label>
+                <Input
+                  id="actual-gross-volume"
+                  placeholder="Enter Actual Gross Volume"
+                  value={gdn.actualGrossVolume}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -353,12 +401,15 @@ export default function GdnByID() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
-              <FormTextarea
-                label="Remarks"
-                value={gdn.remarks}
-                placeholder="Type your message here."
-                readOnly={true}
-              />
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">Remarks</Label>
+                <Textarea
+                  placeholder="Type your message here."
+                  value={gdn.remarks}
+                  disabled
+                  className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"
+                />
+              </div>
             </div>
           </div>
         </div>

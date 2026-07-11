@@ -24,7 +24,13 @@ import {
 import { IconCalendarFilled, IconSearch } from "@tabler/icons-react"
 import { Calendar } from "@/components/ui/calendar"
 import { useRouter } from "next/navigation"
-import { Combobox } from "@/components/ui/combobox"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { ClientApi } from "@/modules/clients/api"
@@ -292,17 +298,21 @@ export default function PackingListForm() {
                 {renderFormField("client_id", ({ field }: { field: any }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel className="mb-1">Client Name</FormLabel>
-                    <Combobox
-                      items={[
-                        { value: "", label: "Select Client Name" },
-                        ...client.map((c: CLIENT_LIST) => ({
-                          value: String(c.id),
-                          label: c.name,
-                        })),
-                      ]}
+                    <Select
                       value={field.value ? String(field.value) : ""}
                       onValueChange={(val) => field.onChange(Number(val))}
-                    />
+                    >
+                      <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                        <SelectValue placeholder="Select Client Name" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                        {client.map((c: CLIENT_LIST) => (
+                          <SelectItem key={c.id} value={String(c.id)}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 ))}

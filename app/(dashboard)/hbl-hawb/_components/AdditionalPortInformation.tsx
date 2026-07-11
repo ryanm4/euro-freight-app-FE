@@ -1,5 +1,6 @@
-import FormField from "@/components/shared/FormField"
 import { IconPlus, IconTrash } from "@tabler/icons-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useState } from "react"
 
 interface Port {
@@ -46,14 +47,16 @@ export default function YourComponent() {
         <div className="grid grid-cols-1 gap-3">
           {ports.map((port) => (
             <div key={port.id} className="flex items-end gap-2">
-              <FormField
-                label="Arrival Port"
-                id={`port-${port.id}`}
-                placeholder="Enter port name"
-                value={port.value}
-                onChange={(v) => updatePort(port.id, v)}
-                className="flex-1"
-              />
+              <div className="flex flex-col gap-1.5 flex-1">
+                <Label htmlFor={`port-${port.id}`} className="text-xs font-medium text-foreground">Arrival Port</Label>
+                <Input
+                  id={`port-${port.id}`}
+                  placeholder="Enter port name"
+                  value={port.value}
+                  onChange={(e) => updatePort(port.id, e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
               <button
                 onClick={() => removePort(port.id)}
                 disabled={ports.length === 1}

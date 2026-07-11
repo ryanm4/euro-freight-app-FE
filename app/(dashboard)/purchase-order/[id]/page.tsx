@@ -2,16 +2,25 @@
 
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { fetchPurchaseOrderById } from "@/lib/api/purchase-orders"
-import { format } from "date-fns"
+import { IconChevronDown, IconChevronUp } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
+import { format } from "date-fns"
 import { useParams } from "next/navigation"
+import { useState } from "react"
+import { CargoItem } from "../_components/purchase-order-form"
 
 export default function PurchaseOrderByID() {
   const { id } = useParams<{ id: string }>()
+  const [openItemIds, setOpenItemIds] = useState<Set<number>>(new Set())
 
   const {
     data: res,
@@ -32,12 +41,26 @@ export default function PurchaseOrderByID() {
     }
   }
 
+  const toggleItem = (itemId: number) => {
+    setOpenItemIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(itemId)) {
+        next.delete(itemId)
+      } else {
+        next.add(itemId)
+      }
+      return next
+    })
+  }
+
   if (isLoading) return <div>Loading…</div>
   if (isError || !res?.data) return <>Not found</>
 
   const data = res.data
+  const items = data.items ?? []
+
   return (
-    <div className="mx-6 space-y-5">
+    <div className="mx-6 mb-6 space-y-6">
       <div className="mt-3">
         <PageTitleWithBreadcrumb
           title={`Purchase Order`}
@@ -70,7 +93,12 @@ export default function PurchaseOrderByID() {
             {/* Row 1: PO Number + PO Quantity */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="po-number" className="text-xs font-medium text-foreground">PO Number</Label>
+                <Label
+                  htmlFor="po-number"
+                  className="text-xs font-medium text-foreground"
+                >
+                  PO Number
+                </Label>
                 <Input
                   id="po-number"
                   placeholder="Enter PO Number"
@@ -80,7 +108,12 @@ export default function PurchaseOrderByID() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="po-quantity" className="text-xs font-medium text-foreground">PO Quantity</Label>
+                <Label
+                  htmlFor="po-quantity"
+                  className="text-xs font-medium text-foreground"
+                >
+                  PO Quantity
+                </Label>
                 <Input
                   id="po-quantity"
                   placeholder="Enter PO Quantity"
@@ -94,7 +127,12 @@ export default function PurchaseOrderByID() {
             {/* Row 2: Supplier + Freight Forwarder */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="supplier" className="text-xs font-medium text-foreground">Supplier</Label>
+                <Label
+                  htmlFor="supplier"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Supplier
+                </Label>
                 <Input
                   id="supplier"
                   placeholder="Enter Supplier"
@@ -104,7 +142,12 @@ export default function PurchaseOrderByID() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="freight-forwarder" className="text-xs font-medium text-foreground">Freight Forwarder</Label>
+                <Label
+                  htmlFor="freight-forwarder"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Freight Forwarder
+                </Label>
                 <Input
                   id="freight-forwarder"
                   placeholder="Enter Freight Forwarder"
@@ -118,7 +161,12 @@ export default function PurchaseOrderByID() {
             {/* Row 3: Payment Mode + Shipping Mode */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="payment-mode" className="text-xs font-medium text-foreground">Payment Mode</Label>
+                <Label
+                  htmlFor="payment-mode"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Payment Mode
+                </Label>
                 <Input
                   id="payment-mode"
                   placeholder="Enter Payment Mode"
@@ -128,21 +176,12 @@ export default function PurchaseOrderByID() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="shipping-mode" className="text-xs font-medium text-foreground">Shipping Mode</Label>
-                <Input
-                  id="shipping-mode"
-                  placeholder="Enter Shipping Mode"
-                  value={data.shipping_mode}
-                  disabled
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-            </div>
-
-            {/* Row 4: Final Destination */}
-            <div className="grid grid-cols-1 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="final-destination" className="text-xs font-medium text-foreground">Final Destination</Label>
+                <Label
+                  htmlFor="final-destination"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Final Destination
+                </Label>
                 <Input
                   id="final-destination"
                   placeholder="Enter Final Destination"
@@ -169,7 +208,12 @@ export default function PurchaseOrderByID() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="ex-factory-date" className="text-xs font-medium text-foreground">Ex Factory Date</Label>
+                <Label
+                  htmlFor="ex-factory-date"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Ex Factory Date
+                </Label>
                 <Input
                   id="ex-factory-date"
                   placeholder="Enter Ex Factory Date"
@@ -179,7 +223,12 @@ export default function PurchaseOrderByID() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="po-document" className="text-xs font-medium text-foreground">PO Document</Label>
+                <Label
+                  htmlFor="po-document"
+                  className="text-xs font-medium text-foreground"
+                >
+                  PO Document
+                </Label>
                 <Input
                   id="po-document"
                   type="file"
@@ -188,10 +237,278 @@ export default function PurchaseOrderByID() {
                 />
               </div>
             </div>
+          </div>
+        </div>
+      </div>
 
+      {/* Purchase Order Items */}
+      <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+        <div className="mb-5">
+          <h2 className="text-sm font-semibold text-zinc-100">
+            Purchase Order Items
+          </h2>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            Commercial, packaging, and measurement details for this shipment
+            item.
+          </p>
+        </div>
+
+        {items.length === 0 ? (
+          <p className="text-sm text-zinc-500">No items found.</p>
+        ) : (
+          <div className="space-y-3">
+            {items.map((item: CargoItem, index: number) => {
+              const isOpen = openItemIds.has(item.id as number)
+              return (
+                <Collapsible
+                  key={item.id}
+                  open={isOpen}
+                  onOpenChange={() => toggleItem(item.id as number)}
+                >
+                  <div className="overflow-hidden rounded-lg border border-zinc-800">
+                    {/* Accordion Header */}
+                    <CollapsibleTrigger asChild>
+                      <button className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-zinc-800/50">
+                        <span className="text-sm font-medium text-zinc-300">
+                          {item.item_name
+                            ? `${item.item_name}${item.sku ? ` (${item.sku})` : ""}`
+                            : `Purchase Order Item ${index + 1}`}
+                        </span>
+                        {isOpen ? (
+                          <IconChevronUp className="h-4 w-4 text-zinc-500" />
+                        ) : (
+                          <IconChevronDown className="h-4 w-4 text-zinc-500" />
+                        )}
+                      </button>
+                    </CollapsibleTrigger>
+
+                    {/* Accordion Content */}
+                    <CollapsibleContent>
+                      <div className="space-y-4 border-t border-zinc-800 px-4 pt-4 pb-4">
+                        {/* Row 1: SKU, Item Name, Color, Size */}
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                          <div className="flex flex-col gap-1.5">
+                            <Label
+                              htmlFor={`sku-${item.id}`}
+                              className="text-xs font-medium text-foreground"
+                            >
+                              SKU
+                            </Label>
+                            <Input
+                              id={`sku-${item.id}`}
+                              value={item.sku ?? ""}
+                              disabled
+                              className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <Label
+                              htmlFor={`item-name-${item.id}`}
+                              className="text-xs font-medium text-foreground"
+                            >
+                              Item Name
+                            </Label>
+                            <Input
+                              id={`item-name-${item.id}`}
+                              value={item.item_name ?? ""}
+                              disabled
+                              className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <Label
+                              htmlFor={`color-${item.id}`}
+                              className="text-xs font-medium text-foreground"
+                            >
+                              Color
+                            </Label>
+                            <Input
+                              id={`color-${item.id}`}
+                              value={item.color ?? ""}
+                              disabled
+                              className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <Label
+                              htmlFor={`size-${item.id}`}
+                              className="text-xs font-medium text-foreground"
+                            >
+                              Size
+                            </Label>
+                            <Input
+                              id={`size-${item.id}`}
+                              value={item.size ?? ""}
+                              disabled
+                              className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Row 2: Country of Origin, Unit Cost, Quantity, Dispatched Qty */}
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                          <div className="flex flex-col gap-1.5">
+                            <Label
+                              htmlFor={`coo-${item.id}`}
+                              className="text-xs font-medium text-foreground"
+                            >
+                              Country of Origin
+                            </Label>
+                            <Input
+                              id={`coo-${item.id}`}
+                              value={item.country_of_origin ?? ""}
+                              disabled
+                              className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <Label
+                              htmlFor={`unit-cost-${item.id}`}
+                              className="text-xs font-medium text-foreground"
+                            >
+                              Unit Cost
+                            </Label>
+                            <Input
+                              id={`unit-cost-${item.id}`}
+                              value={item.unit_cost ?? ""}
+                              disabled
+                              className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <Label
+                              htmlFor={`quantity-${item.id}`}
+                              className="text-xs font-medium text-foreground"
+                            >
+                              Quantity
+                            </Label>
+                            <Input
+                              id={`quantity-${item.id}`}
+                              value={item.quantity ?? ""}
+                              disabled
+                              className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <Label
+                              htmlFor={`dispatched-${item.id}`}
+                              className="text-xs font-medium text-foreground"
+                            >
+                              Dispatched Quantity
+                            </Label>
+                            <Input
+                              id={`dispatched-${item.id}`}
+                              value={item.dispatched_quantity ?? ""}
+                              disabled
+                              className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Row 3: Cartons, Gross Weight, Net Weight, CTN Dimensions */}
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                          <div className="flex flex-col gap-1.5">
+                            <Label
+                              htmlFor={`cartons-${item.id}`}
+                              className="text-xs font-medium text-foreground"
+                            >
+                              Cartons
+                            </Label>
+                            <Input
+                              id={`cartons-${item.id}`}
+                              value={item.cartoons ?? ""}
+                              disabled
+                              className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <Label
+                              htmlFor={`gross-weight-${item.id}`}
+                              className="text-xs font-medium text-foreground"
+                            >
+                              Gross Weight
+                            </Label>
+                            <Input
+                              id={`gross-weight-${item.id}`}
+                              value={item.gross_weight ?? ""}
+                              disabled
+                              className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <Label
+                              htmlFor={`net-weight-${item.id}`}
+                              className="text-xs font-medium text-foreground"
+                            >
+                              Net Weight
+                            </Label>
+                            <Input
+                              id={`net-weight-${item.id}`}
+                              value={item.net_weight ?? ""}
+                              disabled
+                              className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <Label
+                              htmlFor={`ctn-dims-${item.id}`}
+                              className="text-xs font-medium text-foreground"
+                            >
+                              CTN Dimensions
+                            </Label>
+                            <Input
+                              id={`ctn-dims-${item.id}`}
+                              value={item.ctn_demi ?? ""}
+                              disabled
+                              className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Row 4: CBM, Status */}
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                          <div className="flex flex-col gap-1.5">
+                            <Label
+                              htmlFor={`cbm-${item.id}`}
+                              className="text-xs font-medium text-foreground"
+                            >
+                              CBM
+                            </Label>
+                            <Input
+                              id={`cbm-${item.id}`}
+                              value={item.cbm ?? ""}
+                              disabled
+                              className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </div>
+                </Collapsible>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 gap-5">
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              Additional Information
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Packing lists and carton quantities.
+            </p>
+          </div>
+
+          <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
               <div className="flex flex-1 flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">Instructions</Label>
+                <Label className="text-xs font-medium text-foreground">
+                  Instructions
+                </Label>
                 <Textarea
                   placeholder="Type your message here."
                   value={data.instructions}

@@ -1,10 +1,12 @@
 "use client"
 
-import FreightSplitSection, {
-  FreightSplit,
-} from "@/components/custom/FreightSplitSection"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -20,14 +22,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
-import { cn } from "@/lib/utils"
 import { fetchClients } from "@/lib/api/clients"
 import { createPurchaseOrder } from "@/lib/api/purchase-orders"
+import { PAYMENT_MODE_OPTIONS } from "@/lib/constants"
+import { UserRole } from "@/lib/enums/user-role"
+import { cn } from "@/lib/utils"
 import {
   IconCalendarFilled,
   IconChevronDown,
@@ -36,15 +35,15 @@ import {
   IconPlus,
   IconTrash,
 } from "@tabler/icons-react"
-import { format, isValid, parse } from "date-fns"
 import { useQuery } from "@tanstack/react-query"
+import { format, isValid, parse } from "date-fns"
 import { useRouter } from "next/navigation"
 import { useId, useMemo, useState } from "react"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface CargoItem {
-  id: string
+  id: string | number
   sku: string
   itemName: string
   color: string
@@ -60,6 +59,14 @@ export interface CargoItem {
   cbm: string
   status: string
   open: boolean
+  item_name?: string
+  country_of_origin?: string
+  unit_cost?: string
+  dispatched_quantity?: string
+  cartoons?: string
+  gross_weight?: string
+  net_weight?: string
+  ctn_demi?: string
 }
 
 export function createCargoItem(id: string): CargoItem {
@@ -83,29 +90,6 @@ export function createCargoItem(id: string): CargoItem {
   }
 }
 
-const SHIPPING_MODE_OPTIONS = [
-  { value: "Sea", label: "Sea" },
-  { value: "Air", label: "Air" },
-  { value: "Road", label: "Road" },
-  { value: "Courier", label: "Courier" },
-]
-
-const PAYMENT_MODE_OPTIONS = [
-  { value: "LC/TT", label: "LC/TT" },
-  { value: "T/T", label: "T/T" },
-  { value: "LC", label: "LC" },
-  { value: "CAD", label: "CAD" },
-  { value: "Open Account", label: "Open Account" },
-]
-
-const ITEM_STATUS_OPTIONS = [
-  { value: "Pending", label: "Pending" },
-  { value: "In Production", label: "In Production" },
-  { value: "Ready", label: "Ready" },
-  { value: "Dispatched", label: "Dispatched" },
-  { value: "Completed", label: "Completed" },
-]
-
 export default function PurchaseOrderForm() {
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
@@ -118,7 +102,7 @@ export default function PurchaseOrderForm() {
   const [freightForwarder, setFreightForwarder] = useState("")
   const [paymentMode, setPaymentMode] = useState("")
   const [finalDestination, setFinalDestination] = useState("")
-  const [shippingMode, setShippingMode] = useState("")
+  // const [shippingMode, setShippingMode] = useState("")
 
   // Timeline
   const [exFactoryDate, setExFactoryDate] = useState("")
@@ -138,19 +122,21 @@ export default function PurchaseOrderForm() {
 
   const supplierOptions = useMemo(() => {
     return (
-      data?.data?.filter((client: any) => client.type === "manufacturer") || []
+      data?.data?.filter((client: any) => client.type === UserRole.Supplier) ||
+      []
     )
   }, [data])
 
   const freightForwarderOptions = useMemo(() => {
     return (
-      data?.data?.filter((client: any) => client.type === "forwarder") || []
+      data?.data?.filter((client: any) => client.type === UserRole.Forwarder) ||
+      []
     )
   }, [data])
 
-  const [freightSplits, setFreightSplits] = useState<FreightSplit[]>([
-    { id: initialCargoId, method: "sea", quantity: "", dispatchDate: "" },
-  ])
+  // const [freightSplits, setFreightSplits] = useState<FreightSplit[]>([
+  //   { id: initialCargoId, method: "sea", quantity: "", dispatchDate: "" },
+  // ])
 
   const addItem = () =>
     setCargoItems((prev) => [...prev, createCargoItem(crypto.randomUUID())])
@@ -180,11 +166,11 @@ export default function PurchaseOrderForm() {
         freightForwarder,
         paymentMode,
         finalDestination,
-        shippingMode,
+        // shippingMode,
         exFactoryDate,
         instructions,
         cargoItems,
-        freightSplits,
+        // freightSplits,
         remarks,
       })
       router.push("/purchase-order")
@@ -226,8 +212,13 @@ export default function PurchaseOrderForm() {
           <div className="space-y-4">
             {/* Row 1: PO Number + PO Quantity */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5 col-span-1">
-                <Label htmlFor="po-number" className="text-xs font-medium text-foreground">PO Number</Label>
+              <div className="col-span-1 flex flex-col gap-1.5">
+                <Label
+                  htmlFor="po-number"
+                  className="text-xs font-medium text-foreground"
+                >
+                  PO Number
+                </Label>
                 <Input
                   id="po-number"
                   placeholder="Enter PO Number"
@@ -237,7 +228,12 @@ export default function PurchaseOrderForm() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="po-quantity" className="text-xs font-medium text-foreground">PO Quantity</Label>
+                <Label
+                  htmlFor="po-quantity"
+                  className="text-xs font-medium text-foreground"
+                >
+                  PO Quantity
+                </Label>
                 <Input
                   id="po-quantity"
                   placeholder="Enter PO Quantity"
@@ -251,11 +247,10 @@ export default function PurchaseOrderForm() {
             {/* Row 2: Supplier + Freight Forwarder */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">Supplier</Label>
-                <Select
-                  value={supplier}
-                  onValueChange={setSupplier}
-                >
+                <Label className="text-xs font-medium text-foreground">
+                  Supplier
+                </Label>
+                <Select value={supplier} onValueChange={setSupplier}>
                   <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
                     <SelectValue placeholder="Select Supplier" />
                   </SelectTrigger>
@@ -269,7 +264,9 @@ export default function PurchaseOrderForm() {
                 </Select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">Freight Forwarder</Label>
+                <Label className="text-xs font-medium text-foreground">
+                  Freight Forwarder
+                </Label>
                 <Select
                   value={freightForwarder}
                   onValueChange={setFreightForwarder}
@@ -291,11 +288,10 @@ export default function PurchaseOrderForm() {
             {/* Row 3: Payment Mode + Shipping Mode */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">Payment Mode</Label>
-                <Select
-                  value={paymentMode}
-                  onValueChange={setPaymentMode}
-                >
+                <Label className="text-xs font-medium text-foreground">
+                  Payment Mode
+                </Label>
+                <Select value={paymentMode} onValueChange={setPaymentMode}>
                   <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
                     <SelectValue placeholder="Select Payment Mode" />
                   </SelectTrigger>
@@ -309,29 +305,12 @@ export default function PurchaseOrderForm() {
                 </Select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">Shipping Mode</Label>
-                <Select
-                  value={shippingMode}
-                  onValueChange={setShippingMode}
+                <Label
+                  htmlFor="final-destination"
+                  className="text-xs font-medium text-foreground"
                 >
-                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                    <SelectValue placeholder="Select Shipping Mode" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    {SHIPPING_MODE_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Row 4: Final Destination */}
-            <div className="grid grid-cols-1 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="final-destination" className="text-xs font-medium text-foreground">Final Destination</Label>
+                  Final Destination
+                </Label>
                 <Input
                   id="final-destination"
                   placeholder="Enter Final Destination"
@@ -358,7 +337,12 @@ export default function PurchaseOrderForm() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="ex-factory-date" className="text-xs font-medium text-foreground">Ex Factory Date</Label>
+                <Label
+                  htmlFor="ex-factory-date"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Ex Factory Date
+                </Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -369,20 +353,30 @@ export default function PurchaseOrderForm() {
                         !exFactoryDate && "text-zinc-500"
                       )}
                     >
-                     .{exFactoryDate ? (() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        const selectedDate = parseDate(exFactoryDate)
-                        return selectedDate ? format(selectedDate, "PPP") : "Pick a date"
-                      })() : "Pick a date"}
+                      {exFactoryDate
+                        ? (() => {
+                            const parseDate = (
+                              val: string
+                            ): Date | undefined => {
+                              if (!val) return undefined
+                              let d = parse(
+                                val,
+                                "yyyy-MM-dd HH:mm:ss",
+                                new Date()
+                              )
+                              if (isValid(d)) return d
+                              d = parse(val, "yyyy-MM-dd", new Date())
+                              if (isValid(d)) return d
+                              d = new Date(val)
+                              if (isValid(d)) return d
+                              return undefined
+                            }
+                            const selectedDate = parseDate(exFactoryDate)
+                            return selectedDate
+                              ? format(selectedDate, "PPP")
+                              : "Pick a date"
+                          })()
+                        : "Pick a date"}
                       <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -413,7 +407,9 @@ export default function PurchaseOrderForm() {
                 </Popover>
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">PO Document</Label>
+                <Label className="text-xs font-medium text-foreground">
+                  PO Document
+                </Label>
                 <div className="flex items-center gap-2">
                   <label
                     htmlFor="po-document"
@@ -421,44 +417,30 @@ export default function PurchaseOrderForm() {
                   >
                     Choose File
                   </label>
-                  <input
-                    id="po-document"
-                    type="file"
-                    className="sr-only"
-                  />
+                  <input id="po-document" type="file" className="sr-only" />
                   <span className="truncate text-xs text-neutral-500">
                     No file chosen
                   </span>
                 </div>
               </div>
             </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              <div className="flex flex-1 flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">Instructions</Label>
-                <Textarea
-                  placeholder="Type your message here."
-                  value={instructions}
-                  onChange={(e) => setInstructions(e.target.value)}
-                  className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"
-                />
-              </div>
-            </div>
           </div>
         </div>
       </div>
 
-      <FreightSplitSection
+      {/* <FreightSplitSection
         poQuantity={poQuantity}
         splits={freightSplits}
         onChange={setFreightSplits}
-      />
+      /> */}
 
-      {/* ── Cargo Items ───────────────────────────────────────────────────────── */}
+      {/* ── Purchase Order Items ───────────────────────────────────────────────────── */}
       <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
         <div className="mb-5 flex items-start justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-zinc-100">Cargo Items</h2>
+            <h2 className="text-sm font-semibold text-zinc-100">
+              Purchase Order Items
+            </h2>
             <p className="mt-0.5 text-xs text-zinc-500">
               Commercial, packaging, and measurement details for this shipment
               item.
@@ -509,7 +491,7 @@ export default function PurchaseOrderForm() {
             <Collapsible
               key={item.id}
               open={item.open}
-              onOpenChange={() => toggleItem(item.id)}
+              onOpenChange={() => toggleItem(item.id as string)}
             >
               <div className="overflow-hidden rounded-lg border border-zinc-800">
                 {/* Accordion Header */}
@@ -518,7 +500,7 @@ export default function PurchaseOrderForm() {
                     <span className="text-sm font-medium text-zinc-300">
                       {item.itemName
                         ? `${item.itemName}${item.sku ? ` (${item.sku})` : ""}`
-                        : `Cargo Item ${index + 1}`}
+                        : `Purchase Order Item ${index + 1}`}
                     </span>
                     {item.open ? (
                       <IconChevronUp className="h-4 w-4 text-zinc-500" />
@@ -534,42 +516,82 @@ export default function PurchaseOrderForm() {
                     {/* Row 1: SKU, Item Name, Color, Size */}
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`sku-${item.id}`} className="text-xs font-medium text-foreground">SKU</Label>
+                        <Label
+                          htmlFor={`sku-${item.id}`}
+                          className="text-xs font-medium text-foreground"
+                        >
+                          SKU
+                        </Label>
                         <Input
                           id={`sku-${item.id}`}
                           placeholder="Enter SKU"
                           value={item.sku}
-                          onChange={(e) => updateItem(item.id, "sku", e.target.value)}
+                          onChange={(e) =>
+                            updateItem(item.id as string, "sku", e.target.value)
+                          }
                           className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`item-name-${item.id}`} className="text-xs font-medium text-foreground">Item Name</Label>
+                        <Label
+                          htmlFor={`item-name-${item.id}`}
+                          className="text-xs font-medium text-foreground"
+                        >
+                          Item Name
+                        </Label>
                         <Input
                           id={`item-name-${item.id}`}
                           placeholder="Enter Item Name"
                           value={item.itemName}
-                          onChange={(e) => updateItem(item.id, "itemName", e.target.value)}
+                          onChange={(e) =>
+                            updateItem(
+                              item.id as string,
+                              "itemName",
+                              e.target.value
+                            )
+                          }
                           className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`color-${item.id}`} className="text-xs font-medium text-foreground">Color</Label>
+                        <Label
+                          htmlFor={`color-${item.id}`}
+                          className="text-xs font-medium text-foreground"
+                        >
+                          Color
+                        </Label>
                         <Input
                           id={`color-${item.id}`}
                           placeholder="Enter Color"
                           value={item.color}
-                          onChange={(e) => updateItem(item.id, "color", e.target.value)}
+                          onChange={(e) =>
+                            updateItem(
+                              item.id as string,
+                              "color",
+                              e.target.value
+                            )
+                          }
                           className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`size-${item.id}`} className="text-xs font-medium text-foreground">Size</Label>
+                        <Label
+                          htmlFor={`size-${item.id}`}
+                          className="text-xs font-medium text-foreground"
+                        >
+                          Size
+                        </Label>
                         <Input
                           id={`size-${item.id}`}
                           placeholder="Enter Size"
                           value={item.size}
-                          onChange={(e) => updateItem(item.id, "size", e.target.value)}
+                          onChange={(e) =>
+                            updateItem(
+                              item.id as string,
+                              "size",
+                              e.target.value
+                            )
+                          }
                           className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                         />
                       </div>
@@ -578,42 +600,86 @@ export default function PurchaseOrderForm() {
                     {/* Row 2: Country of Origin, Unit Cost, Quantity, Dispatched Qty */}
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`coo-${item.id}`} className="text-xs font-medium text-foreground">Country of Origin</Label>
+                        <Label
+                          htmlFor={`coo-${item.id}`}
+                          className="text-xs font-medium text-foreground"
+                        >
+                          Country of Origin
+                        </Label>
                         <Input
                           id={`coo-${item.id}`}
                           placeholder="Enter Country of Origin"
                           value={item.countryOfOrigin}
-                          onChange={(e) => updateItem(item.id, "countryOfOrigin", e.target.value)}
+                          onChange={(e) =>
+                            updateItem(
+                              item.id as string,
+                              "countryOfOrigin",
+                              e.target.value
+                            )
+                          }
                           className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`unit-cost-${item.id}`} className="text-xs font-medium text-foreground">Unit Cost</Label>
+                        <Label
+                          htmlFor={`unit-cost-${item.id}`}
+                          className="text-xs font-medium text-foreground"
+                        >
+                          Unit Cost
+                        </Label>
                         <Input
                           id={`unit-cost-${item.id}`}
                           placeholder="Enter Unit Cost"
                           value={item.unitCost}
-                          onChange={(e) => updateItem(item.id, "unitCost", e.target.value)}
+                          onChange={(e) =>
+                            updateItem(
+                              item.id as string,
+                              "unitCost",
+                              e.target.value
+                            )
+                          }
                           className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`quantity-${item.id}`} className="text-xs font-medium text-foreground">Quantity</Label>
+                        <Label
+                          htmlFor={`quantity-${item.id}`}
+                          className="text-xs font-medium text-foreground"
+                        >
+                          Quantity
+                        </Label>
                         <Input
                           id={`quantity-${item.id}`}
                           placeholder="Enter Quantity"
                           value={item.quantity}
-                          onChange={(e) => updateItem(item.id, "quantity", e.target.value)}
+                          onChange={(e) =>
+                            updateItem(
+                              item.id as string,
+                              "quantity",
+                              e.target.value
+                            )
+                          }
                           className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`dispatched-${item.id}`} className="text-xs font-medium text-foreground">Dispatched Quantity</Label>
+                        <Label
+                          htmlFor={`dispatched-${item.id}`}
+                          className="text-xs font-medium text-foreground"
+                        >
+                          Dispatched Quantity
+                        </Label>
                         <Input
                           id={`dispatched-${item.id}`}
                           placeholder="Enter Dispatched Quantity"
                           value={item.dispatchedQuantity}
-                          onChange={(e) => updateItem(item.id, "dispatchedQuantity", e.target.value)}
+                          onChange={(e) =>
+                            updateItem(
+                              item.id as string,
+                              "dispatchedQuantity",
+                              e.target.value
+                            )
+                          }
                           className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                         />
                       </div>
@@ -622,42 +688,86 @@ export default function PurchaseOrderForm() {
                     {/* Row 3: Cartons, Gross Weight, Net Weight, CTN Dimensions */}
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`cartons-${item.id}`} className="text-xs font-medium text-foreground">Cartons</Label>
+                        <Label
+                          htmlFor={`cartons-${item.id}`}
+                          className="text-xs font-medium text-foreground"
+                        >
+                          Cartons
+                        </Label>
                         <Input
                           id={`cartons-${item.id}`}
                           placeholder="Enter Cartons"
                           value={item.cartons}
-                          onChange={(e) => updateItem(item.id, "cartons", e.target.value)}
+                          onChange={(e) =>
+                            updateItem(
+                              item.id as string,
+                              "cartons",
+                              e.target.value
+                            )
+                          }
                           className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`gross-weight-${item.id}`} className="text-xs font-medium text-foreground">Gross Weight</Label>
+                        <Label
+                          htmlFor={`gross-weight-${item.id}`}
+                          className="text-xs font-medium text-foreground"
+                        >
+                          Gross Weight
+                        </Label>
                         <Input
                           id={`gross-weight-${item.id}`}
                           placeholder="Enter Gross Weight"
                           value={item.grossWeight}
-                          onChange={(e) => updateItem(item.id, "grossWeight", e.target.value)}
+                          onChange={(e) =>
+                            updateItem(
+                              item.id as string,
+                              "grossWeight",
+                              e.target.value
+                            )
+                          }
                           className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`net-weight-${item.id}`} className="text-xs font-medium text-foreground">Net Weight</Label>
+                        <Label
+                          htmlFor={`net-weight-${item.id}`}
+                          className="text-xs font-medium text-foreground"
+                        >
+                          Net Weight
+                        </Label>
                         <Input
                           id={`net-weight-${item.id}`}
                           placeholder="Enter Net Weight"
                           value={item.netWeight}
-                          onChange={(e) => updateItem(item.id, "netWeight", e.target.value)}
+                          onChange={(e) =>
+                            updateItem(
+                              item.id as string,
+                              "netWeight",
+                              e.target.value
+                            )
+                          }
                           className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`ctn-dims-${item.id}`} className="text-xs font-medium text-foreground">CTN Dimensions</Label>
+                        <Label
+                          htmlFor={`ctn-dims-${item.id}`}
+                          className="text-xs font-medium text-foreground"
+                        >
+                          CTN Dimensions
+                        </Label>
                         <Input
                           id={`ctn-dims-${item.id}`}
                           placeholder="e.g. 10x10x10"
                           value={item.ctnDimensions}
-                          onChange={(e) => updateItem(item.id, "ctnDimensions", e.target.value)}
+                          onChange={(e) =>
+                            updateItem(
+                              item.id as string,
+                              "ctnDimensions",
+                              e.target.value
+                            )
+                          }
                           className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                         />
                       </div>
@@ -665,21 +775,32 @@ export default function PurchaseOrderForm() {
 
                     {/* Row 4: CBM, Status, Delete */}
                     <div className="flex items-end gap-4">
-                      <div className="flex flex-col gap-1.5 w-[calc(25%-12px)]">
-                        <Label htmlFor={`cbm-${item.id}`} className="text-xs font-medium text-foreground">CBM</Label>
+                      <div className="flex w-[calc(25%-12px)] flex-col gap-1.5">
+                        <Label
+                          htmlFor={`cbm-${item.id}`}
+                          className="text-xs font-medium text-foreground"
+                        >
+                          CBM
+                        </Label>
                         <Input
                           id={`cbm-${item.id}`}
                           placeholder="Enter CBM"
                           value={item.cbm}
-                          onChange={(e) => updateItem(item.id, "cbm", e.target.value)}
+                          onChange={(e) =>
+                            updateItem(item.id as string, "cbm", e.target.value)
+                          }
                           className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                         />
                       </div>
-                      <div className="flex flex-col gap-1.5 w-[calc(25%-12px)]">
-                        <Label className="text-xs font-medium text-foreground">Status</Label>
+                      {/* <div className="flex w-[calc(25%-12px)] flex-col gap-1.5">
+                        <Label className="text-xs font-medium text-foreground">
+                          Status
+                        </Label>
                         <Select
                           value={item.status}
-                          onValueChange={(v) => updateItem(item.id, "status", v)}
+                          onValueChange={(v) =>
+                            updateItem(item.id, "status", v)
+                          }
                         >
                           <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
                             <SelectValue placeholder="Select Status" />
@@ -692,10 +813,10 @@ export default function PurchaseOrderForm() {
                             ))}
                           </SelectContent>
                         </Select>
-                      </div>
+                      </div> */}
                       <div className="mb-0 ml-auto">
                         <Button
-                          onClick={() => deleteItem(item.id)}
+                          onClick={() => deleteItem(item.id as string)}
                           variant="destructive"
                           size="sm"
                           className="h-9 gap-1.5 rounded-md bg-red-500! text-xs text-white hover:bg-red-600"
@@ -727,11 +848,13 @@ export default function PurchaseOrderForm() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
               <div className="flex flex-1 flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">Remarks</Label>
+                <Label className="text-xs font-medium text-foreground">
+                  Instructions
+                </Label>
                 <Textarea
                   placeholder="Type your message here."
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
+                  value={instructions}
+                  onChange={(e) => setInstructions(e.target.value)}
                   className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"
                 />
               </div>

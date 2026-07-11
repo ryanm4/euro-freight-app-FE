@@ -1,7 +1,20 @@
 "use client"
 
-import * as React from "react"
 import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes"
+import * as React from "react"
+
+if (typeof window !== "undefined") {
+  const originalError = console.error
+  console.error = (...args: any[]) => {
+    if (
+      typeof args[0] === "string" &&
+      args[0].includes("Encountered a script tag while rendering")
+    ) {
+      return
+    }
+    originalError(...args)
+  }
+}
 
 function ThemeProvider({
   children,

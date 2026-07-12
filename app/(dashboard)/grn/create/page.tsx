@@ -4,15 +4,15 @@ import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcr
 import { useRouter } from "next/navigation"
 import GoodsReceiveNoteForm from "../_components/grn-form"
 
-export default function PurchaseOrderCreatePage() {
+export default function GoodsReceiveNoteCreatePage() {
   const router = useRouter()
   return (
     <div className="mt-3 flex flex-1 flex-col gap-4 p-6 pt-0">
       <PageTitleWithBreadcrumb
-        title="Add"
+        title="Create Goods Receive Note"
         breadcrumbs={[
           { title: "Dashboard", href: "/dashboard" },
-          { title: "Good Received Notes", href: "/grn" },
+          { title: "Goods Received Notes", href: "/grn" },
         ]}
       />
 

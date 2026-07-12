@@ -35,7 +35,7 @@ export default function ShipmentPage() {
   return (
     <div className="mt-3 flex flex-1 flex-col gap-4 p-[24px] pt-0">
       <PageTitleWithBreadcrumb
-        title="Shipment"
+        title="Shipments"
         breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }]}
       />
       <div className="flex flex-row justify-end gap-[24px]">

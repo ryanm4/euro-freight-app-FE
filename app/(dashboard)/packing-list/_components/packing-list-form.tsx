@@ -1,5 +1,10 @@
 "use client"
 
+import { StatusBadge } from "@/components/shared/status-badge"
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Form,
   FormControl,
@@ -8,22 +13,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { Textarea } from "@/components/ui/textarea"
-import { packingListSchema } from "@/modules/packing-list/validation"
-import { useCallback, useState, useEffect, useMemo } from "react"
-import { FieldPath, useForm, SubmitHandler } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import z from "zod"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { IconCalendarFilled, IconSearch } from "@tabler/icons-react"
-import { Calendar } from "@/components/ui/calendar"
-import { useRouter } from "next/navigation"
 import {
   Select,
   SelectContent,
@@ -31,11 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
-import { format } from "date-fns"
-import { ClientApi } from "@/modules/clients/api"
-import { CLIENT_LIST } from "@/modules/clients/types"
-import { PURCHASE_ORDER } from "@/modules/purchase-order/types"
 import {
   Table,
   TableBody,
@@ -44,15 +34,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import { StatusBadge } from "@/components/shared/status-badge"
-import { toast } from "sonner"
+import { Textarea } from "@/components/ui/textarea"
+import { fetchClients } from "@/lib/api/clients"
+import { UserRole } from "@/lib/enums/user-role"
+import { cn } from "@/lib/utils"
+import { CLIENT_LIST } from "@/modules/clients/types"
+import { packingListSchema } from "@/modules/packing-list/validation"
 import { PurchaseOrderApi } from "@/modules/purchase-order/api"
+import { PURCHASE_ORDER } from "@/modules/purchase-order/types"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { IconCalendarFilled, IconSearch } from "@tabler/icons-react"
+import { useQuery } from "@tanstack/react-query"
+import { format } from "date-fns"
+import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { FieldPath, SubmitHandler, useForm } from "react-hook-form"
+import { toast } from "sonner"
+import z from "zod"
 
 export default function PackingListForm() {
   const router = useRouter()
-  const [client, setClient] = useState<CLIENT_LIST[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [pos, setPos] = useState<PURCHASE_ORDER[]>([])
   const [isPosLoading, setIsPosLoading] = useState(false)
@@ -83,32 +84,6 @@ export default function PackingListForm() {
     >["0"]["render"]
   ) => <FormField control={form.control} name={name} render={render} />
 
-  const fetchCustomerData = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      const response = await ClientApi.getAll()
-      if (response.status === 200) {
-        // Backend may return a paginated/wrapped object or a plain array
-        const raw = response.data as unknown
-        if (Array.isArray(raw)) {
-          setClient(raw)
-        } else if (raw && typeof raw === "object") {
-          // Try common wrapper keys: data, clients, results, items
-          const obj = raw as Record<string, unknown>
-          const extracted =
-            obj.data ?? obj.clients ?? obj.results ?? obj.items
-          setClient(Array.isArray(extracted) ? (extracted as CLIENT_LIST[]) : [])
-        } else {
-          setClient([])
-        }
-      }
-    } catch (error) {
-      console.error("Failed to fetch clients", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
   const fetchPOs = useCallback(async () => {
     try {
       setIsPosLoading(true)
@@ -123,7 +98,9 @@ export default function PackingListForm() {
           const obj = raw as Record<string, unknown>
           const extracted =
             obj.data ?? obj.purchase_orders ?? obj.results ?? obj.items
-          setPos(Array.isArray(extracted) ? (extracted as PURCHASE_ORDER[]) : [])
+          setPos(
+            Array.isArray(extracted) ? (extracted as PURCHASE_ORDER[]) : []
+          )
         } else {
           setPos([])
         }
@@ -135,10 +112,20 @@ export default function PackingListForm() {
     }
   }, [])
 
+  const { data } = useQuery({
+    queryKey: ["clients"],
+    queryFn: fetchClients,
+  })
+
+  const clientOptions = useMemo(() => {
+    return (
+      data?.data?.filter((client: any) => client.type === UserRole.Client) || []
+    )
+  }, [data])
+
   useEffect(() => {
-    fetchCustomerData()
     fetchPOs()
-  }, [fetchCustomerData, fetchPOs])
+  }, [fetchPOs])
 
   const activePOs = useMemo(() => {
     return pos.filter((po) => !po.packing_list_id)
@@ -146,8 +133,10 @@ export default function PackingListForm() {
 
   const selectedClientId = form.watch("client_id")
   const selectedClient = useMemo(() => {
-    return client.find((c) => String(c.id) === String(selectedClientId))
-  }, [client, selectedClientId])
+    return clientOptions.find(
+      (c: any) => String(c.id) === String(selectedClientId)
+    )
+  }, [clientOptions, selectedClientId])
 
   const filteredPOs = useMemo(() => {
     let result = activePOs
@@ -306,7 +295,7 @@ export default function PackingListForm() {
                         <SelectValue placeholder="Select Client Name" />
                       </SelectTrigger>
                       <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                        {client.map((c: CLIENT_LIST) => (
+                        {clientOptions.map((c: CLIENT_LIST) => (
                           <SelectItem key={c.id} value={String(c.id)}>
                             {c.name}
                           </SelectItem>

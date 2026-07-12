@@ -18,10 +18,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { createBillOfLading } from "@/lib/api/bill_of_lading"
 import { fetchClients } from "@/lib/api/clients"
 import { fetchGRNs } from "@/lib/api/goods_receive_notes"
-import { IconCalendarFilled, IconPlus, IconTrash } from "@tabler/icons-react"
-import { format, isValid, parse } from "date-fns"
+import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
+import { IconCalendarFilled, IconPlus, IconTrash } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
+import { format, isValid, parse } from "date-fns"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 import GRNTable, { GRN } from "./GRNTable"
@@ -80,13 +81,16 @@ export default function HBLHABWForm() {
   })
   // data={(data?.data ?? []) as GOODS_RECEIVE_NOTE[]}
 
-  const supplierOptions = useMemo(() => {
-    return data?.data?.filter((client: any) => client.type === "client") || []
+  const clientOptions = useMemo(() => {
+    return (
+      data?.data?.filter((client: any) => client.type === UserRole.Client) || []
+    )
   }, [data])
 
   const manufacturerOptions = useMemo(() => {
     return (
-      data?.data?.filter((client: any) => client.type === "manufacturer") || []
+      data?.data?.filter((client: any) => client.type === UserRole.Supplier) ||
+      []
     )
   }, [data])
 
@@ -171,11 +175,10 @@ export default function HBLHABWForm() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">Type</Label>
-                <Select
-                  value={type}
-                  onValueChange={setType}
-                >
+                <Label className="text-xs font-medium text-foreground">
+                  Type
+                </Label>
+                <Select value={type} onValueChange={setType}>
                   <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
                     <SelectValue placeholder="Choose Type" />
                   </SelectTrigger>
@@ -187,7 +190,12 @@ export default function HBLHABWForm() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="date" className="text-xs font-medium text-foreground">Date</Label>
+                <Label
+                  htmlFor="date"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Date
+                </Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -198,20 +206,30 @@ export default function HBLHABWForm() {
                         !date && "text-zinc-500"
                       )}
                     >
-                      {date ? (() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        const selectedDate = parseDate(date)
-                        return selectedDate ? format(selectedDate, "PPP") : "Pick a date"
-                      })() : "Pick a date"}
+                      {date
+                        ? (() => {
+                            const parseDate = (
+                              val: string
+                            ): Date | undefined => {
+                              if (!val) return undefined
+                              let d = parse(
+                                val,
+                                "yyyy-MM-dd HH:mm:ss",
+                                new Date()
+                              )
+                              if (isValid(d)) return d
+                              d = parse(val, "yyyy-MM-dd", new Date())
+                              if (isValid(d)) return d
+                              d = new Date(val)
+                              if (isValid(d)) return d
+                              return undefined
+                            }
+                            const selectedDate = parseDate(date)
+                            return selectedDate
+                              ? format(selectedDate, "PPP")
+                              : "Pick a date"
+                          })()
+                        : "Pick a date"}
                       <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -258,18 +276,17 @@ export default function HBLHABWForm() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">Client</Label>
-                <Select
-                  value={client}
-                  onValueChange={setClient}
-                >
+                <Label className="text-xs font-medium text-foreground">
+                  Client
+                </Label>
+                <Select value={client} onValueChange={setClient}>
                   <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
                     <SelectValue placeholder="Choose Client" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    {supplierOptions.map((s: any) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
+                    {clientOptions.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -277,11 +294,10 @@ export default function HBLHABWForm() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">Manufacturer</Label>
-                <Select
-                  value={manufacturer}
-                  onValueChange={setManufacturer}
-                >
+                <Label className="text-xs font-medium text-foreground">
+                  Manufacturer
+                </Label>
+                <Select value={manufacturer} onValueChange={setManufacturer}>
                   <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
                     <SelectValue placeholder="Choose Manufacturer" />
                   </SelectTrigger>
@@ -296,7 +312,12 @@ export default function HBLHABWForm() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="mbl-mawb-no" className="text-xs font-medium text-foreground">MBL / MAWB No</Label>
+                <Label
+                  htmlFor="mbl-mawb-no"
+                  className="text-xs font-medium text-foreground"
+                >
+                  MBL / MAWB No
+                </Label>
                 <Input
                   id="mbl-mawb-no"
                   placeholder="Enter MBL / MAWB No"
@@ -345,7 +366,12 @@ export default function HBLHABWForm() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="vessel-name" className="text-xs font-medium text-foreground">Planned Vessel Name</Label>
+                <Label
+                  htmlFor="vessel-name"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Planned Vessel Name
+                </Label>
                 <Input
                   id="vessel-name"
                   placeholder="Enter Vessel Name"
@@ -356,7 +382,12 @@ export default function HBLHABWForm() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="voyage-no" className="text-xs font-medium text-foreground">Voyage No</Label>
+                <Label
+                  htmlFor="voyage-no"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Voyage No
+                </Label>
                 <Input
                   id="voyage-no"
                   placeholder="Enter Voyage No"
@@ -367,7 +398,12 @@ export default function HBLHABWForm() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="estimated-time-of-delivery" className="text-xs font-medium text-foreground">Estimated Time of Delivery</Label>
+                <Label
+                  htmlFor="estimated-time-of-delivery"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Estimated Time of Delivery
+                </Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -378,20 +414,32 @@ export default function HBLHABWForm() {
                         !estimatedTimeOfDelivery && "text-zinc-500"
                       )}
                     >
-                      {estimatedTimeOfDelivery ? (() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        const selectedDate = parseDate(estimatedTimeOfDelivery)
-                        return selectedDate ? format(selectedDate, "PPP") : "Pick a date"
-                      })() : "Pick a date"}
+                      {estimatedTimeOfDelivery
+                        ? (() => {
+                            const parseDate = (
+                              val: string
+                            ): Date | undefined => {
+                              if (!val) return undefined
+                              let d = parse(
+                                val,
+                                "yyyy-MM-dd HH:mm:ss",
+                                new Date()
+                              )
+                              if (isValid(d)) return d
+                              d = parse(val, "yyyy-MM-dd", new Date())
+                              if (isValid(d)) return d
+                              d = new Date(val)
+                              if (isValid(d)) return d
+                              return undefined
+                            }
+                            const selectedDate = parseDate(
+                              estimatedTimeOfDelivery
+                            )
+                            return selectedDate
+                              ? format(selectedDate, "PPP")
+                              : "Pick a date"
+                          })()
+                        : "Pick a date"}
                       <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -413,7 +461,9 @@ export default function HBLHABWForm() {
                       })()}
                       onSelect={(selectedDate) => {
                         if (selectedDate) {
-                          setEstimatedTimeOfDelivery(format(selectedDate, "yyyy-MM-dd"))
+                          setEstimatedTimeOfDelivery(
+                            format(selectedDate, "yyyy-MM-dd")
+                          )
                         }
                       }}
                       captionLayout="dropdown"
@@ -423,7 +473,12 @@ export default function HBLHABWForm() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="estimated-time-of-arrival" className="text-xs font-medium text-foreground">Estimated Time of Arrival</Label>
+                <Label
+                  htmlFor="estimated-time-of-arrival"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Estimated Time of Arrival
+                </Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -434,20 +489,32 @@ export default function HBLHABWForm() {
                         !estimatedTimeOfArrival && "text-zinc-500"
                       )}
                     >
-                      {estimatedTimeOfArrival ? (() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        const selectedDate = parseDate(estimatedTimeOfArrival)
-                        return selectedDate ? format(selectedDate, "PPP") : "Pick a date"
-                      })() : "Pick a date"}
+                      {estimatedTimeOfArrival
+                        ? (() => {
+                            const parseDate = (
+                              val: string
+                            ): Date | undefined => {
+                              if (!val) return undefined
+                              let d = parse(
+                                val,
+                                "yyyy-MM-dd HH:mm:ss",
+                                new Date()
+                              )
+                              if (isValid(d)) return d
+                              d = parse(val, "yyyy-MM-dd", new Date())
+                              if (isValid(d)) return d
+                              d = new Date(val)
+                              if (isValid(d)) return d
+                              return undefined
+                            }
+                            const selectedDate = parseDate(
+                              estimatedTimeOfArrival
+                            )
+                            return selectedDate
+                              ? format(selectedDate, "PPP")
+                              : "Pick a date"
+                          })()
+                        : "Pick a date"}
                       <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -469,7 +536,9 @@ export default function HBLHABWForm() {
                       })()}
                       onSelect={(selectedDate) => {
                         if (selectedDate) {
-                          setEstimatedTimeOfArrival(format(selectedDate, "yyyy-MM-dd"))
+                          setEstimatedTimeOfArrival(
+                            format(selectedDate, "yyyy-MM-dd")
+                          )
                         }
                       }}
                       captionLayout="dropdown"
@@ -479,7 +548,12 @@ export default function HBLHABWForm() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="actual-time-of-delivery" className="text-xs font-medium text-foreground">Actual Time of Delivery</Label>
+                <Label
+                  htmlFor="actual-time-of-delivery"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Actual Time of Delivery
+                </Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -490,20 +564,30 @@ export default function HBLHABWForm() {
                         !actualTimeOfDelivery && "text-zinc-500"
                       )}
                     >
-                      {actualTimeOfDelivery ? (() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        const selectedDate = parseDate(actualTimeOfDelivery)
-                        return selectedDate ? format(selectedDate, "PPP") : "Pick a date"
-                      })() : "Pick a date"}
+                      {actualTimeOfDelivery
+                        ? (() => {
+                            const parseDate = (
+                              val: string
+                            ): Date | undefined => {
+                              if (!val) return undefined
+                              let d = parse(
+                                val,
+                                "yyyy-MM-dd HH:mm:ss",
+                                new Date()
+                              )
+                              if (isValid(d)) return d
+                              d = parse(val, "yyyy-MM-dd", new Date())
+                              if (isValid(d)) return d
+                              d = new Date(val)
+                              if (isValid(d)) return d
+                              return undefined
+                            }
+                            const selectedDate = parseDate(actualTimeOfDelivery)
+                            return selectedDate
+                              ? format(selectedDate, "PPP")
+                              : "Pick a date"
+                          })()
+                        : "Pick a date"}
                       <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -525,7 +609,9 @@ export default function HBLHABWForm() {
                       })()}
                       onSelect={(selectedDate) => {
                         if (selectedDate) {
-                          setActualTimeOfDelivery(format(selectedDate, "yyyy-MM-dd"))
+                          setActualTimeOfDelivery(
+                            format(selectedDate, "yyyy-MM-dd")
+                          )
                         }
                       }}
                       captionLayout="dropdown"
@@ -535,7 +621,12 @@ export default function HBLHABWForm() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="actual-time-of-arrival" className="text-xs font-medium text-foreground">Actual Time of Arrival</Label>
+                <Label
+                  htmlFor="actual-time-of-arrival"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Actual Time of Arrival
+                </Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -546,20 +637,30 @@ export default function HBLHABWForm() {
                         !actualTimeOfArrival && "text-zinc-500"
                       )}
                     >
-                      {actualTimeOfArrival ? (() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        const selectedDate = parseDate(actualTimeOfArrival)
-                        return selectedDate ? format(selectedDate, "PPP") : "Pick a date"
-                      })() : "Pick a date"}
+                      {actualTimeOfArrival
+                        ? (() => {
+                            const parseDate = (
+                              val: string
+                            ): Date | undefined => {
+                              if (!val) return undefined
+                              let d = parse(
+                                val,
+                                "yyyy-MM-dd HH:mm:ss",
+                                new Date()
+                              )
+                              if (isValid(d)) return d
+                              d = parse(val, "yyyy-MM-dd", new Date())
+                              if (isValid(d)) return d
+                              d = new Date(val)
+                              if (isValid(d)) return d
+                              return undefined
+                            }
+                            const selectedDate = parseDate(actualTimeOfArrival)
+                            return selectedDate
+                              ? format(selectedDate, "PPP")
+                              : "Pick a date"
+                          })()
+                        : "Pick a date"}
                       <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -581,7 +682,9 @@ export default function HBLHABWForm() {
                       })()}
                       onSelect={(selectedDate) => {
                         if (selectedDate) {
-                          setActualTimeOfArrival(format(selectedDate, "yyyy-MM-dd"))
+                          setActualTimeOfArrival(
+                            format(selectedDate, "yyyy-MM-dd")
+                          )
                         }
                       }}
                       captionLayout="dropdown"
@@ -606,7 +709,12 @@ export default function HBLHABWForm() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="arrival-port" className="text-xs font-medium text-foreground">Arrival Port</Label>
+                <Label
+                  htmlFor="arrival-port"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Arrival Port
+                </Label>
                 <Input
                   id="arrival-port"
                   placeholder="Enter Arrival Port"
@@ -617,7 +725,12 @@ export default function HBLHABWForm() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="inland-location" className="text-xs font-medium text-foreground">Inland Location</Label>
+                <Label
+                  htmlFor="inland-location"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Inland Location
+                </Label>
                 <Input
                   id="inland-location"
                   placeholder="Enter Inland Location"
@@ -628,7 +741,12 @@ export default function HBLHABWForm() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="no-of-pieces" className="text-xs font-medium text-foreground">No. of Pieces</Label>
+                <Label
+                  htmlFor="no-of-pieces"
+                  className="text-xs font-medium text-foreground"
+                >
+                  No. of Pieces
+                </Label>
                 <Input
                   id="no-of-pieces"
                   placeholder="Enter No. of Pieces"
@@ -639,7 +757,12 @@ export default function HBLHABWForm() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="gross-weight" className="text-xs font-medium text-foreground">Gross Weight</Label>
+                <Label
+                  htmlFor="gross-weight"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Gross Weight
+                </Label>
                 <Input
                   id="gross-weight"
                   placeholder="Enter Gross Weight"
@@ -650,7 +773,12 @@ export default function HBLHABWForm() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="chargeable-weight" className="text-xs font-medium text-foreground">Chargeable Weight</Label>
+                <Label
+                  htmlFor="chargeable-weight"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Chargeable Weight
+                </Label>
                 <Input
                   id="chargeable-weight"
                   placeholder="Enter Chargeable Weight"
@@ -661,7 +789,12 @@ export default function HBLHABWForm() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="cbm" className="text-xs font-medium text-foreground">CBM</Label>
+                <Label
+                  htmlFor="cbm"
+                  className="text-xs font-medium text-foreground"
+                >
+                  CBM
+                </Label>
                 <Input
                   id="cbm"
                   placeholder="Enter CBM"
@@ -672,7 +805,12 @@ export default function HBLHABWForm() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="container-seal-no" className="text-xs font-medium text-foreground">Container Seal No</Label>
+                <Label
+                  htmlFor="container-seal-no"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Container Seal No
+                </Label>
                 <Input
                   id="container-seal-no"
                   placeholder="Enter Container Seal No"
@@ -683,7 +821,12 @@ export default function HBLHABWForm() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="onboarded-date" className="text-xs font-medium text-foreground">Onboarded date</Label>
+                <Label
+                  htmlFor="onboarded-date"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Onboarded date
+                </Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -694,20 +837,30 @@ export default function HBLHABWForm() {
                         !onboardedDate && "text-zinc-500"
                       )}
                     >
-                      {onboardedDate ? (() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        const selectedDate = parseDate(onboardedDate)
-                        return selectedDate ? format(selectedDate, "PPP") : "Pick a date"
-                      })() : "Pick a date"}
+                      {onboardedDate
+                        ? (() => {
+                            const parseDate = (
+                              val: string
+                            ): Date | undefined => {
+                              if (!val) return undefined
+                              let d = parse(
+                                val,
+                                "yyyy-MM-dd HH:mm:ss",
+                                new Date()
+                              )
+                              if (isValid(d)) return d
+                              d = parse(val, "yyyy-MM-dd", new Date())
+                              if (isValid(d)) return d
+                              d = new Date(val)
+                              if (isValid(d)) return d
+                              return undefined
+                            }
+                            const selectedDate = parseDate(onboardedDate)
+                            return selectedDate
+                              ? format(selectedDate, "PPP")
+                              : "Pick a date"
+                          })()
+                        : "Pick a date"}
                       <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -756,7 +909,9 @@ export default function HBLHABWForm() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
               <div className="flex flex-1 flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">Remarks</Label>
+                <Label className="text-xs font-medium text-foreground">
+                  Remarks
+                </Label>
                 <Textarea
                   placeholder="Type your message here."
                   value={remarks}
@@ -791,8 +946,13 @@ export default function HBLHABWForm() {
             <div className="grid grid-cols-1 gap-3">
               {ports.map((port) => (
                 <div key={port.id} className="flex items-end gap-2">
-                  <div className="flex flex-col gap-1.5 flex-1">
-                    <Label htmlFor={`port-${port.id}`} className="text-xs font-medium text-foreground">Arrival Port</Label>
+                  <div className="flex flex-1 flex-col gap-1.5">
+                    <Label
+                      htmlFor={`port-${port.id}`}
+                      className="text-xs font-medium text-foreground"
+                    >
+                      Arrival Port
+                    </Label>
                     <Input
                       id={`port-${port.id}`}
                       placeholder="Enter port name"

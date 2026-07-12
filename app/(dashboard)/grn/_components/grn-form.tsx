@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -16,8 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
   TableBody,
@@ -26,13 +25,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Textarea } from "@/components/ui/textarea"
 import { fetchClients } from "@/lib/api/clients"
 import { createGoodsReceiveNote } from "@/lib/api/goods_receive_notes"
 import { fetchPackingLists } from "@/lib/api/packing_lists"
-import { IconCalendarFilled } from "@tabler/icons-react"
-import { format, isValid, parse } from "date-fns"
+import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
+import { IconCalendarFilled } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
+import { format, isValid, parse } from "date-fns"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 
@@ -60,7 +61,6 @@ export default function GoodsReceiveNoteForm() {
   const [remarks, setRemarks] = useState("")
 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
-  console.log("selectedRows", selectedRows)
 
   const {
     data,
@@ -78,23 +78,23 @@ export default function GoodsReceiveNoteForm() {
 
   console.log("data", data)
 
-  const supplierOptions = useMemo(() => {
-    return data?.data?.filter((client: any) => client.type === "client") || []
-  }, [data])
-
-  const manufacturerOptions = useMemo(() => {
+  const clientOptions = useMemo(() => {
     return (
-      data?.data?.filter((client: any) => client.type === "manufacturer") || []
+      data?.data?.filter((client: any) => client.type === UserRole.Client) || []
     )
   }, [data])
 
   const forwarderOptions = useMemo(() => {
     return (
-      data?.data?.filter((client: any) => client.type === "forwarder") || []
+      data?.data?.filter((client: any) => client.type === UserRole.Forwarder) ||
+      []
     )
   }, [data])
 
-  console.log("supplierOptions", supplierOptions)
+  const manufacturerOptions = useMemo(() => {
+    return data?.data?.filter((c: any) => c.type === UserRole.Supplier) || []
+  }, [data])
+
   console.log("manufacturerOptions", manufacturerOptions)
   console.log("forwarderOptions", forwarderOptions)
 
@@ -172,7 +172,12 @@ export default function GoodsReceiveNoteForm() {
             {/* Row 1: Date, Client, Forwarder, Manufacturer */}
             <div className="grid grid-cols-4 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="date" className="text-xs font-medium text-foreground">Date</Label>
+                <Label
+                  htmlFor="date"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Date
+                </Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -183,20 +188,30 @@ export default function GoodsReceiveNoteForm() {
                         !date && "text-zinc-500"
                       )}
                     >
-                      {date ? (() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        const selectedDate = parseDate(date)
-                        return selectedDate ? format(selectedDate, "PPP") : "Pick a date"
-                      })() : "Pick a date"}
+                      {date
+                        ? (() => {
+                            const parseDate = (
+                              val: string
+                            ): Date | undefined => {
+                              if (!val) return undefined
+                              let d = parse(
+                                val,
+                                "yyyy-MM-dd HH:mm:ss",
+                                new Date()
+                              )
+                              if (isValid(d)) return d
+                              d = parse(val, "yyyy-MM-dd", new Date())
+                              if (isValid(d)) return d
+                              d = new Date(val)
+                              if (isValid(d)) return d
+                              return undefined
+                            }
+                            const selectedDate = parseDate(date)
+                            return selectedDate
+                              ? format(selectedDate, "PPP")
+                              : "Pick a date"
+                          })()
+                        : "Pick a date"}
                       <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -227,29 +242,27 @@ export default function GoodsReceiveNoteForm() {
                 </Popover>
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">Client</Label>
-                <Select
-                  value={client}
-                  onValueChange={setClient}
-                >
+                <Label className="text-xs font-medium text-foreground">
+                  Client
+                </Label>
+                <Select value={client} onValueChange={setClient}>
                   <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
                     <SelectValue placeholder="Choose Client" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    {supplierOptions.map((s: any) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
+                    {clientOptions.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">Forwarder</Label>
-                <Select
-                  value={forwarder}
-                  onValueChange={setForwarder}
-                >
+                <Label className="text-xs font-medium text-foreground">
+                  Forwarder
+                </Label>
+                <Select value={forwarder} onValueChange={setForwarder}>
                   <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
                     <SelectValue placeholder="Choose Forwarder" />
                   </SelectTrigger>
@@ -263,11 +276,10 @@ export default function GoodsReceiveNoteForm() {
                 </Select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">Manufacturer</Label>
-                <Select
-                  value={manufacturer}
-                  onValueChange={setManufacturer}
-                >
+                <Label className="text-xs font-medium text-foreground">
+                  Manufacturer
+                </Label>
+                <Select value={manufacturer} onValueChange={setManufacturer}>
                   <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
                     <SelectValue placeholder="Select Manufacturer" />
                   </SelectTrigger>
@@ -285,7 +297,12 @@ export default function GoodsReceiveNoteForm() {
             {/* Row 2: Quantity, Packing List */}
             <div className="grid grid-cols-4 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="quantity" className="text-xs font-medium text-foreground">Quantity</Label>
+                <Label
+                  htmlFor="quantity"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Quantity
+                </Label>
                 <Input
                   id="quantity"
                   placeholder="Enter Quantity"
@@ -419,7 +436,9 @@ export default function GoodsReceiveNoteForm() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
               <div className="flex flex-1 flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">Remarks</Label>
+                <Label className="text-xs font-medium text-foreground">
+                  Remarks
+                </Label>
                 <Textarea
                   placeholder="Type your message here."
                   value={remarks}

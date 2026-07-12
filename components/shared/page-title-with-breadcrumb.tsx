@@ -22,14 +22,16 @@ function PageTitleWithBreadcrumb({
   breadcrumbs = [],
   isDashboard = false,
 }: PageTitleWithBreadcrumbProps) {
-  const [currentTime, setCurrentTime] = useState(new Date())
+  const [currentTime, setCurrentTime] = useState<Date | null>(null)
 
   useEffect(() => {
+    setCurrentTime(new Date())
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
 
   const getGreeting = () => {
+    if (!currentTime) return "Good"
     const hour = currentTime.getHours()
     if (hour < 12) return "Good Morning"
     if (hour < 18) return "Good Afternoon"
@@ -37,6 +39,7 @@ function PageTitleWithBreadcrumb({
   }
 
   const formatDate = () => {
+    if (!currentTime) return ""
     return currentTime.toLocaleDateString("en-US", {
       weekday: "long",
       month: "long",
@@ -46,6 +49,7 @@ function PageTitleWithBreadcrumb({
   }
 
   const formatTime = () => {
+    if (!currentTime) return ""
     return currentTime.toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
@@ -62,7 +66,7 @@ function PageTitleWithBreadcrumb({
           {getGreeting()}
         </h1>
         <p className="text-sm text-muted-foreground">
-          {formatDate()} · {formatTime()}
+          {currentTime ? `${formatDate()} · ${formatTime()}` : "\u00A0"}
         </p>
       </div>
     )

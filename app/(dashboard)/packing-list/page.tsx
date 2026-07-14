@@ -10,10 +10,12 @@ import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 import { packingListColumns } from "./_components/packing-list-columns"
 import { DataTable } from "./_components/packing-list-table"
+import { PackingListUploadDialog } from "./_components/packing-list-upload-dialog"
 
 export default function PackingListPage() {
   const router = useRouter()
   const [searchValue, setSearchValue] = useState("")
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
 
   const actions = useMemo(
     () => ({
@@ -52,8 +54,8 @@ export default function PackingListPage() {
             onChange={(e) => setSearchValue(e.target.value)}
           />
         </div> */}
-        <Button onClick={() => router.push("/packing-list/create")}>
-          <IconPlus className="mr-2 h-4 w-4" /> Create New
+        <Button onClick={() => setIsUploadDialogOpen(true)}>
+          <IconPlus className="mr-2 h-4 w-4" /> Upload Packing List
         </Button>
       </div>
       <div className="mt-4">
@@ -64,6 +66,10 @@ export default function PackingListPage() {
           isLoading={isLoading}
         />
       </div>
+      <PackingListUploadDialog
+        open={isUploadDialogOpen}
+        onOpenChange={setIsUploadDialogOpen}
+      />
     </div>
   )
 }

@@ -35,6 +35,15 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import { fetchClients } from "@/lib/api/clients"
 import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
@@ -52,14 +61,53 @@ import { FieldPath, SubmitHandler, useForm } from "react-hook-form"
 import { toast } from "sonner"
 import z from "zod"
 
-export default function PackingListForm() {
+interface UploadedPackingListData {
+  success: boolean
+  filename: string
+  pages: number
+  rowCount: number
+  rowsFailedToParse: number
+  totals: {
+    totalQuantity: number
+    totalCartons: number
+    totalGrossWeight: number
+    totalNetWeight: number
+    totalCbm: number
+  }
+  items: Array<{
+    poNumber: string
+    sku: string
+    itemDescription: string
+    size: string
+    unitCost: number
+    quantity: number
+    ctnCount: number
+    grossWeightKg: number
+    netWeightKg: number
+    cartonDimensions: string
+    cbm: number
+  }>
+  parseErrors: Array<{
+    rowIndex: number
+    poNumber: string
+    rawChunk: string
+  }>
+}
+
+interface PackingListFormProps {
+  uploadedData?: UploadedPackingListData | null
+}
+
+export default function PackingListForm({ uploadedData }: PackingListFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [pos, setPos] = useState<PURCHASE_ORDER[]>([])
   const [isPosLoading, setIsPosLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
+  const [uploadedItemsCurrentPage, setUploadedItemsCurrentPage] = useState(1)
   const itemsPerPage = 5
+  const uploadedItemsPerPage = 10
 
   type PackingListFormValues = z.infer<typeof packingListSchema>
 
@@ -172,6 +220,18 @@ export default function PackingListForm() {
   }, [filteredPOs, currentPage])
 
   const totalPages = Math.ceil(filteredPOs.length / itemsPerPage)
+
+  // Pagination for uploaded items
+  const uploadedItemsTotalPages = uploadedData
+    ? Math.ceil(uploadedData.items.length / uploadedItemsPerPage)
+    : 0
+
+  const paginatedUploadedItems = uploadedData
+    ? uploadedData.items.slice(
+        (uploadedItemsCurrentPage - 1) * uploadedItemsPerPage,
+        uploadedItemsCurrentPage * uploadedItemsPerPage
+      )
+    : []
 
   const selectedPoIds = form.watch("po_detail_ids") || []
 
@@ -352,43 +412,92 @@ export default function PackingListForm() {
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div className="flex flex-col gap-[0.5px]">
                   <h3 className="text-md font-medium">
-                    Active Purchase Orders
+                    {uploadedData ? "Uploaded Items" : "Active Purchase Orders"}
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    overview of the active orders
+                    {uploadedData
+                      ? `Items from ${uploadedData.filename}`
+                      : "overview of the active orders"}
                   </p>
                 </div>
-                <div className="relative w-[280px]">
-                  <IconSearch className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Search Purchase Order"
-                    className="h-9 w-full pl-9"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
+                {!uploadedData && (
+                  <div className="relative w-[280px]">
+                    <IconSearch className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      placeholder="Search Purchase Order"
+                      className="h-9 w-full pl-9"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="overflow-hidden rounded-md border border-border">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>PO Number</TableHead>
-                        <TableHead>Order Quantity</TableHead>
-                        <TableHead>EX Factory Date</TableHead>
-                        <TableHead>Shipping Mode</TableHead>
-                        <TableHead>Final Destination</TableHead>
-                        <TableHead>Supplier ID</TableHead>
-                        <TableHead>Cargo Dispatch Date</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="pr-4 text-right">
-                          Actions
-                        </TableHead>
+                        {uploadedData ? (
+                          <>
+                            <TableHead>PO Number</TableHead>
+                            <TableHead>SKU</TableHead>
+                            <TableHead>Item Description</TableHead>
+                            <TableHead>Size</TableHead>
+                            <TableHead>Quantity</TableHead>
+                            <TableHead>Carton Count</TableHead>
+                            <TableHead>Gross Weight (kg)</TableHead>
+                            <TableHead>Net Weight (kg)</TableHead>
+                            <TableHead>Carton Dimensions</TableHead>
+                            <TableHead>CBM</TableHead>
+                          </>
+                        ) : (
+                          <>
+                            <TableHead>PO Number</TableHead>
+                            <TableHead>Order Quantity</TableHead>
+                            <TableHead>EX Factory Date</TableHead>
+                            <TableHead>Shipping Mode</TableHead>
+                            <TableHead>Final Destination</TableHead>
+                            <TableHead>Supplier ID</TableHead>
+                            <TableHead>Cargo Dispatch Date</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="pr-4 text-right">
+                              Actions
+                            </TableHead>
+                          </>
+                        )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {isPosLoading ? (
+                      {uploadedData ? (
+                        uploadedData.items.length > 0 ? (
+                          paginatedUploadedItems.map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">
+                                {item.poNumber || "N/A"}
+                              </TableCell>
+                              <TableCell>{item.sku || "N/A"}</TableCell>
+                              <TableCell>{item.itemDescription || "N/A"}</TableCell>
+                              <TableCell>{item.size || "N/A"}</TableCell>
+                              <TableCell>{item.quantity ?? 0}</TableCell>
+                              <TableCell>{item.ctnCount ?? 0}</TableCell>
+                              <TableCell>{item.grossWeightKg ?? 0}</TableCell>
+                              <TableCell>{item.netWeightKg ?? 0}</TableCell>
+                              <TableCell>{item.cartonDimensions || "N/A"}</TableCell>
+                              <TableCell>{item.cbm ?? 0}</TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell
+                              colSpan={10}
+                              className="h-24 text-center text-sm text-muted-foreground"
+                            >
+                              No items found in the uploaded file.
+                            </TableCell>
+                          </TableRow>
+                        )
+                      ) : isPosLoading ? (
                         Array.from({ length: 3 }).map((_, i) => (
                           <TableRow key={i}>
                             {Array.from({ length: 9 }).map((_, j) => (
@@ -456,7 +565,81 @@ export default function PackingListForm() {
                   </Table>
                 </div>
 
-                {totalPages > 1 && (
+                {uploadedData && uploadedItemsTotalPages > 1 && (
+                  <div className="flex items-center justify-between py-2">
+                    <div className="text-xs text-muted-foreground">
+                      Showing {(uploadedItemsCurrentPage - 1) * uploadedItemsPerPage + 1} to{" "}
+                      {Math.min(uploadedItemsCurrentPage * uploadedItemsPerPage, uploadedData.items.length)}{" "}
+                      of {uploadedData.items.length} items
+                    </div>
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          {uploadedItemsCurrentPage > 1 ? (
+                            <PaginationPrevious
+                              onClick={() =>
+                                setUploadedItemsCurrentPage((p) => Math.max(1, p - 1))
+                              }
+                              className="cursor-pointer"
+                            />
+                          ) : (
+                            <PaginationPrevious
+                              className="pointer-events-none opacity-50"
+                            />
+                          )}
+                        </PaginationItem>
+                        {Array.from({ length: uploadedItemsTotalPages }).map((_, idx) => {
+                          const pageNum = idx + 1
+                          if (
+                            pageNum === 1 ||
+                            pageNum === uploadedItemsTotalPages ||
+                            (pageNum >= uploadedItemsCurrentPage - 1 &&
+                              pageNum <= uploadedItemsCurrentPage + 1)
+                          ) {
+                            return (
+                              <PaginationItem key={pageNum}>
+                                <PaginationLink
+                                  onClick={() => setUploadedItemsCurrentPage(pageNum)}
+                                  isActive={uploadedItemsCurrentPage === pageNum}
+                                  className="cursor-pointer"
+                                >
+                                  {pageNum}
+                                </PaginationLink>
+                              </PaginationItem>
+                            )
+                          }
+                          if (
+                            pageNum === uploadedItemsCurrentPage - 2 ||
+                            pageNum === uploadedItemsCurrentPage + 2
+                          ) {
+                            return (
+                              <PaginationItem key={pageNum}>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            )
+                          }
+                          return null
+                        })}
+                        <PaginationItem>
+                          {uploadedItemsCurrentPage < uploadedItemsTotalPages ? (
+                            <PaginationNext
+                              onClick={() =>
+                                setUploadedItemsCurrentPage((p) => Math.min(uploadedItemsTotalPages, p + 1))
+                              }
+                              className="cursor-pointer"
+                            />
+                          ) : (
+                            <PaginationNext
+                              className="pointer-events-none opacity-50"
+                            />
+                          )}
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
+
+                {!uploadedData && totalPages > 1 && (
                   <div className="flex items-center justify-between py-2">
                     <div className="text-xs text-muted-foreground">
                       Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
@@ -524,7 +707,7 @@ export default function PackingListForm() {
                     </div>
                   </div>
                 )}
-                {form.formState.errors.po_detail_ids && (
+                {!uploadedData && form.formState.errors.po_detail_ids && (
                   <p className="text-sm font-medium text-destructive">
                     {form.formState.errors.po_detail_ids.message}
                   </p>

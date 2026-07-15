@@ -110,7 +110,7 @@ export default function GdnByID() {
     <div className="mx-6 mb-5 space-y-5">
       <div className="mt-3">
         <PageTitleWithBreadcrumb
-          title={`GDN — ${gdn.gdnNo}`}
+          title={`GDN ${data?.gdn_no ?? ""}`}
           breadcrumbs={[
             { title: "Dashboard", href: "/dashboard" },
             { title: "GDN", href: "/gdn" },

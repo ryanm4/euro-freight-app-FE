@@ -37,7 +37,7 @@ import { IconCalendarFilled } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
 import { format, isValid, parse } from "date-fns"
 import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 interface PackingListRow {
   id: number
@@ -109,8 +109,8 @@ export default function GoodsDispatchNoteForm() {
   })
 
   const { data: packingLists } = useQuery({
-    queryKey: ["packingLists"],
-    queryFn: fetchPackingLists,
+    queryKey: ["packingLists", "completed"],
+    queryFn: () => fetchPackingLists("completed"),
   })
 
   const { data: driversData } = useQuery({
@@ -124,6 +124,7 @@ export default function GoodsDispatchNoteForm() {
   })
 
   const driverOptions = useMemo(() => driversData?.data ?? [], [driversData])
+
   const wharfStaffOptions = useMemo(
     () => wharfStaffData?.data ?? [],
     [wharfStaffData]
@@ -282,6 +283,15 @@ export default function GoodsDispatchNoteForm() {
       setIsSaving(false)
     }
   }
+
+  useEffect(() => {
+    setDriverNic(selectedDriver?.nic_no ?? "")
+    setDriverContactNo(selectedDriver?.contact_no ?? "")
+  }, [selectedDriver])
+
+  useEffect(() => {
+    setWharfStaffContactNo(selectedWharfStaff.contact_no ?? "")
+  }, [selectedWharfStaff])
 
   return (
     <div className="mx-auto space-y-5">
@@ -675,6 +685,7 @@ export default function GoodsDispatchNoteForm() {
                   Driver NIC
                 </Label>
                 <Input
+                  disabled
                   id="driver-nic"
                   placeholder="Enter Driver NIC"
                   value={driverNic}
@@ -688,6 +699,7 @@ export default function GoodsDispatchNoteForm() {
                   Driver Contact No
                 </Label>
                 <Input
+                  disabled
                   id="driver-contact-no"
                   placeholder="Enter Driver Contact No"
                   value={driverContactNo}
@@ -720,6 +732,7 @@ export default function GoodsDispatchNoteForm() {
                 Wharf Staff Contact No
               </Label>
               <Input
+                disabled
                 id="wharf-staff-contact-no"
                 placeholder="Enter Wharf Staff Contact No"
                 value={wharfStaffContactNo}

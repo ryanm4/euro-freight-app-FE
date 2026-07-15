@@ -33,21 +33,6 @@ export const goodsDeliverNoteColumns = (
 
   return [
     {
-      accessorKey: "id",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          ID
-          <IconArrowsSort className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => (
-        <div className="font-semibold">#{row.original.id}</div>
-      ),
-    },
-    {
       accessorKey: "gdn_no",
       header: ({ column }) => (
         <Button

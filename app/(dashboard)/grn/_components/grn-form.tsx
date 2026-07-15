@@ -73,7 +73,7 @@ export default function GoodsReceiveNoteForm() {
 
   const { data: packingLists } = useQuery({
     queryKey: ["packingLists"],
-    queryFn: fetchPackingLists,
+    queryFn: () => fetchPackingLists(),
   })
 
   console.log("data", data)

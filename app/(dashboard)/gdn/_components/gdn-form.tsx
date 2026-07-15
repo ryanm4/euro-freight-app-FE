@@ -290,7 +290,7 @@ export default function GoodsDispatchNoteForm() {
   }, [selectedDriver])
 
   useEffect(() => {
-    setWharfStaffContactNo(selectedWharfStaff.contact_no ?? "")
+    setWharfStaffContactNo(selectedWharfStaff?.contact_no ?? "")
   }, [selectedWharfStaff])
 
   return (

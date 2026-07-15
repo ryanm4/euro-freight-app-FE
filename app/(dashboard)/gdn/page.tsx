@@ -1,5 +1,6 @@
 "use client"
 
+import { DeleteConfirmationDialog } from "@/components/custom/DeleteConfirmationDialog"
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
 import { fetchGDNs } from "@/lib/api/goods_dispatch_notes"
@@ -15,6 +16,11 @@ export default function GDNPage() {
   const router = useRouter()
   const [searchValue, setSearchValue] = useState("")
 
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [selectedGDN, setSelectedGDN] = useState<GOODS_DELIVER_NOTE | null>(
+    null
+  )
+
   const {
     data,
     isLoading,
@@ -26,11 +32,23 @@ export default function GDNPage() {
 
   const actions = {
     onEdit: (id: string) => router.push(`/gdn/edit/${id}`),
-    onDelete: (id: string) => console.log("Delete", id),
+    onDelete: (id: string) => {
+      const gdn = (data?.data as GOODS_DELIVER_NOTE[] | undefined)?.find(
+        (item) => item.id === Number(id)
+      )
+      if (gdn) {
+        setSelectedGDN(gdn)
+        setDeleteOpen(true)
+      }
+    },
     onView: (id: string) => router.push(`/gdn/${id}`),
   }
 
   const columns = goodsDeliverNoteColumns(actions)
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedGDN) return
+  }
 
   return (
     <div className="mt-3 flex flex-1 flex-col gap-4 p-6 pt-0">
@@ -61,6 +79,20 @@ export default function GDNPage() {
           isLoading={isLoading}
         />
       </div>
+      <DeleteConfirmationDialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          setDeleteOpen(open)
+          if (!open) setSelectedGDN(null)
+        }}
+        itemName={String(selectedGDN?.id)}
+        itemType="goods dispatch note"
+        onConfirm={() => {
+          if (selectedGDN) {
+            handleDeleteConfirm()
+          }
+        }}
+      />
     </div>
   )
 }

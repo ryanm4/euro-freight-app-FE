@@ -47,7 +47,7 @@ export const packingListSchema = z.object({
         cbm: z.number().min(0, "CBM must be 0 or greater"),
       })
     )
-    .default([]),
+    .optional(),
 })
 
 export type PackingListFormValues = z.infer<typeof packingListSchema>

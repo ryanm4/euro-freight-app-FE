@@ -20,4 +20,14 @@ export interface PURCHASE_ORDER {
   created_on?: string | null
   updated_by?: string | null
   updated_on?: string | null
+  // Item detail fields for packing list selection
+  sku?: string | null
+  item_description?: string | null
+  size?: string | null
+  unit_cost?: number | null
+  carton_count?: number | null
+  gross_weight?: number | null
+  net_weight?: number | null
+  carton_dimensions?: string | null
+  cbm?: number | null
 }

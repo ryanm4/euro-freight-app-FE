@@ -135,6 +135,7 @@ export default function PackingListForm({
   const form = useForm<PackingListFormValues>({
     resolver: zodResolver(packingListSchema),
     defaultValues: baseDefaultValues,
+    shouldUnregister: false,
   })
 
   const renderFormField = <TName extends FieldPath<PackingListFormValues>>(
@@ -187,6 +188,27 @@ export default function PackingListForm({
       []
     )
   }, [data])
+
+  // Auto-populate all items from uploaded data when arriving from the upload flow
+  useEffect(() => {
+    if (uploadedData && uploadedData.items.length > 0) {
+      const autoItems = uploadedData.items.map((item) => ({
+        poNumber: item.poNumber,
+        sku: item.sku,
+        itemDescription: item.itemName,
+        size: item.size,
+        unitCost: item.unitCost,
+        quantity: item.quantity,
+        ctnCount: item.ctn,
+        grossWeightKg: item.grossWeightKg,
+        netWeightKg: item.netWeightKg,
+        cartonDimensions: item.ctnDemi,
+        cbm: item.cbm,
+      }))
+      form.setValue("items", autoItems, { shouldValidate: false })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploadedData])
 
   useEffect(() => {
     fetchPOs()
@@ -326,8 +348,10 @@ export default function PackingListForm({
     try {
       setIsLoading(true)
 
-      // Use the items the user actually selected (tracked in form state)
-      const allItems = (data.items ?? []).map((item) => ({
+      // Read items directly from form state — items are set via setValue
+      // (not registered via <FormField>), so we prefer getValues() over data.items.
+      const formItems = form.getValues("items") ?? data.items ?? []
+      const allItems = formItems.map((item) => ({
         poNumber: item.poNumber,
         sku: item.sku || "",
         itemName: item.itemDescription || "",
@@ -619,70 +643,7 @@ export default function PackingListForm({
               </CardContent>
             </Card>
 
-            {/* Card 2: Selected Items */}
-            {selectedItems.length > 0 && (
-              <Card className="flex w-full flex-col shadow-sm transition-shadow hover:shadow-md">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                  <div className="flex flex-col gap-[0.5px]">
-                    <h3 className="text-md font-medium">Selected Items</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedItems.length} item{selectedItems.length !== 1 ? "s" : ""} selected
-                    </p>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto rounded-md border border-border">
-                    <Table className="min-w-[900px]">
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="min-w-[120px]">PO Number</TableHead>
-                          <TableHead className="min-w-[80px]">SKU</TableHead>
-                          <TableHead className="min-w-[160px]">Item Description</TableHead>
-                          <TableHead className="min-w-[70px]">Size</TableHead>
-                          <TableHead className="min-w-[80px]">Quantity</TableHead>
-                          <TableHead className="min-w-[100px]">Carton Count</TableHead>
-                          <TableHead className="min-w-[130px]">Gross Weight (kg)</TableHead>
-                          <TableHead className="min-w-[120px]">Net Weight (kg)</TableHead>
-                          <TableHead className="min-w-[150px]">Carton Dimensions</TableHead>
-                          <TableHead className="min-w-[70px]">CBM</TableHead>
-                          <TableHead />
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedItems.map((item, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell className="font-medium">{item.poNumber || "N/A"}</TableCell>
-                            <TableCell>{item.sku || "N/A"}</TableCell>
-                            <TableCell>{item.itemDescription || "N/A"}</TableCell>
-                            <TableCell>{item.size || "N/A"}</TableCell>
-                            <TableCell>{item.quantity ?? 0}</TableCell>
-                            <TableCell>{item.ctnCount ?? 0}</TableCell>
-                            <TableCell>{item.grossWeightKg ?? 0}</TableCell>
-                            <TableCell>{item.netWeightKg ?? 0}</TableCell>
-                            <TableCell>{item.cartonDimensions || "N/A"}</TableCell>
-                            <TableCell>{item.cbm ?? 0}</TableCell>
-                            <TableCell className="text-right">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = selectedItems.filter((_, i) => i !== idx)
-                                  form.setValue("items", updated, { shouldValidate: true })
-                                }}
-                                className="text-xs text-destructive hover:underline"
-                              >
-                                Remove
-                              </button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Card 3: Active Purchase Orders / Uploaded Items */}
+            {/* Card 2: Active Purchase Orders / Uploaded Items */}
             <Card className="flex w-full flex-col shadow-sm transition-shadow hover:shadow-md">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div className="flex flex-col gap-[0.5px]">

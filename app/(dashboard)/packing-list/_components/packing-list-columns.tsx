@@ -32,25 +32,27 @@ export const packingListColumns = (
 
   return [
     {
-      accessorKey: "packing_list_id",
+      accessorKey: "packing_list_no",
       header: ({ column }) => (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          ID
+          Packing List Number
           <IconArrowsSort className="ml-2 h-4 w-4" />
         </Button>
       ),
     },
     {
-      accessorKey: "client_id",
+      id: "po_number",
+      accessorFn: (row) =>
+        row.purchase_orders?.map((po) => po.po_number).join(", ") || "-",
       header: ({ column }) => (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Client
+          PO Number
           <IconArrowsSort className="ml-2 h-4 w-4" />
         </Button>
       ),
@@ -64,60 +66,51 @@ export const packingListColumns = (
       },
     },
     {
+      accessorKey: "client_name",
+      header: "Client Name",
+    },
+
+    {
+      accessorKey: "total_quantity",
+      header: "Quantity",
+    },
+    // {
+    //   accessorKey: "quantity",
+    //   header: ({ column }) => (
+    //     <Button
+    //       variant="ghost"
+    //       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+    //     >
+    //       Actual Quantity
+    //       <IconArrowsSort className="ml-2 h-4 w-4" />
+    //     </Button>
+    //   ),
+    //   cell: ({ row }) => <div>{row.original.quantity ?? "N/A"}</div>,
+    // },
+    {
+      accessorKey: "shipping_mode",
+      header: "Shipping Mode",
+    },
+
+    {
+      accessorKey: "total_net_weight_kg",
+      header: "Total Weight",
+    },
+    {
+      accessorKey: "total_volume",
+      header: "Total volume",
+    },
+    {
       accessorKey: "gdn_id",
-      header: "GDN ID",
-      cell: ({ row }) => <div>{row.original.gdn_id ?? "N/A"}</div>,
+      header: "GDN Number",
     },
-    {
-      accessorKey: "grn_id",
-      header: "GRN ID",
-      cell: ({ row }) => <div>{row.original.grn_id ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "quantity",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Quantity
-          <IconArrowsSort className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => <div>{row.original.quantity ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "created_by",
-      header: "Created By",
-      cell: ({ row }) => <div>{row.original.created_by ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "created_on",
-      header: "Created On",
-      cell: ({ row }) => {
-        const date = row.original.created_on
-        return date ? format(new Date(date), "PPP p") : "N/A"
-      },
-    },
-    {
-      accessorKey: "updated_by",
-      header: "Updated By",
-      cell: ({ row }) => <div>{row.original.updated_by ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "updated_on",
-      header: "Updated On",
-      cell: ({ row }) => {
-        const date = row.original.updated_on
-        return date ? format(new Date(date), "PPP p") : "N/A"
-      },
-    },
+
     {
       id: "actions",
       enableHiding: false,
       cell: ({ row }) => {
         const id = String(row.original.packing_list_id)
-        
+
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

@@ -135,6 +135,7 @@ export default function PackingListForm({
   const form = useForm<PackingListFormValues>({
     resolver: zodResolver(packingListSchema),
     defaultValues: baseDefaultValues,
+    shouldUnregister: false,
   })
 
   const renderFormField = <TName extends FieldPath<PackingListFormValues>>(
@@ -187,6 +188,27 @@ export default function PackingListForm({
       []
     )
   }, [data])
+
+  // Auto-populate all items from uploaded data when arriving from the upload flow
+  useEffect(() => {
+    if (uploadedData && uploadedData.items.length > 0) {
+      const autoItems = uploadedData.items.map((item) => ({
+        poNumber: item.poNumber,
+        sku: item.sku,
+        itemDescription: item.itemName,
+        size: item.size,
+        unitCost: item.unitCost,
+        quantity: item.quantity,
+        ctnCount: item.ctn,
+        grossWeightKg: item.grossWeightKg,
+        netWeightKg: item.netWeightKg,
+        cartonDimensions: item.ctnDemi,
+        cbm: item.cbm,
+      }))
+      form.setValue("items", autoItems, { shouldValidate: false })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploadedData])
 
   useEffect(() => {
     fetchPOs()
@@ -326,8 +348,10 @@ export default function PackingListForm({
     try {
       setIsLoading(true)
 
-      // Use the items the user actually selected (tracked in form state)
-      const allItems = (data.items ?? []).map((item) => ({
+      // Read items directly from form state — items are set via setValue
+      // (not registered via <FormField>), so we prefer getValues() over data.items.
+      const formItems = form.getValues("items") ?? data.items ?? []
+      const allItems = formItems.map((item) => ({
         poNumber: item.poNumber,
         sku: item.sku || "",
         itemName: item.itemDescription || "",

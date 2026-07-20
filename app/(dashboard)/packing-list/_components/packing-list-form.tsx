@@ -45,6 +45,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { fetchClients } from "@/lib/api/clients"
+import { SHIPPING_MODE_OPTIONS } from "@/lib/constants"
 import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
 import { CLIENT_LIST } from "@/modules/clients/types"
@@ -75,16 +76,19 @@ interface UploadedPackingListData {
     totalCbm: number
   }
   items: Array<{
+    ctnNo?: number
     poNumber: string
     sku: string
-    itemDescription: string
+    itemName: string
+    color?: string
     size: string
+    co?: string
     unitCost: number
     quantity: number
-    ctnCount: number
+    ctn: number
     grossWeightKg: number
     netWeightKg: number
-    cartonDimensions: string
+    ctnDemi: string
     cbm: number
   }>
   parseErrors: Array<{
@@ -98,7 +102,9 @@ interface PackingListFormProps {
   uploadedData?: UploadedPackingListData | null
 }
 
-export default function PackingListForm({ uploadedData }: PackingListFormProps) {
+export default function PackingListForm({
+  uploadedData,
+}: PackingListFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [pos, setPos] = useState<PURCHASE_ORDER[]>([])
@@ -113,10 +119,15 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
 
   const baseDefaultValues: PackingListFormValues = {
     client_id: 0,
-    date: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
+    manufacturer_id: 0,
+    date: format(new Date(), "yyyy-MM-dd"),
+    document_date: format(new Date(), "yyyy-MM-dd"),
+    ship_to: "",
+    shipping_mode: "",
+    total_volume: "",
+    status: "DRAFT",
     created_by: "ryan",
-    quantity: 0,
-    po_detail_ids: [],
+    items: [],
     additional_info: "",
   }
 
@@ -137,12 +148,10 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
       setIsPosLoading(true)
       const response = await PurchaseOrderApi.getAll()
       if (response.status === 200) {
-        // Backend may return a paginated/wrapped object or a plain array
         const raw = response.data as unknown
         if (Array.isArray(raw)) {
           setPos(raw)
         } else if (raw && typeof raw === "object") {
-          // Try common wrapper keys: data, purchase_orders, results, items
           const obj = raw as Record<string, unknown>
           const extracted =
             obj.data ?? obj.purchase_orders ?? obj.results ?? obj.items
@@ -168,6 +177,13 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
   const clientOptions = useMemo(() => {
     return (
       data?.data?.filter((client: any) => client.type === UserRole.Client) || []
+    )
+  }, [data])
+
+  const manufacturerOptions = useMemo(() => {
+    return (
+      data?.data?.filter((client: any) => client.type === UserRole.Supplier) ||
+      []
     )
   }, [data])
 
@@ -209,7 +225,6 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
     return result
   }, [activePOs, selectedClient, searchQuery])
 
-  // Reset pagination if search or client changes
   useEffect(() => {
     setCurrentPage(1)
   }, [searchQuery, selectedClientId])
@@ -221,7 +236,6 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
 
   const totalPages = Math.ceil(filteredPOs.length / itemsPerPage)
 
-  // Pagination for uploaded items
   const uploadedItemsTotalPages = uploadedData
     ? Math.ceil(uploadedData.items.length / uploadedItemsPerPage)
     : 0
@@ -233,24 +247,78 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
       )
     : []
 
-  const selectedPoIds = form.watch("po_detail_ids") || []
+  const selectedItems = form.watch("items") || []
 
-  const handleSelectPo = (id: number) => {
-    const currentSelected = form.getValues("po_detail_ids") || []
-    let newSelected: number[]
+  const handleSelectItem = (po: PURCHASE_ORDER) => {
+    const currentItems = form.getValues("items") || []
+    const existingIndex = currentItems.findIndex(
+      (item) => item.poNumber === po.po_number
+    )
 
-    if (currentSelected.includes(id)) {
-      newSelected = currentSelected.filter((item) => item !== id)
+    let newItems
+    if (existingIndex >= 0) {
+      newItems = currentItems.filter((item) => item.poNumber !== po.po_number)
     } else {
-      newSelected = [...currentSelected, id]
+      newItems = [
+        ...currentItems,
+        {
+          poNumber: po.po_number || "",
+          sku: po.sku || "",
+          itemDescription: po.item_description || "",
+          size: po.size || "",
+          unitCost: po.unit_cost || 0,
+          quantity: po.po_quantity || 0,
+          ctnCount: po.carton_count || 0,
+          grossWeightKg: po.gross_weight || 0,
+          netWeightKg: po.net_weight || 0,
+          cartonDimensions: po.carton_dimensions || "",
+          cbm: po.cbm || 0,
+        },
+      ]
     }
 
-    const totalQty = activePOs
-      .filter((po) => newSelected.includes(po.id))
-      .reduce((sum, po) => sum + (po.po_quantity || 0), 0)
+    form.setValue("items", newItems, { shouldValidate: true })
+  }
 
-    form.setValue("po_detail_ids", newSelected, { shouldValidate: true })
-    form.setValue("quantity", totalQty, { shouldValidate: true })
+  const handleSelectUploadedItem = (
+    uploadedItem: UploadedPackingListData["items"][0]
+  ) => {
+    const currentItems = form.getValues("items") || []
+    const existingIndex = currentItems.findIndex(
+      (item) =>
+        item.poNumber === uploadedItem.poNumber &&
+        item.sku === uploadedItem.sku
+    )
+
+    let newItems
+    if (existingIndex >= 0) {
+      newItems = currentItems.filter(
+        (item) =>
+          !(
+            item.poNumber === uploadedItem.poNumber &&
+            item.sku === uploadedItem.sku
+          )
+      )
+    } else {
+      newItems = [
+        ...currentItems,
+        {
+          poNumber: uploadedItem.poNumber,
+          sku: uploadedItem.sku,
+          itemDescription: uploadedItem.itemName,
+          size: uploadedItem.size,
+          unitCost: uploadedItem.unitCost,
+          quantity: uploadedItem.quantity,
+          ctnCount: uploadedItem.ctn,
+          grossWeightKg: uploadedItem.grossWeightKg,
+          netWeightKg: uploadedItem.netWeightKg,
+          cartonDimensions: uploadedItem.ctnDemi,
+          cbm: uploadedItem.cbm,
+        },
+      ]
+    }
+
+    form.setValue("items", newItems, { shouldValidate: true })
   }
 
   const onSubmit: SubmitHandler<PackingListFormValues> = async (data) => {
@@ -263,10 +331,15 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
         },
         body: JSON.stringify({
           client_id: Number(data.client_id),
+          manufacturer_id: Number(data.manufacturer_id),
           date: data.date,
-          created_by: "ryan",
-          quantity: data.quantity,
-          po_detail_ids: data.po_detail_ids,
+          document_date: data.document_date,
+          ship_to: data.ship_to,
+          shipping_mode: data.shipping_mode,
+          total_volume: data.total_volume,
+          status: "DRAFT",
+          created_by: data.created_by,
+          items: data.items,
           additional_info: data.additional_info || "",
         }),
       })
@@ -290,7 +363,6 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
   const formatDateValue = (val?: string) => {
     if (!val) return ""
     try {
-      // Replace space with T to make it standard ISO parser friendly
       const parsable = val.includes(" ") ? val.replace(" ", "T") : val
       return format(new Date(parsable), "PPP")
     } catch {
@@ -343,7 +415,7 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
                   Important dates, documents, and shipment instructions.
                 </p>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <CardContent className="grid grid-cols-3 gap-4 md:grid-cols-2">
                 {renderFormField("client_id", ({ field }: { field: any }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel className="mb-1">Client Name</FormLabel>
@@ -365,6 +437,31 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
                     <FormMessage />
                   </FormItem>
                 ))}
+
+                {renderFormField(
+                  "manufacturer_id",
+                  ({ field }: { field: any }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="mb-1">Manufacturer Name</FormLabel>
+                      <Select
+                        value={field.value ? String(field.value) : ""}
+                        onValueChange={(val) => field.onChange(Number(val))}
+                      >
+                        <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                          <SelectValue placeholder="Select Manufacturer Name" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                          {manufacturerOptions.map((m: CLIENT_LIST) => (
+                            <SelectItem key={m.id} value={String(m.id)}>
+                              {m.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )
+                )}
 
                 {renderFormField("date", ({ field }) => (
                   <FormItem className="flex flex-col">
@@ -393,7 +490,7 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
                           onSelect={(selectedDate) => {
                             if (selectedDate) {
                               field.onChange(
-                                format(selectedDate, "yyyy-MM-dd HH:mm:ss")
+                                format(selectedDate, "yyyy-MM-dd")
                               )
                             }
                           }}
@@ -404,10 +501,99 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
                     <FormMessage />
                   </FormItem>
                 ))}
+
+                {renderFormField("document_date", ({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel className="mb-1">Document Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "h-9 w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value
+                              ? formatDateValue(field.value)
+                              : format(new Date(), "PPP")}
+                            <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={getCalendarSelectedDate(field.value)}
+                          onSelect={(selectedDate) => {
+                            if (selectedDate) {
+                              field.onChange(
+                                format(selectedDate, "yyyy-MM-dd")
+                              )
+                            }
+                          }}
+                          captionLayout="dropdown"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+
+                {renderFormField("ship_to", ({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel className="mb-1">Ship To</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter Ship To"
+                        {...field}
+                        className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+
+                {renderFormField("shipping_mode", ({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel className="mb-1">Shipping Mode</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                        <SelectValue placeholder="Select Shipping Mode" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                        {SHIPPING_MODE_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+
+                {renderFormField("total_volume", ({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel className="mb-1">Total Volume</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter Total Volume"
+                        {...field}
+                        className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
               </CardContent>
             </Card>
 
-            {/* Card 2: Active Purchase Orders */}
+            {/* Card 2: Active Purchase Orders / Uploaded Items */}
             <Card className="flex w-full flex-col shadow-sm transition-shadow hover:shadow-md">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div className="flex flex-col gap-[0.5px]">
@@ -442,7 +628,8 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
                           <>
                             <TableHead>PO Number</TableHead>
                             <TableHead>SKU</TableHead>
-                            <TableHead>Item Description</TableHead>
+                            <TableHead>Item Name</TableHead>
+                            <TableHead>Color</TableHead>
                             <TableHead>Size</TableHead>
                             <TableHead>Quantity</TableHead>
                             <TableHead>Carton Count</TableHead>
@@ -450,6 +637,7 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
                             <TableHead>Net Weight (kg)</TableHead>
                             <TableHead>Carton Dimensions</TableHead>
                             <TableHead>CBM</TableHead>
+                            <TableHead className="w-10"></TableHead>
                           </>
                         ) : (
                           <>
@@ -461,9 +649,7 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
                             <TableHead>Supplier ID</TableHead>
                             <TableHead>Cargo Dispatch Date</TableHead>
                             <TableHead>Status</TableHead>
-                            <TableHead className="pr-4 text-right">
-                              Actions
-                            </TableHead>
+                            <TableHead className="w-10"></TableHead>
                           </>
                         )}
                       </TableRow>
@@ -477,20 +663,38 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
                                 {item.poNumber || "N/A"}
                               </TableCell>
                               <TableCell>{item.sku || "N/A"}</TableCell>
-                              <TableCell>{item.itemDescription || "N/A"}</TableCell>
+                              <TableCell>
+                                {item.itemName || "N/A"}
+                              </TableCell>
+                              <TableCell>{item.color || "N/A"}</TableCell>
                               <TableCell>{item.size || "N/A"}</TableCell>
                               <TableCell>{item.quantity ?? 0}</TableCell>
-                              <TableCell>{item.ctnCount ?? 0}</TableCell>
+                              <TableCell>{item.ctn ?? 0}</TableCell>
                               <TableCell>{item.grossWeightKg ?? 0}</TableCell>
                               <TableCell>{item.netWeightKg ?? 0}</TableCell>
-                              <TableCell>{item.cartonDimensions || "N/A"}</TableCell>
+                              <TableCell>
+                                {item.ctnDemi || "N/A"}
+                              </TableCell>
                               <TableCell>{item.cbm ?? 0}</TableCell>
+                              <TableCell className="pr-4 text-right">
+                                <Checkbox
+                                  checked={selectedItems.some(
+                                    (selectedItem) =>
+                                      selectedItem.poNumber ===
+                                        item.poNumber &&
+                                      selectedItem.sku === item.sku
+                                  )}
+                                  onCheckedChange={() =>
+                                    handleSelectUploadedItem(item)
+                                  }
+                                />
+                              </TableCell>
                             </TableRow>
                           ))
                         ) : (
                           <TableRow>
                             <TableCell
-                              colSpan={10}
+                              colSpan={12}
                               className="h-24 text-center text-sm text-muted-foreground"
                             >
                               No items found in the uploaded file.
@@ -541,10 +745,12 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
                                 type="PURCHASE_ORDER"
                               />
                             </TableCell>
-                            <TableCell className="pr-6 text-right">
+                            <TableCell className="pr-4 text-right">
                               <Checkbox
-                                checked={selectedPoIds.includes(po.id)}
-                                onCheckedChange={() => handleSelectPo(po.id)}
+                                checked={selectedItems.some(
+                                  (item) => item.poNumber === po.po_number
+                                )}
+                                onCheckedChange={() => handleSelectItem(po)}
                               />
                             </TableCell>
                           </TableRow>
@@ -568,8 +774,14 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
                 {uploadedData && uploadedItemsTotalPages > 1 && (
                   <div className="flex items-center justify-between py-2">
                     <div className="text-xs text-muted-foreground">
-                      Showing {(uploadedItemsCurrentPage - 1) * uploadedItemsPerPage + 1} to{" "}
-                      {Math.min(uploadedItemsCurrentPage * uploadedItemsPerPage, uploadedData.items.length)}{" "}
+                      Showing{" "}
+                      {(uploadedItemsCurrentPage - 1) * uploadedItemsPerPage +
+                        1}{" "}
+                      to{" "}
+                      {Math.min(
+                        uploadedItemsCurrentPage * uploadedItemsPerPage,
+                        uploadedData.items.length
+                      )}{" "}
                       of {uploadedData.items.length} items
                     </div>
                     <Pagination>
@@ -578,60 +790,66 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
                           {uploadedItemsCurrentPage > 1 ? (
                             <PaginationPrevious
                               onClick={() =>
-                                setUploadedItemsCurrentPage((p) => Math.max(1, p - 1))
+                                setUploadedItemsCurrentPage((p) =>
+                                  Math.max(1, p - 1)
+                                )
                               }
                               className="cursor-pointer"
                             />
                           ) : (
-                            <PaginationPrevious
-                              className="pointer-events-none opacity-50"
-                            />
+                            <PaginationPrevious className="pointer-events-none opacity-50" />
                           )}
                         </PaginationItem>
-                        {Array.from({ length: uploadedItemsTotalPages }).map((_, idx) => {
-                          const pageNum = idx + 1
-                          if (
-                            pageNum === 1 ||
-                            pageNum === uploadedItemsTotalPages ||
-                            (pageNum >= uploadedItemsCurrentPage - 1 &&
-                              pageNum <= uploadedItemsCurrentPage + 1)
-                          ) {
-                            return (
-                              <PaginationItem key={pageNum}>
-                                <PaginationLink
-                                  onClick={() => setUploadedItemsCurrentPage(pageNum)}
-                                  isActive={uploadedItemsCurrentPage === pageNum}
-                                  className="cursor-pointer"
-                                >
-                                  {pageNum}
-                                </PaginationLink>
-                              </PaginationItem>
-                            )
+                        {Array.from({ length: uploadedItemsTotalPages }).map(
+                          (_, idx) => {
+                            const pageNum = idx + 1
+                            if (
+                              pageNum === 1 ||
+                              pageNum === uploadedItemsTotalPages ||
+                              (pageNum >= uploadedItemsCurrentPage - 1 &&
+                                pageNum <= uploadedItemsCurrentPage + 1)
+                            ) {
+                              return (
+                                <PaginationItem key={pageNum}>
+                                  <PaginationLink
+                                    onClick={() =>
+                                      setUploadedItemsCurrentPage(pageNum)
+                                    }
+                                    isActive={
+                                      uploadedItemsCurrentPage === pageNum
+                                    }
+                                    className="cursor-pointer"
+                                  >
+                                    {pageNum}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              )
+                            }
+                            if (
+                              pageNum === uploadedItemsCurrentPage - 2 ||
+                              pageNum === uploadedItemsCurrentPage + 2
+                            ) {
+                              return (
+                                <PaginationItem key={pageNum}>
+                                  <PaginationEllipsis />
+                                </PaginationItem>
+                              )
+                            }
+                            return null
                           }
-                          if (
-                            pageNum === uploadedItemsCurrentPage - 2 ||
-                            pageNum === uploadedItemsCurrentPage + 2
-                          ) {
-                            return (
-                              <PaginationItem key={pageNum}>
-                                <PaginationEllipsis />
-                              </PaginationItem>
-                            )
-                          }
-                          return null
-                        })}
+                        )}
                         <PaginationItem>
                           {uploadedItemsCurrentPage < uploadedItemsTotalPages ? (
                             <PaginationNext
                               onClick={() =>
-                                setUploadedItemsCurrentPage((p) => Math.min(uploadedItemsTotalPages, p + 1))
+                                setUploadedItemsCurrentPage((p) =>
+                                  Math.min(uploadedItemsTotalPages, p + 1)
+                                )
                               }
                               className="cursor-pointer"
                             />
                           ) : (
-                            <PaginationNext
-                              className="pointer-events-none opacity-50"
-                            />
+                            <PaginationNext className="pointer-events-none opacity-50" />
                           )}
                         </PaginationItem>
                       </PaginationContent>
@@ -707,9 +925,9 @@ export default function PackingListForm({ uploadedData }: PackingListFormProps) 
                     </div>
                   </div>
                 )}
-                {!uploadedData && form.formState.errors.po_detail_ids && (
+                {!uploadedData && form.formState.errors.items && (
                   <p className="text-sm font-medium text-destructive">
-                    {form.formState.errors.po_detail_ids.message}
+                    {form.formState.errors.items.message}
                   </p>
                 )}
               </CardContent>

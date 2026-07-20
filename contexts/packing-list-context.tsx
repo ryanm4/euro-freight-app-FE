@@ -2,7 +2,24 @@
 
 import { createContext, useContext, useState, ReactNode } from "react"
 
-interface UploadedPackingListData {
+export interface UploadedPackingListItem {
+  ctnNo?: number
+  poNumber: string
+  sku: string
+  itemName: string
+  color?: string
+  size: string
+  co?: string
+  unitCost: number
+  quantity: number
+  ctn: number
+  grossWeightKg: number
+  netWeightKg: number
+  ctnDemi: string
+  cbm: number
+}
+
+export interface UploadedPackingListData {
   success: boolean
   filename: string
   pages: number
@@ -15,19 +32,7 @@ interface UploadedPackingListData {
     totalNetWeight: number
     totalCbm: number
   }
-  items: Array<{
-    poNumber: string
-    sku: string
-    itemDescription: string
-    size: string
-    unitCost: number
-    quantity: number
-    ctnCount: number
-    grossWeightKg: number
-    netWeightKg: number
-    cartonDimensions: string
-    cbm: number
-  }>
+  items: UploadedPackingListItem[]
   parseErrors: Array<{
     rowIndex: number
     poNumber: string

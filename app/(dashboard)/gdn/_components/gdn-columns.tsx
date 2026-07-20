@@ -33,100 +33,104 @@ export const goodsDeliverNoteColumns = (
 
   return [
     {
-      accessorKey: "id",
+      accessorKey: "gdn_no",
       header: ({ column }) => (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          ID
+          GDN No
           <IconArrowsSort className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="font-semibold">#{row.original.id}</div>
+        <div className="font-semibold">{row.original.gdn_no ?? "N/A"}</div>
       ),
     },
     {
-      accessorKey: "client_name",
+      id: "packing_list_no",
+      header: "Packing List No(s)",
+      cell: ({ row }) => {
+        const router = useRouter()
+        const packingLists = row.original.packing_lists ?? []
+
+        if (packingLists.length === 0) {
+          return <div>N/A</div>
+        }
+
+        return (
+          <div className="flex flex-wrap gap-1">
+            {packingLists.map((pl) => {
+              const label = pl.packing_list_no ?? `PL-${pl.id}`
+              return (
+                <button
+                  key={pl.id}
+                  type="button"
+                  className="text-primary underline-offset-4 hover:underline"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    router.push(`/packing-list/${pl.id}`)
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: "forwarder_name",
+      header: "Forwarder",
+      cell: ({ row }) => <div>{row.original.forwarder_name ?? "N/A"}</div>,
+    },
+    {
+      accessorKey: "transport_mode",
+      header: "Shipping Mode",
+      cell: ({ row }) => <div>{row.original.transport_mode ?? "N/A"}</div>,
+    },
+    {
+      id: "total_quantity",
+      header: "Total Quantity",
+      cell: ({ row }) => {
+        const value =
+          row.original.actual_cartoons ?? row.original.cartoons ?? "N/A"
+        return <div>{value}</div>
+      },
+    },
+    {
+      id: "total_weight",
+      header: "Total Weight",
+      cell: ({ row }) => {
+        const value =
+          row.original.actual_gross_weight ?? row.original.gross_weight ?? "N/A"
+        return <div>{value}</div>
+      },
+    },
+    {
+      id: "total_volume",
+      header: "Total Volume",
+      cell: ({ row }) => {
+        const value =
+          row.original.actual_gross_volume ?? row.original.gross_volume ?? "N/A"
+        return <div>{value}</div>
+      },
+    },
+    {
+      accessorKey: "date",
       header: ({ column }) => (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Client
+          Dispatch Date
           <IconArrowsSort className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => <div>{row.original.client_name ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "manufacture_id",
-      header: "Manufacturer ID",
-      cell: ({ row }) => <div>{row.original.manufacture_id ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "forwarder_id",
-      header: "Forwarder ID",
-      cell: ({ row }) => <div>{row.original.forwarder_id ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "date",
-      header: "Date",
       cell: ({ row }) => {
         const date = row.original.date
         return date ? format(new Date(date), "PPP p") : "N/A"
-      },
-    },
-    {
-      accessorKey: "cartoons",
-      header: "Cartons",
-      cell: ({ row }) => <div>{row.original.cartoons ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "actual_cartoons",
-      header: "Actual Cartons",
-      cell: ({ row }) => <div>{row.original.actual_cartoons ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "gross_weight",
-      header: "Gross Weight",
-      cell: ({ row }) => <div>{row.original.gross_weight ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "actual_gross_weight",
-      header: "Actual Gross Weight",
-      cell: ({ row }) => <div>{row.original.actual_gross_weight ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "gross_volume",
-      header: "Gross Volume",
-      cell: ({ row }) => <div>{row.original.gross_volume ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "actual_gross_volume",
-      header: "Actual Gross Volume",
-      cell: ({ row }) => <div>{row.original.actual_gross_volume ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "gdn_grn_ref",
-      header: "GDN/GRN Ref",
-      cell: ({ row }) => {
-        const router = useRouter()
-        const ref = row.original.gdn_grn_ref ?? "N/A"
-
-        return (
-          <button
-            type="button"
-            className="text-primary underline-offset-4 hover:underline"
-            onClick={(e) => {
-              e.stopPropagation() // prevents any row-level click handler from also firing
-              router.push(`/packing-list/${ref}`)
-            }}
-          >
-            {ref}
-          </button>
-        )
       },
     },
     {
@@ -154,32 +158,6 @@ export const goodsDeliverNoteColumns = (
             {status ?? "N/A"}
           </span>
         )
-      },
-    },
-    {
-      accessorKey: "created_by",
-      header: "Created By",
-      cell: ({ row }) => <div>{row.original.created_by ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "created_on",
-      header: "Created On",
-      cell: ({ row }) => {
-        const date = row.original.created_on
-        return date ? format(new Date(date), "PPP p") : "N/A"
-      },
-    },
-    {
-      accessorKey: "updated_by",
-      header: "Updated By",
-      cell: ({ row }) => <div>{row.original.updated_by ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "updated_on",
-      header: "Updated On",
-      cell: ({ row }) => {
-        const date = row.original.updated_on
-        return date ? format(new Date(date), "PPP p") : "N/A"
       },
     },
     {

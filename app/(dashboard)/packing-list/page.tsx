@@ -32,7 +32,7 @@ export default function PackingListPage() {
     // error,
   } = useQuery({
     queryKey: ["packing-lists"],
-    queryFn: fetchPackingLists,
+    queryFn: () => fetchPackingLists(),
   })
 
   const columns = useMemo(() => packingListColumns(actions), [actions])

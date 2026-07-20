@@ -643,6 +643,60 @@ export default function PackingListForm({
               </CardContent>
             </Card>
 
+            {/* Totals — shown when items come from an uploaded file */}
+            {uploadedData && (
+              <Card className="flex w-full flex-col shadow-sm transition-shadow hover:shadow-md">
+                <CardHeader className="flex flex-col gap-[0.5px]">
+                  <h3 className="text-md mb-2 font-medium">Totals</h3>
+                  <p className="mb-4 text-xs text-muted-foreground">
+                    Aggregated quantities from the uploaded file.
+                  </p>
+                </CardHeader>
+                <CardContent className="grid grid-cols-3 gap-4 md:grid-cols-2">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-foreground">Total Quantity</label>
+                    <input
+                      readOnly
+                      value={uploadedData.totals.totalQuantity}
+                      className="h-9 w-full rounded-md border border-zinc-700 bg-[#0A0A0A] px-3 text-sm text-zinc-100 outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-foreground">Total Cartons</label>
+                    <input
+                      readOnly
+                      value={uploadedData.totals.totalCartons}
+                      className="h-9 w-full rounded-md border border-zinc-700 bg-[#0A0A0A] px-3 text-sm text-zinc-100 outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-foreground">Total Gross Weight (kg)</label>
+                    <input
+                      readOnly
+                      value={uploadedData.totals.totalGrossWeight}
+                      className="h-9 w-full rounded-md border border-zinc-700 bg-[#0A0A0A] px-3 text-sm text-zinc-100 outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-foreground">Total Net Weight (kg)</label>
+                    <input
+                      readOnly
+                      value={uploadedData.totals.totalNetWeight}
+                      className="h-9 w-full rounded-md border border-zinc-700 bg-[#0A0A0A] px-3 text-sm text-zinc-100 outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-foreground">Total CBM</label>
+                    <input
+                      readOnly
+                      value={uploadedData.totals.totalCbm}
+                      className="h-9 w-full rounded-md border border-zinc-700 bg-[#0A0A0A] px-3 text-sm text-zinc-100 outline-none"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Card 2: Active Purchase Orders / Uploaded Items */}
             <Card className="flex w-full flex-col shadow-sm transition-shadow hover:shadow-md">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">

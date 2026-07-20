@@ -87,7 +87,7 @@ export const goodsDeliverNoteColumns = (
     },
     {
       accessorKey: "transport_mode",
-      header: "Shipping Mode",
+      header: "Cargo Transport Mode",
       cell: ({ row }) => <div>{row.original.transport_mode ?? "N/A"}</div>,
     },
     {

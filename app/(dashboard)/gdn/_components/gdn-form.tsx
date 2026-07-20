@@ -68,7 +68,7 @@ const CONTAINER_SIZE_OPTIONS = ["20GP", "40GP", "40HC"]
 
 const CUSTOM_DOC_STATUS_OPTIONS = ["Pending", "In Progress", "Completed"]
 
-const STATUS_OPTIONS = ["Saved", "Edit", "Completed"]
+const STATUS_OPTIONS = ["Draft", "Saved", "Completed"]
 
 export default function GoodsDispatchNoteForm() {
   const router = useRouter()
@@ -80,7 +80,7 @@ export default function GoodsDispatchNoteForm() {
   const [manufacturer, setManufacturer] = useState("")
   const [driver, setDriver] = useState("")
   const [wharfStaff, setWharfStaff] = useState("")
-  const [dispatchLocation, setDispatchLocation] = useState("")
+  const [deliveredTo, setDeliveredTo] = useState("")
   const [transportMode, setTransportMode] = useState("")
   const [containerNo, setContainerNo] = useState("")
   const [containerSize, setContainerSize] = useState("")
@@ -88,8 +88,8 @@ export default function GoodsDispatchNoteForm() {
   const [secondarySealNo, setSecondarySealNo] = useState("")
   const [customDocStatus, setCustomDocStatus] = useState("")
   const [status, setStatus] = useState("")
-  const [cartons, setCartons] = useState("")
-  const [actualCartons, setActualCartons] = useState("")
+  // const [cartons, setCartons] = useState("")
+  // const [actualCartons, setActualCartons] = useState("")
   const [grossWeight, setGrossWeight] = useState("")
   const [actualGrossWeight, setActualGrossWeight] = useState("")
   const [grossVolume, setGrossVolume] = useState("")
@@ -100,6 +100,11 @@ export default function GoodsDispatchNoteForm() {
   const [driverNic, setDriverNic] = useState("")
   const [driverContactNo, setDriverContactNo] = useState("")
   const [wharfStaffContactNo, setWharfStaffContactNo] = useState("")
+
+  const [driverContactNoOptional, setDriverContactNoOptional] = useState("")
+  const [wharfStaffContactNoOptional, setWharfStaffContactNoOptional] =
+    useState("")
+  const [quantityLoaded, setQuantityLoaded] = useState("")
 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
 
@@ -194,6 +199,14 @@ export default function GoodsDispatchNoteForm() {
     [wharfStaffOptions, wharfStaff]
   )
 
+  const packingListQuantity = useMemo(
+    () =>
+      selectedRows.reduce((accumulator, currentValue) => {
+        return accumulator + currentValue
+      }, 0),
+    [selectedRows]
+  )
+
   const handleSave = async () => {
     if (!derivedClient || !derivedForwarder) {
       alert(
@@ -205,7 +218,7 @@ export default function GoodsDispatchNoteForm() {
       alert("Please fill in Date and Manufacturer.")
       return
     }
-    if (!dispatchLocation) {
+    if (!deliveredTo) {
       alert("Please select a Dispatch Location.")
       return
     }
@@ -250,8 +263,8 @@ export default function GoodsDispatchNoteForm() {
         manufacture_id: Number(manufacturer),
         date: formattedDate,
         packing_list_ids: selectedRows,
-        cartoons: cartons,
-        actual_cartoons: actualCartons,
+        cartoons: quantityLoaded,
+        // actual_cartoons: actualCartons,
         gross_weight: grossWeight,
         actual_gross_weight: actualGrossWeight,
         gross_volume: grossVolume,
@@ -262,7 +275,7 @@ export default function GoodsDispatchNoteForm() {
         gdn_grn_ref: gdnReference,
         vehicle_no: vehicleNo,
         driver_id: Number(driver),
-        dispatch_location: dispatchLocation,
+        dispatch_location: deliveredTo,
         transport_mode: transportMode,
         ...(transportMode === "FCL container"
           ? {
@@ -274,6 +287,8 @@ export default function GoodsDispatchNoteForm() {
           : {}),
         custom_doc_status: customDocStatus,
         wharf_staff_id: Number(wharfStaff),
+        driver_contact_no: driverContactNoOptional,
+        wharf_contact_no: wharfStaffContactNoOptional,
       })
       router.push("/gdn")
     } catch (err) {
@@ -517,14 +532,11 @@ export default function GoodsDispatchNoteForm() {
           <div className="space-y-4">
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium text-foreground">
-                Dispatch Location
+                Delivered To
               </Label>
-              <Select
-                value={dispatchLocation}
-                onValueChange={setDispatchLocation}
-              >
+              <Select value={deliveredTo} onValueChange={setDeliveredTo}>
                 <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                  <SelectValue placeholder="Choose Dispatch Location" />
+                  <SelectValue placeholder="Choose Delivered To Location" />
                 </SelectTrigger>
                 <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
                   {DISPATCH_LOCATION_OPTIONS.map((opt) => (
@@ -707,6 +719,19 @@ export default function GoodsDispatchNoteForm() {
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Driver Contact No (Optional)
+                </Label>
+                <Input
+                  id="driver-contact-no-optional"
+                  placeholder="Enter Driver Contact No (Optional)"
+                  value={driverContactNoOptional}
+                  onChange={(e) => setDriverContactNoOptional(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -740,6 +765,19 @@ export default function GoodsDispatchNoteForm() {
                 className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
               />
             </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-foreground">
+                Wharf Staff Contact No (Optional)
+              </Label>
+              <Input
+                id="wharf-staff-contact-no-optional"
+                placeholder="Enter Wharf Staff Contact No (Optional)"
+                value={wharfStaffContactNoOptional}
+                onChange={(e) => setWharfStaffContactNoOptional(e.target.value)}
+                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -762,29 +800,29 @@ export default function GoodsDispatchNoteForm() {
                   htmlFor="cartons"
                   className="text-xs font-medium text-foreground"
                 >
-                  Cartons (Planned)
+                  Packing List Quantity
                 </Label>
                 <Input
+                  disabled
                   id="cartons"
                   placeholder="Enter Cartons"
-                  value={cartons}
-                  onChange={(e) => setCartons(e.target.value)}
+                  value={packingListQuantity}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <Label
-                  htmlFor="actual-cartons"
+                  htmlFor="cartons"
                   className="text-xs font-medium text-foreground"
                 >
-                  Total Quantity (Actual Loaded)
+                  Quantity Loaded
                 </Label>
                 <Input
-                  id="actual-cartons"
-                  placeholder="Enter Actual Cartons Loaded"
-                  value={actualCartons}
-                  onChange={(e) => setActualCartons(e.target.value)}
+                  id="quantity-loaded"
+                  placeholder="Enter Quantity Loaded"
+                  value={quantityLoaded}
+                  onChange={(e) => setQuantityLoaded(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>

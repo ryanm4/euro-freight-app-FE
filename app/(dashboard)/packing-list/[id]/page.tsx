@@ -208,6 +208,38 @@ export default function PackingListViewPage() {
           </CardContent>
         </Card>
 
+        {/* Totals */}
+        <Card className="flex w-full flex-col shadow-sm transition-shadow hover:shadow-md">
+          <CardHeader className="flex flex-col gap-[0.5px]">
+            <h3 className="text-md mb-2 font-medium">Totals</h3>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Aggregated quantities across all line items.
+            </p>
+          </CardHeader>
+          <CardContent className="grid grid-cols-3 gap-4 md:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="view-total-qty" className={labelCls}>Total Quantity</Label>
+              <Input id="view-total-qty" value={totalQty} disabled className={inputCls} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="view-total-cartons" className={labelCls}>Total Cartons</Label>
+              <Input id="view-total-cartons" value={totalCartons} disabled className={inputCls} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="view-total-gross" className={labelCls}>Total Gross Weight (kg)</Label>
+              <Input id="view-total-gross" value={totalGrossWeight.toFixed(3)} disabled className={inputCls} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="view-total-net" className={labelCls}>Total Net Weight (kg)</Label>
+              <Input id="view-total-net" value={totalNetWeight.toFixed(3)} disabled className={inputCls} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="view-total-cbm" className={labelCls}>Total CBM</Label>
+              <Input id="view-total-cbm" value={totalCbm.toFixed(3)} disabled className={inputCls} />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Line Items */}
         <Card className="flex w-full flex-col shadow-sm transition-shadow hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
@@ -362,6 +394,7 @@ export default function PackingListViewPage() {
             )}
           </CardContent>
         </Card>
+
       </div>
     </div>
   )

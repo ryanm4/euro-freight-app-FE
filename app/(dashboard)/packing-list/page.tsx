@@ -19,7 +19,7 @@ export default function PackingListPage() {
 
   const actions = useMemo(
     () => ({
-      onEdit: (id: string) => router.push(`/packing-list/edit/${id}`),
+      onEdit: (id: string) => router.push(`/packing-list/${id}/edit`),
       onDelete: (id: string) => console.log("Delete", id),
       onView: (id: string) => router.push(`/packing-list/${id}`),
     }),

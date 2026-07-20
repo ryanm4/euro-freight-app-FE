@@ -4,7 +4,7 @@ import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
+
 import {
   Form,
   FormControl,
@@ -62,6 +62,8 @@ import { FieldPath, SubmitHandler, useForm } from "react-hook-form"
 import { toast } from "sonner"
 import z from "zod"
 
+type PackingListFormValues = z.infer<typeof packingListSchema>
+
 interface UploadedPackingListData {
   success: boolean
   filename: string
@@ -115,7 +117,6 @@ export default function PackingListForm({
   const itemsPerPage = 5
   const uploadedItemsPerPage = 10
 
-  type PackingListFormValues = z.infer<typeof packingListSchema>
 
   const baseDefaultValues: PackingListFormValues = {
     client_id: 0,
@@ -324,6 +325,22 @@ export default function PackingListForm({
   const onSubmit: SubmitHandler<PackingListFormValues> = async (data) => {
     try {
       setIsLoading(true)
+
+      // Use the items the user actually selected (tracked in form state)
+      const allItems = (data.items ?? []).map((item) => ({
+        poNumber: item.poNumber,
+        sku: item.sku || "",
+        itemName: item.itemDescription || "",
+        size: item.size || "",
+        unitCost: item.unitCost || 0,
+        quantity: item.quantity || 0,
+        ctnCount: item.ctnCount || 0,
+        grossWeightKg: item.grossWeightKg || 0,
+        netWeightKg: item.netWeightKg || 0,
+        cartonDimensions: item.cartonDimensions || "",
+        cbm: item.cbm || 0,
+      }))
+
       const response = await fetch("/api/packing-list", {
         method: "POST",
         headers: {
@@ -339,14 +356,14 @@ export default function PackingListForm({
           total_volume: data.total_volume,
           status: "DRAFT",
           created_by: data.created_by,
-          items: data.items,
+          items: allItems,
           additional_info: data.additional_info || "",
         }),
       })
 
       const resData = await response.json()
 
-      if (response.ok && resData.success) {
+      if (response.ok) {
         toast.success("Packing list created successfully!")
         router.push("/packing-list")
       } else {
@@ -383,7 +400,14 @@ export default function PackingListForm({
   return (
     <div className="mx-auto space-y-5">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-0">
+        <form
+          onSubmit={form.handleSubmit(onSubmit, (errors) => {
+            console.error("Packing list form validation errors:", errors)
+            const fieldNames = Object.keys(errors).join(", ")
+            toast.error(`Please fix the following fields: ${fieldNames}`)
+          })}
+          className="space-y-6 pb-0"
+        >
           <div className="mt-6 flex w-full items-center justify-end gap-[16px] sm:justify-end">
             <Button
               size="lg"
@@ -470,6 +494,7 @@ export default function PackingListForm({
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
+                            type="button"
                             variant="outline"
                             className={cn(
                               "h-9 w-full pl-3 text-left font-normal",
@@ -509,6 +534,7 @@ export default function PackingListForm({
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
+                            type="button"
                             variant="outline"
                             className={cn(
                               "h-9 w-full pl-3 text-left font-normal",
@@ -593,7 +619,70 @@ export default function PackingListForm({
               </CardContent>
             </Card>
 
-            {/* Card 2: Active Purchase Orders / Uploaded Items */}
+            {/* Card 2: Selected Items */}
+            {selectedItems.length > 0 && (
+              <Card className="flex w-full flex-col shadow-sm transition-shadow hover:shadow-md">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                  <div className="flex flex-col gap-[0.5px]">
+                    <h3 className="text-md font-medium">Selected Items</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedItems.length} item{selectedItems.length !== 1 ? "s" : ""} selected
+                    </p>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto rounded-md border border-border">
+                    <Table className="min-w-[900px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[120px]">PO Number</TableHead>
+                          <TableHead className="min-w-[80px]">SKU</TableHead>
+                          <TableHead className="min-w-[160px]">Item Description</TableHead>
+                          <TableHead className="min-w-[70px]">Size</TableHead>
+                          <TableHead className="min-w-[80px]">Quantity</TableHead>
+                          <TableHead className="min-w-[100px]">Carton Count</TableHead>
+                          <TableHead className="min-w-[130px]">Gross Weight (kg)</TableHead>
+                          <TableHead className="min-w-[120px]">Net Weight (kg)</TableHead>
+                          <TableHead className="min-w-[150px]">Carton Dimensions</TableHead>
+                          <TableHead className="min-w-[70px]">CBM</TableHead>
+                          <TableHead />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedItems.map((item, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell className="font-medium">{item.poNumber || "N/A"}</TableCell>
+                            <TableCell>{item.sku || "N/A"}</TableCell>
+                            <TableCell>{item.itemDescription || "N/A"}</TableCell>
+                            <TableCell>{item.size || "N/A"}</TableCell>
+                            <TableCell>{item.quantity ?? 0}</TableCell>
+                            <TableCell>{item.ctnCount ?? 0}</TableCell>
+                            <TableCell>{item.grossWeightKg ?? 0}</TableCell>
+                            <TableCell>{item.netWeightKg ?? 0}</TableCell>
+                            <TableCell>{item.cartonDimensions || "N/A"}</TableCell>
+                            <TableCell>{item.cbm ?? 0}</TableCell>
+                            <TableCell className="text-right">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = selectedItems.filter((_, i) => i !== idx)
+                                  form.setValue("items", updated, { shouldValidate: true })
+                                }}
+                                className="text-xs text-destructive hover:underline"
+                              >
+                                Remove
+                              </button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Card 3: Active Purchase Orders / Uploaded Items */}
             <Card className="flex w-full flex-col shadow-sm transition-shadow hover:shadow-md">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div className="flex flex-col gap-[0.5px]">
@@ -620,36 +709,36 @@ export default function PackingListForm({
                 )}
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="overflow-hidden rounded-md border border-border">
-                  <Table>
+                <div className="overflow-x-auto rounded-md border border-border">
+                  <Table className="min-w-[900px]">
                     <TableHeader>
                       <TableRow>
                         {uploadedData ? (
                           <>
-                            <TableHead>PO Number</TableHead>
-                            <TableHead>SKU</TableHead>
-                            <TableHead>Item Name</TableHead>
-                            <TableHead>Color</TableHead>
-                            <TableHead>Size</TableHead>
-                            <TableHead>Quantity</TableHead>
-                            <TableHead>Carton Count</TableHead>
-                            <TableHead>Gross Weight (kg)</TableHead>
-                            <TableHead>Net Weight (kg)</TableHead>
-                            <TableHead>Carton Dimensions</TableHead>
-                            <TableHead>CBM</TableHead>
-                            <TableHead className="w-10"></TableHead>
+                            <TableHead className="min-w-[120px]">PO Number</TableHead>
+                            <TableHead className="min-w-[80px]">SKU</TableHead>
+                            <TableHead className="min-w-[150px]">Item Name</TableHead>
+                            <TableHead className="min-w-[80px]">Color</TableHead>
+                            <TableHead className="min-w-[70px]">Size</TableHead>
+                            <TableHead className="min-w-[80px]">Quantity</TableHead>
+                            <TableHead className="min-w-[100px]">Carton Count</TableHead>
+                            <TableHead className="min-w-[130px]">Gross Weight (kg)</TableHead>
+                            <TableHead className="min-w-[120px]">Net Weight (kg)</TableHead>
+                            <TableHead className="min-w-[150px]">Carton Dimensions</TableHead>
+                            <TableHead className="min-w-[70px]">CBM</TableHead>
+
                           </>
                         ) : (
                           <>
-                            <TableHead>PO Number</TableHead>
-                            <TableHead>Order Quantity</TableHead>
-                            <TableHead>EX Factory Date</TableHead>
-                            <TableHead>Shipping Mode</TableHead>
-                            <TableHead>Final Destination</TableHead>
-                            <TableHead>Supplier ID</TableHead>
-                            <TableHead>Cargo Dispatch Date</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="w-10"></TableHead>
+                            <TableHead className="min-w-[120px]">PO Number</TableHead>
+                            <TableHead className="min-w-[110px]">Order Quantity</TableHead>
+                            <TableHead className="min-w-[120px]">EX Factory Date</TableHead>
+                            <TableHead className="min-w-[120px]">Shipping Mode</TableHead>
+                            <TableHead className="min-w-[140px]">Final Destination</TableHead>
+                            <TableHead className="min-w-[100px]">Supplier ID</TableHead>
+                            <TableHead className="min-w-[150px]">Cargo Dispatch Date</TableHead>
+                            <TableHead className="min-w-[80px]">Status</TableHead>
+
                           </>
                         )}
                       </TableRow>
@@ -658,7 +747,20 @@ export default function PackingListForm({
                       {uploadedData ? (
                         uploadedData.items.length > 0 ? (
                           paginatedUploadedItems.map((item, index) => (
-                            <TableRow key={index}>
+                            <TableRow
+                              key={index}
+                              onClick={() => handleSelectUploadedItem(item)}
+                              className={cn(
+                                "cursor-pointer transition-colors",
+                                selectedItems.some(
+                                  (selectedItem) =>
+                                    selectedItem.poNumber === item.poNumber &&
+                                    selectedItem.sku === item.sku
+                                )
+                                  ? "bg-primary/10 hover:bg-primary/15"
+                                  : "hover:bg-muted/50"
+                              )}
+                            >
                               <TableCell className="font-medium">
                                 {item.poNumber || "N/A"}
                               </TableCell>
@@ -676,19 +778,7 @@ export default function PackingListForm({
                                 {item.ctnDemi || "N/A"}
                               </TableCell>
                               <TableCell>{item.cbm ?? 0}</TableCell>
-                              <TableCell className="pr-4 text-right">
-                                <Checkbox
-                                  checked={selectedItems.some(
-                                    (selectedItem) =>
-                                      selectedItem.poNumber ===
-                                        item.poNumber &&
-                                      selectedItem.sku === item.sku
-                                  )}
-                                  onCheckedChange={() =>
-                                    handleSelectUploadedItem(item)
-                                  }
-                                />
-                              </TableCell>
+
                             </TableRow>
                           ))
                         ) : (
@@ -713,7 +803,18 @@ export default function PackingListForm({
                         ))
                       ) : paginatedPOs.length > 0 ? (
                         paginatedPOs.map((po) => (
-                          <TableRow key={po.id}>
+                          <TableRow
+                            key={po.id}
+                            onClick={() => handleSelectItem(po)}
+                            className={cn(
+                              "cursor-pointer transition-colors",
+                              selectedItems.some(
+                                (item) => item.poNumber === po.po_number
+                              )
+                                ? "bg-primary/10 hover:bg-primary/15"
+                                : "hover:bg-muted/50"
+                            )}
+                          >
                             <TableCell className="font-medium">
                               {po.po_number || "N/A"}
                             </TableCell>
@@ -745,14 +846,7 @@ export default function PackingListForm({
                                 type="PURCHASE_ORDER"
                               />
                             </TableCell>
-                            <TableCell className="pr-4 text-right">
-                              <Checkbox
-                                checked={selectedItems.some(
-                                  (item) => item.poNumber === po.po_number
-                                )}
-                                onCheckedChange={() => handleSelectItem(po)}
-                              />
-                            </TableCell>
+
                           </TableRow>
                         ))
                       ) : (

@@ -26,30 +26,28 @@ export const packingListSchema = z.object({
       z.object({
         poNumber: z.string().min(1, "PO Number is required"),
 
-        sku: z.string().min(1, "SKU is required"),
+        sku: z.string().optional(),
 
-        itemDescription: z.string().min(1, "Item Description is required"),
+        itemDescription: z.string().optional(),
 
-        size: z.string().min(1, "Size is required"),
+        size: z.string().optional(),
 
         unitCost: z.number().min(0, "Unit Cost cannot be negative"),
 
-        quantity: z.number().positive("Quantity must be greater than 0"),
+        quantity: z.number().min(0, "Quantity must be 0 or greater"),
 
-        ctnCount: z.number().positive("Carton Count must be greater than 0"),
+        ctnCount: z.number().min(0, "Carton Count must be 0 or greater"),
 
-        grossWeightKg: z
-          .number()
-          .positive("Gross Weight must be greater than 0"),
+        grossWeightKg: z.number().min(0, "Gross Weight must be 0 or greater"),
 
-        netWeightKg: z.number().positive("Net Weight must be greater than 0"),
+        netWeightKg: z.number().min(0, "Net Weight must be 0 or greater"),
 
-        cartonDimensions: z.string().min(1, "Carton Dimensions are required"),
+        cartonDimensions: z.string().optional(),
 
-        cbm: z.number().positive("CBM must be greater than 0"),
+        cbm: z.number().min(0, "CBM must be 0 or greater"),
       })
     )
-    .min(1, "At least one item is required"),
+    .optional(),
 })
 
 export type PackingListFormValues = z.infer<typeof packingListSchema>

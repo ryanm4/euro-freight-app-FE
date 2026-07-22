@@ -7,9 +7,9 @@ export interface CreateGoodsDispatchNotePayload {
   cartoons: string
   actual_cartoons?: string
   gross_weight: string
-  actual_gross_weight: string
-  gross_volume: string
-  actual_gross_volume: string
+  actual_gross_weight?: string
+  gross_volume: number
+  actual_gross_volume?: string
   status: string
   created_by: string
   gdn_grn_ref: string
@@ -25,6 +25,9 @@ export interface CreateGoodsDispatchNotePayload {
   wharf_staff_id: number
   driver_contact_no: string
   wharf_contact_no: string
+  length_cm: number
+  width_cm: number
+  height_cm: number
 }
 
 export async function fetchGDNs() {

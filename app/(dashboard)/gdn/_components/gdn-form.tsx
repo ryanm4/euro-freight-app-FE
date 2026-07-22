@@ -1,5 +1,18 @@
 "use client"
 
+interface PackingListRow {
+  id: number
+  packingListNo: string
+  documentDate: string
+  shipTo: string
+  shippingMode: string
+  totalCartons: number
+  totalCbm: string
+  totalNetWeightKg: string
+  totalQuantity: number
+  totalVolume: string
+}
+
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -39,20 +52,6 @@ import { format, isValid, parse } from "date-fns"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 
-interface PackingListRow {
-  id: number
-  packingListNo: string
-  clientId: number | null
-  clientName: string
-  forwarderId: number | null
-  forwarderName: string
-  poNumber: string
-  date: string
-  quantity: number
-  gdnNo: string
-  status: string
-}
-
 const DISPATCH_LOCATION_OPTIONS = [
   { label: "Airport – Katunayaka", value: "Katunayaka Airport" },
   { label: "Sea Port – Colombo Port", value: "Colombo Port" },
@@ -68,7 +67,7 @@ const CONTAINER_SIZE_OPTIONS = ["20GP", "40GP", "40HC"]
 
 const CUSTOM_DOC_STATUS_OPTIONS = ["Pending", "In Progress", "Completed"]
 
-const STATUS_OPTIONS = ["Saved", "Edit", "Completed"]
+const STATUS_OPTIONS = ["Draft", "Saved", "Completed"]
 
 export default function GoodsDispatchNoteForm() {
   const router = useRouter()
@@ -80,7 +79,7 @@ export default function GoodsDispatchNoteForm() {
   const [manufacturer, setManufacturer] = useState("")
   const [driver, setDriver] = useState("")
   const [wharfStaff, setWharfStaff] = useState("")
-  const [dispatchLocation, setDispatchLocation] = useState("")
+  const [deliveredTo, setDeliveredTo] = useState("")
   const [transportMode, setTransportMode] = useState("")
   const [containerNo, setContainerNo] = useState("")
   const [containerSize, setContainerSize] = useState("")
@@ -88,12 +87,12 @@ export default function GoodsDispatchNoteForm() {
   const [secondarySealNo, setSecondarySealNo] = useState("")
   const [customDocStatus, setCustomDocStatus] = useState("")
   const [status, setStatus] = useState("")
-  const [cartons, setCartons] = useState("")
-  const [actualCartons, setActualCartons] = useState("")
+  // const [cartons, setCartons] = useState("")
+  // const [actualCartons, setActualCartons] = useState("")
   const [grossWeight, setGrossWeight] = useState("")
-  const [actualGrossWeight, setActualGrossWeight] = useState("")
-  const [grossVolume, setGrossVolume] = useState("")
-  const [actualGrossVolume, setActualGrossVolume] = useState("")
+  // const [actualGrossWeight, setActualGrossWeight] = useState("")
+  // const [grossVolume, setGrossVolume] = useState("")
+  // const [actualGrossVolume, setActualGrossVolume] = useState("")
   const [remarks, setRemarks] = useState("")
   const [client, setClient] = useState("")
   const [forwarder, setForwarder] = useState("")
@@ -101,7 +100,16 @@ export default function GoodsDispatchNoteForm() {
   const [driverContactNo, setDriverContactNo] = useState("")
   const [wharfStaffContactNo, setWharfStaffContactNo] = useState("")
 
+  const [driverContactNoOptional, setDriverContactNoOptional] = useState("")
+  const [wharfStaffContactNoOptional, setWharfStaffContactNoOptional] =
+    useState("")
+  const [quantityLoaded, setQuantityLoaded] = useState("")
+  const [cartoonLength, setCartoonLength] = useState("")
+  const [cartoonWidth, setCartoonWidth] = useState("")
+  const [cartoonHeight, setCartoonHeight] = useState("")
+
   const [selectedRows, setSelectedRows] = useState<number[]>([])
+  console.log("selectedRows", selectedRows)
 
   const { data } = useQuery({
     queryKey: ["clients"],
@@ -142,6 +150,17 @@ export default function GoodsDispatchNoteForm() {
     return data?.data?.filter((c: any) => c.type === UserRole.Forwarder) || []
   }, [data])
 
+  const volumeM3 = useMemo(() => {
+    const l = Number(cartoonLength)
+    const w = Number(cartoonWidth)
+    const h = Number(cartoonHeight)
+    return (l * w * h) / 1_000_000
+  }, [cartoonLength, cartoonWidth, cartoonHeight])
+
+  const calculatedVolume = useMemo(() => {
+    return volumeM3 * Number(quantityLoaded)
+  }, [volumeM3, quantityLoaded])
+
   const toggleRow = (id: number) => {
     setSelectedRows((prev) =>
       prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
@@ -152,24 +171,21 @@ export default function GoodsDispatchNoteForm() {
     return (
       packingLists?.data?.map((pl: any) => ({
         id: pl.packing_list_id,
-        packingListNo: `PL-${pl.packing_list_id}`,
-        clientId: pl.client_id ?? null,
-        clientName: pl.client_name ?? `Client #${pl.client_id ?? "—"}`,
-        forwarderId: pl.forwarder_id ?? null,
-        forwarderName: pl.forwarder_id
-          ? (pl.forwarder_name ?? `Forwarder #${pl.forwarder_id}`)
-          : "—",
-        poNumber: pl.purchase_orders?.[0]?.po_number ?? "—",
-        date: pl.date
-          ? new Date(pl.date).toLocaleDateString("en-GB", {
+        packingListNo: pl.packing_list_no ?? "",
+        documentDate: pl.document_date
+          ? new Date(pl.document_date).toLocaleDateString("en-GB", {
               day: "numeric",
               month: "short",
               year: "numeric",
             })
           : "—",
-        quantity: pl.quantity,
-        gdnNo: pl.gdn_id ? `GDN-${pl.gdn_id}` : "—",
-        status: pl.purchase_orders?.[0]?.status ?? "—",
+        shipTo: pl.ship_to ?? "",
+        shippingMode: pl.shipping_mode ?? "",
+        totalCartons: pl.total_cartons ?? 0,
+        totalCbm: pl.total_cbm ?? "0",
+        totalNetWeightKg: pl.total_net_weight_kg ?? "0",
+        totalQuantity: pl.total_quantity ?? 0,
+        totalVolume: pl.total_volume ?? "0",
       })) ?? []
     )
   }, [packingLists])
@@ -194,6 +210,17 @@ export default function GoodsDispatchNoteForm() {
     [wharfStaffOptions, wharfStaff]
   )
 
+  const packingListQuantity = useMemo(
+    () =>
+      selectedRows.reduce((accumulator, id) => {
+        const packingList = packingLists?.data?.find(
+          (pl: any) => pl.packing_list_id === id
+        )
+        return accumulator + (packingList?.total_cartons ?? 0)
+      }, 0),
+    [selectedRows, packingLists]
+  )
+
   const handleSave = async () => {
     if (!derivedClient || !derivedForwarder) {
       alert(
@@ -205,7 +232,7 @@ export default function GoodsDispatchNoteForm() {
       alert("Please fill in Date and Manufacturer.")
       return
     }
-    if (!dispatchLocation) {
+    if (!deliveredTo) {
       alert("Please select a Dispatch Location.")
       return
     }
@@ -250,19 +277,19 @@ export default function GoodsDispatchNoteForm() {
         manufacture_id: Number(manufacturer),
         date: formattedDate,
         packing_list_ids: selectedRows,
-        cartoons: cartons,
-        actual_cartoons: actualCartons,
+        cartoons: quantityLoaded,
+        // actual_cartoons: actualCartons,
         gross_weight: grossWeight,
-        actual_gross_weight: actualGrossWeight,
-        gross_volume: grossVolume,
-        actual_gross_volume: actualGrossVolume,
-        status,
+        // actual_gross_weight: actualGrossWeight,
+        gross_volume: calculatedVolume,
+        // actual_gross_volume: actualGrossVolume,
+        status: "Draft",
         // TODO: replace with the actual logged-in user (e.g. from an auth/session context)
         created_by: "admin",
         gdn_grn_ref: gdnReference,
         vehicle_no: vehicleNo,
         driver_id: Number(driver),
-        dispatch_location: dispatchLocation,
+        dispatch_location: deliveredTo,
         transport_mode: transportMode,
         ...(transportMode === "FCL container"
           ? {
@@ -274,6 +301,11 @@ export default function GoodsDispatchNoteForm() {
           : {}),
         custom_doc_status: customDocStatus,
         wharf_staff_id: Number(wharfStaff),
+        driver_contact_no: driverContactNoOptional,
+        wharf_contact_no: wharfStaffContactNoOptional,
+        length_cm: Number(cartoonLength),
+        width_cm: Number(cartoonWidth),
+        height_cm: Number(cartoonHeight),
       })
       router.push("/gdn")
     } catch (err) {
@@ -517,14 +549,11 @@ export default function GoodsDispatchNoteForm() {
           <div className="space-y-4">
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium text-foreground">
-                Dispatch Location
+                Delivered To
               </Label>
-              <Select
-                value={dispatchLocation}
-                onValueChange={setDispatchLocation}
-              >
+              <Select value={deliveredTo} onValueChange={setDeliveredTo}>
                 <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                  <SelectValue placeholder="Choose Dispatch Location" />
+                  <SelectValue placeholder="Choose Delivered To Location" />
                 </SelectTrigger>
                 <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
                   {DISPATCH_LOCATION_OPTIONS.map((opt) => (
@@ -707,6 +736,19 @@ export default function GoodsDispatchNoteForm() {
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Driver Contact No (Optional)
+                </Label>
+                <Input
+                  id="driver-contact-no-optional"
+                  placeholder="Enter Driver Contact No (Optional)"
+                  value={driverContactNoOptional}
+                  onChange={(e) => setDriverContactNoOptional(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -740,6 +782,19 @@ export default function GoodsDispatchNoteForm() {
                 className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
               />
             </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-foreground">
+                Wharf Staff Contact No (Optional)
+              </Label>
+              <Input
+                id="wharf-staff-contact-no-optional"
+                placeholder="Enter Wharf Staff Contact No (Optional)"
+                value={wharfStaffContactNoOptional}
+                onChange={(e) => setWharfStaffContactNoOptional(e.target.value)}
+                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -762,29 +817,29 @@ export default function GoodsDispatchNoteForm() {
                   htmlFor="cartons"
                   className="text-xs font-medium text-foreground"
                 >
-                  Cartons (Planned)
+                  Packing List Quantity
                 </Label>
                 <Input
+                  disabled
                   id="cartons"
                   placeholder="Enter Cartons"
-                  value={cartons}
-                  onChange={(e) => setCartons(e.target.value)}
+                  value={packingListQuantity}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <Label
-                  htmlFor="actual-cartons"
+                  htmlFor="cartons"
                   className="text-xs font-medium text-foreground"
                 >
-                  Total Quantity (Actual Loaded)
+                  Quantity Loaded
                 </Label>
                 <Input
-                  id="actual-cartons"
-                  placeholder="Enter Actual Cartons Loaded"
-                  value={actualCartons}
-                  onChange={(e) => setActualCartons(e.target.value)}
+                  id="quantity-loaded"
+                  placeholder="Enter Quantity Loaded"
+                  value={quantityLoaded}
+                  onChange={(e) => setQuantityLoaded(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -846,13 +901,13 @@ export default function GoodsDispatchNoteForm() {
                   htmlFor="actual-gross-weight"
                   className="text-xs font-medium text-foreground"
                 >
-                  Actual Gross Weight
+                  Cartoon Dimensions - L (cm)
                 </Label>
                 <Input
                   id="actual-gross-weight"
                   placeholder="Enter Actual Gross Weight"
-                  value={actualGrossWeight}
-                  onChange={(e) => setActualGrossWeight(e.target.value)}
+                  value={cartoonLength}
+                  onChange={(e) => setCartoonLength(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -864,13 +919,13 @@ export default function GoodsDispatchNoteForm() {
                   htmlFor="gross-volume"
                   className="text-xs font-medium text-foreground"
                 >
-                  Gross Volume
+                  Cartoon Dimensions - W (cm)
                 </Label>
                 <Input
                   id="gross-volume"
                   placeholder="Enter Gross Volume"
-                  value={grossVolume}
-                  onChange={(e) => setGrossVolume(e.target.value)}
+                  value={cartoonWidth}
+                  onChange={(e) => setCartoonWidth(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -880,13 +935,47 @@ export default function GoodsDispatchNoteForm() {
                   htmlFor="actual-gross-volume"
                   className="text-xs font-medium text-foreground"
                 >
-                  Actual Gross Volume
+                  Cartoon Dimensions - H (cm)
                 </Label>
                 <Input
                   id="actual-gross-volume"
                   placeholder="Enter Actual Gross Volume"
-                  value={actualGrossVolume}
-                  onChange={(e) => setActualGrossVolume(e.target.value)}
+                  value={cartoonHeight}
+                  onChange={(e) => setCartoonHeight(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="gross-volume"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Cartoon Volume (m³)
+                </Label>
+                <Input
+                  disabled
+                  id="gross-volume"
+                  placeholder="Enter Gross Volume"
+                  value={volumeM3}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="gross-volume"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Calculated Volume (m³)
+                </Label>
+                <Input
+                  disabled
+                  id="gross-volume"
+                  placeholder="Enter Gross Volume"
+                  value={calculatedVolume}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -916,25 +1005,28 @@ export default function GoodsDispatchNoteForm() {
                       Packing List No
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Client
-                    </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
-                      Forwarder
-                    </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
-                      PO Number
-                    </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
                       Date
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Quantity
+                      Ship To
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      GDN No
+                      Shipping Mode
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Status
+                      Total Cartons
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total CBM
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total Net Weight(kg)
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total Quantity
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total Volume
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Actions
@@ -952,27 +1044,28 @@ export default function GoodsDispatchNoteForm() {
                           {row.packingListNo}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.clientName}
+                          {row.documentDate}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.forwarderName}
+                          {row.shipTo}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.poNumber}
+                          {row.shippingMode}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.date}
+                          {row.totalCartons}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.quantity}
+                          {row.totalCbm}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.gdnNo}
+                          {row.totalNetWeightKg}
                         </TableCell>
-                        <TableCell>
-                          <span className="inline-flex items-center rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-400">
-                            {row.status}
-                          </span>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.totalQuantity}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.totalVolume}
                         </TableCell>
                         <TableCell>
                           <Checkbox

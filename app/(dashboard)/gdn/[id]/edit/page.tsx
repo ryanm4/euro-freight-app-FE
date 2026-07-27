@@ -13,6 +13,7 @@ interface PackingListRow {
   totalVolume: string
 }
 
+import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -41,7 +42,10 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { fetchClients } from "@/lib/api/clients"
 import { fetchDrivers } from "@/lib/api/drivers"
-import { createGoodsDispatchNote } from "@/lib/api/goods_dispatch_notes"
+import {
+  fetchGoodsDispatchNoteById,
+  updateGoodsDispatchNote,
+} from "@/lib/api/goods_dispatch_notes"
 import { fetchPackingLists } from "@/lib/api/packing_lists"
 import { fetchWharfStaff } from "@/lib/api/wharf_staff"
 import { UserRole } from "@/lib/enums/user-role"
@@ -49,7 +53,7 @@ import { cn } from "@/lib/utils"
 import { IconCalendarFilled } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
 import { format, isValid, parse } from "date-fns"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 
 const DISPATCH_LOCATION_OPTIONS = [
@@ -69,9 +73,22 @@ const CUSTOM_DOC_STATUS_OPTIONS = ["Pending", "In Progress", "Completed"]
 
 const STATUS_OPTIONS = ["Draft", "Saved", "Completed"]
 
-export default function GoodsDispatchNoteForm() {
+const parseDateValue = (val: string): Date | undefined => {
+  if (!val) return undefined
+  let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
+  if (isValid(d)) return d
+  d = parse(val, "yyyy-MM-dd", new Date())
+  if (isValid(d)) return d
+  d = new Date(val)
+  if (isValid(d)) return d
+  return undefined
+}
+
+export default function GDNEdit() {
   const router = useRouter()
+  const { id } = useParams<{ id: string }>()
   const [isSaving, setIsSaving] = useState(false)
+  const [hasHydrated, setHasHydrated] = useState(false)
 
   const [date, setDate] = useState("")
   const [gdnReference, setGdnReference] = useState("")
@@ -87,12 +104,7 @@ export default function GoodsDispatchNoteForm() {
   const [secondarySealNo, setSecondarySealNo] = useState("")
   const [customDocStatus, setCustomDocStatus] = useState("")
   const [status, setStatus] = useState("")
-  // const [cartons, setCartons] = useState("")
-  // const [actualCartons, setActualCartons] = useState("")
   const [grossWeight, setGrossWeight] = useState("")
-  // const [actualGrossWeight, setActualGrossWeight] = useState("")
-  // const [grossVolume, setGrossVolume] = useState("")
-  // const [actualGrossVolume, setActualGrossVolume] = useState("")
   const [remarks, setRemarks] = useState("")
   const [client, setClient] = useState("")
   const [forwarder, setForwarder] = useState("")
@@ -109,7 +121,12 @@ export default function GoodsDispatchNoteForm() {
   const [cartoonHeight, setCartoonHeight] = useState("")
 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
-  console.log("selectedRows", selectedRows)
+
+  const { data: gdnRes, isLoading: isGdnLoading } = useQuery({
+    queryKey: ["gdn", id],
+    queryFn: () => fetchGoodsDispatchNoteById(id),
+    enabled: !!id,
+  })
 
   const { data } = useQuery({
     queryKey: ["clients"],
@@ -161,13 +178,15 @@ export default function GoodsDispatchNoteForm() {
     return volumeM3 * Number(quantityLoaded)
   }, [volumeM3, quantityLoaded])
 
-  const toggleRow = (id: number) => {
+  const toggleRow = (rowId: number) => {
     setSelectedRows((prev) =>
-      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
+      prev.includes(rowId) ? prev.filter((r) => r !== rowId) : [...prev, rowId]
     )
   }
 
-  const rows: PackingListRow[] = useMemo(() => {
+  // Rows available for selection, sourced from the "completed" packing
+  // lists endpoint.
+  const availableRows: PackingListRow[] = useMemo(() => {
     return (
       packingLists?.data?.map((pl: any) => ({
         id: pl.packing_list_id,
@@ -189,6 +208,42 @@ export default function GoodsDispatchNoteForm() {
       })) ?? []
     )
   }, [packingLists])
+
+  // The GDN's currently-linked packing lists — kept visible in the table
+  // even if they no longer show up in the "completed" list, so the user
+  // never loses sight of what's already attached to this GDN.
+  const linkedRows: PackingListRow[] = useMemo(() => {
+    return (
+      gdnRes?.data?.packing_lists?.map((pl: any) => ({
+        id: pl.id,
+        packingListNo: pl.packing_list_no ?? `PL-${pl.id}`,
+        documentDate: pl.date
+          ? new Date(pl.date.replace(" ", "T")).toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })
+          : "—",
+        shipTo: pl.ship_to ?? "",
+        shippingMode: pl.shipping_mode ?? "",
+        totalCartons: pl.total_cartons ?? 0,
+        totalCbm: pl.total_cbm ?? "0",
+        totalNetWeightKg: pl.total_net_weight_kg ?? "0",
+        totalQuantity: pl.total_quantity ?? 0,
+        totalVolume: pl.total_volume ?? "0",
+      })) ?? []
+    )
+  }, [gdnRes])
+
+  const rows: PackingListRow[] = useMemo(() => {
+    const merged = [...linkedRows]
+    availableRows.forEach((row) => {
+      if (!merged.some((r) => r.id === row.id)) {
+        merged.push(row)
+      }
+    })
+    return merged
+  }, [linkedRows, availableRows])
 
   // Client & Forwarder are derived from the selected packing list(s) —
   // the GDN generator cannot amend these directly.
@@ -212,19 +267,55 @@ export default function GoodsDispatchNoteForm() {
 
   const packingListQuantity = useMemo(
     () =>
-      selectedRows.reduce((accumulator, id) => {
-        const packingList = packingLists?.data?.find(
-          (pl: any) => pl.packing_list_id === id
-        )
-        return accumulator + (packingList?.total_cartons ?? 0)
+      selectedRows.reduce((accumulator, rowId) => {
+        const row = rows.find((r) => r.id === rowId)
+        return accumulator + (row?.totalCartons ?? 0)
       }, 0),
-    [selectedRows, packingLists]
+    [selectedRows, rows]
   )
 
   const quantityExceedsAvailable = useMemo(() => {
     const loaded = Number(quantityLoaded)
     return quantityLoaded !== "" && loaded > packingListQuantity
   }, [quantityLoaded, packingListQuantity])
+
+  // Hydrate all form state from the fetched GDN, once, when it arrives.
+  useEffect(() => {
+    if (hasHydrated || !gdnRes?.data) return
+    const gdn = gdnRes.data
+
+    setDate(
+      gdn.date
+        ? format(parseDateValue(gdn.date) ?? new Date(gdn.date), "yyyy-MM-dd")
+        : ""
+    )
+    setGdnReference(gdn.gdn_grn_ref ?? "")
+    setVehicleNo(gdn.vehicle_no ?? "")
+    setManufacturer(gdn.manufacture_id ? String(gdn.manufacture_id) : "")
+    setDriver(gdn.driver_id ? String(gdn.driver_id) : "")
+    setWharfStaff(gdn.wharf_staff_id ? String(gdn.wharf_staff_id) : "")
+    setDeliveredTo(gdn.dispatch_location ?? "")
+    setTransportMode(gdn.transport_mode ?? "")
+    setContainerNo(gdn.container_no ?? "")
+    setContainerSize(gdn.container_size ?? "")
+    setPrimarySealNo(gdn.primary_seal_no ?? "")
+    setSecondarySealNo(gdn.secondary_seal_no ?? "")
+    setCustomDocStatus(gdn.custom_doc_status ?? "")
+    setStatus(gdn.status ?? "")
+    setGrossWeight(gdn.gross_weight ? String(gdn.gross_weight) : "")
+    setRemarks(gdn.remarks ?? "")
+    setClient(gdn.client_id ? String(gdn.client_id) : "")
+    setForwarder(gdn.forwarder_id ? String(gdn.forwarder_id) : "")
+    setDriverContactNoOptional(gdn.driver_contact_no_optional ?? "")
+    setWharfStaffContactNoOptional(gdn.wharf_contact_no_optional ?? "")
+    setQuantityLoaded(gdn.cartoons ? String(gdn.cartoons) : "")
+    setCartoonLength(gdn.length_cm ? String(gdn.length_cm) : "")
+    setCartoonWidth(gdn.width_cm ? String(gdn.width_cm) : "")
+    setCartoonHeight(gdn.height_cm ? String(gdn.height_cm) : "")
+    setSelectedRows(gdn.packing_lists?.map((pl: any) => pl.id) ?? [])
+
+    setHasHydrated(true)
+  }, [gdnRes, hasHydrated])
 
   const handleSave = async () => {
     if (!derivedClient || !derivedForwarder) {
@@ -286,21 +377,16 @@ export default function GoodsDispatchNoteForm() {
 
       const formattedDate = `${date} 00:00:00`
 
-      await createGoodsDispatchNote({
+      await updateGoodsDispatchNote(id, {
         client_id: Number(client),
         forwarder_id: Number(forwarder),
         manufacture_id: Number(manufacturer),
         date: formattedDate,
         packing_list_ids: selectedRows,
         cartoons: quantityLoaded,
-        // actual_cartoons: actualCartons,
         gross_weight: grossWeight,
-        // actual_gross_weight: actualGrossWeight,
         gross_volume: calculatedVolume,
-        // actual_gross_volume: actualGrossVolume,
-        status: "Draft",
-        // TODO: replace with the actual logged-in user (e.g. from an auth/session context)
-        created_by: "admin",
+        status,
         gdn_grn_ref: gdnReference,
         vehicle_no: vehicleNo,
         driver_id: Number(driver),
@@ -316,32 +402,49 @@ export default function GoodsDispatchNoteForm() {
           : {}),
         custom_doc_status: customDocStatus,
         wharf_staff_id: Number(wharfStaff),
-        driver_contact_no: driverContactNoOptional,
-        wharf_contact_no: wharfStaffContactNoOptional,
+        driver_contact_no: driverContactNo,
+        driver_contact_no_optional: driverContactNoOptional,
+        wharf_contact_no: wharfStaffContactNo,
+        wharf_contact_no_optional: wharfStaffContactNoOptional,
         length_cm: Number(cartoonLength),
         width_cm: Number(cartoonWidth),
         height_cm: Number(cartoonHeight),
+        remarks,
       })
       router.push("/gdn")
     } catch (err) {
       console.error(err)
-      alert("Failed to save goods dispatch note.")
+      alert("Failed to update goods dispatch note.")
     } finally {
       setIsSaving(false)
     }
   }
 
   useEffect(() => {
+    if (!selectedDriver) return
     setDriverNic(selectedDriver?.nic_no ?? "")
     setDriverContactNo(selectedDriver?.contact_no ?? "")
   }, [selectedDriver])
 
   useEffect(() => {
+    if (!selectedWharfStaff) return
     setWharfStaffContactNo(selectedWharfStaff?.contact_no ?? "")
   }, [selectedWharfStaff])
 
+  if (isGdnLoading) return <div>Loading…</div>
+
   return (
-    <div className="mx-auto space-y-5">
+    <div className="mx-6 mb-5 space-y-5">
+      <div className="mt-3">
+        <PageTitleWithBreadcrumb
+          title={`${gdnRes?.data?.gdn_no ?? ""}`}
+          breadcrumbs={[
+            { title: "Dashboard", href: "/dashboard" },
+            { title: "Good Dispatch Note", href: "/gdn" },
+          ]}
+        />
+      </div>
+
       <div className="flex justify-end gap-3">
         <Button
           variant="outline"
@@ -388,23 +491,7 @@ export default function GoodsDispatchNoteForm() {
                     >
                       {date
                         ? (() => {
-                            const parseDate = (
-                              val: string
-                            ): Date | undefined => {
-                              if (!val) return undefined
-                              let d = parse(
-                                val,
-                                "yyyy-MM-dd HH:mm:ss",
-                                new Date()
-                              )
-                              if (isValid(d)) return d
-                              d = parse(val, "yyyy-MM-dd", new Date())
-                              if (isValid(d)) return d
-                              d = new Date(val)
-                              if (isValid(d)) return d
-                              return undefined
-                            }
-                            const selectedDate = parseDate(date)
+                            const selectedDate = parseDateValue(date)
                             return selectedDate
                               ? format(selectedDate, "PPP")
                               : "Pick a date"
@@ -416,19 +503,7 @@ export default function GoodsDispatchNoteForm() {
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
-                      selected={(() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        return parseDate(date)
-                      })()}
+                      selected={parseDateValue(date)}
                       onSelect={(selectedDate) => {
                         if (selectedDate) {
                           setDate(format(selectedDate, "yyyy-MM-dd"))
@@ -860,7 +935,6 @@ export default function GoodsDispatchNoteForm() {
                   value={quantityLoaded}
                   onChange={(e) => {
                     const val = e.target.value
-                    // Clamp so the user can't type past the available quantity
                     if (val !== "" && Number(val) > packingListQuantity) {
                       setQuantityLoaded(String(packingListQuantity))
                     } else {
@@ -934,14 +1008,14 @@ export default function GoodsDispatchNoteForm() {
 
               <div className="flex flex-col gap-1.5">
                 <Label
-                  htmlFor="actual-gross-weight"
+                  htmlFor="cartoon-length"
                   className="text-xs font-medium text-foreground"
                 >
                   Cartoon Dimensions - L (cm)
                 </Label>
                 <Input
-                  id="actual-gross-weight"
-                  placeholder="Enter Actual Gross Weight"
+                  id="cartoon-length"
+                  placeholder="Enter Length"
                   value={cartoonLength}
                   onChange={(e) => setCartoonLength(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
@@ -952,14 +1026,14 @@ export default function GoodsDispatchNoteForm() {
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
                 <Label
-                  htmlFor="gross-volume"
+                  htmlFor="cartoon-width"
                   className="text-xs font-medium text-foreground"
                 >
                   Cartoon Dimensions - W (cm)
                 </Label>
                 <Input
-                  id="gross-volume"
-                  placeholder="Enter Gross Volume"
+                  id="cartoon-width"
+                  placeholder="Enter Width"
                   value={cartoonWidth}
                   onChange={(e) => setCartoonWidth(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
@@ -968,14 +1042,14 @@ export default function GoodsDispatchNoteForm() {
 
               <div className="flex flex-col gap-1.5">
                 <Label
-                  htmlFor="actual-gross-volume"
+                  htmlFor="cartoon-height"
                   className="text-xs font-medium text-foreground"
                 >
                   Cartoon Dimensions - H (cm)
                 </Label>
                 <Input
-                  id="actual-gross-volume"
-                  placeholder="Enter Actual Gross Volume"
+                  id="cartoon-height"
+                  placeholder="Enter Height"
                   value={cartoonHeight}
                   onChange={(e) => setCartoonHeight(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
@@ -985,32 +1059,22 @@ export default function GoodsDispatchNoteForm() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="gross-volume"
-                  className="text-xs font-medium text-foreground"
-                >
+                <Label className="text-xs font-medium text-foreground">
                   Per Cartoon Volume (m³)
                 </Label>
                 <Input
                   disabled
-                  id="gross-volume"
-                  placeholder="Enter Gross Volume"
                   value={volumeM3}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="gross-volume"
-                  className="text-xs font-medium text-foreground"
-                >
+                <Label className="text-xs font-medium text-foreground">
                   Calculated Volume (m³)
                 </Label>
                 <Input
                   disabled
-                  id="gross-volume"
-                  placeholder="Enter Gross Volume"
                   value={calculatedVolume}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
@@ -1115,7 +1179,7 @@ export default function GoodsDispatchNoteForm() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={9}
+                        colSpan={10}
                         className="h-24 text-center text-sm text-zinc-500"
                       >
                         No results.

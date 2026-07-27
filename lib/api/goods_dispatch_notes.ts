@@ -28,7 +28,14 @@ export interface CreateGoodsDispatchNotePayload {
   length_cm: number
   width_cm: number
   height_cm: number
+  driver_contact_no_optional?: string
+  wharf_contact_no_optional?: string
+  remarks?: string
 }
+
+export type UpdateGoodsDispatchNotePayload = Partial<
+  Omit<CreateGoodsDispatchNotePayload, "created_by">
+>
 
 export async function fetchGDNs() {
   const res = await fetch("/api/goods_dispatch_notes")
@@ -52,5 +59,19 @@ export async function createGoodsDispatchNote(
 export async function fetchGoodsDispatchNoteById(id: string) {
   const res = await fetch(`/api/goods_dispatch_notes/${id}`)
   if (!res.ok) throw new Error("Failed to fetch goods dispatch note by ID")
+  return res.json()
+}
+
+export async function updateGoodsDispatchNote(
+  id: string | number,
+  payload: UpdateGoodsDispatchNotePayload
+) {
+  const res = await fetch(`/api/goods_dispatch_notes/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+
+  if (!res.ok) throw new Error("Failed to update goods dispatch note")
   return res.json()
 }

@@ -16,12 +16,66 @@ import { Textarea } from "@/components/ui/textarea"
 import { fetchGoodsDispatchNoteById } from "@/lib/api/goods_dispatch_notes"
 import { useQuery } from "@tanstack/react-query"
 import { format } from "date-fns"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
+
+const DISPATCH_LOCATION_OPTIONS = [
+  { label: "Airport – Katunayaka (Air)", value: "Katunayaka Airport" },
+  { label: "Sea Port – Colombo Port (FCL)", value: "Colombo Port" },
+  {
+    label: "Consolidator's Warehouse – ACE Yard (LCL)",
+    value: "ACE Yard",
+  },
+]
+
+const formatDateValue = (val?: string) => {
+  if (!val) return "—"
+  try {
+    const parsable = val.includes(" ") ? val.replace(" ", "T") : val
+    return format(new Date(parsable), "PPP")
+  } catch {
+    return val
+  }
+}
 
 const createGDNObject = (gdn: any) => {
+  const packingLists =
+    gdn.packing_lists?.map((pl: any) => ({
+      id: pl.id,
+      packingListNo: pl.packing_list_no ?? `PL-${pl.id}`,
+      shippingMode: pl.shipping_mode ?? "—",
+      date: pl.date ? formatDateValue(pl.date) : "—",
+      totalCartons: pl.total_cartons ?? 0,
+      totalCbm: pl.total_cbm ?? "0",
+      totalNetWeightKg: pl.total_net_weight_kg ?? "0",
+      totalGrossWeightKg: pl.total_gross_weight_kg ?? "0",
+      totalQuantity: pl.total_quantity ?? 0,
+      status: pl.status ?? "—",
+    })) ?? []
+
+  // Packing List Quantity = sum of cartons across all linked packing
+  // lists, mirroring the create form's `packingListQuantity` calc.
+  const packingListQuantity = packingLists.reduce(
+    (acc: number, pl: any) => acc + (Number(pl.totalCartons) || 0),
+    0
+  )
+
+  const cartoonLength = gdn.length_cm ?? ""
+  const cartoonWidth = gdn.width_cm ?? ""
+  const cartoonHeight = gdn.height_cm ?? ""
+
+  const volumeM3 =
+    (Number(cartoonLength) * Number(cartoonWidth) * Number(cartoonHeight)) /
+    1_000_000
+
+  const dispatchLocationLabel =
+    DISPATCH_LOCATION_OPTIONS.find((opt) => opt.value === gdn.dispatch_location)
+      ?.label ??
+    gdn.dispatch_location ??
+    "—"
+
   return {
     gdnNo: gdn.gdn_no ?? "—",
-    date: gdn.date ?? "—",
+    date: gdn.date ?? "",
     gdnReference: gdn.gdn_grn_ref ?? "—",
     vehicleNo: gdn.vehicle_no ?? "—",
     status: gdn.status ?? "—",
@@ -29,55 +83,37 @@ const createGDNObject = (gdn: any) => {
     manufacturer: gdn.manufacture_name ?? "—",
     forwarder: gdn.forwarder_name ?? "—",
     driver: gdn.driver_name ?? "—",
+    // Not currently returned by the API — shows "—" until the backend adds it.
     driverNic: gdn.driver_nic_no ?? "—",
     driverContactNo: gdn.driver_contact_no ?? "—",
+    // Not present in the current API response — will populate once the
+    // backend starts returning a separate optional contact field.
+    driverContactNoOptional: gdn.driver_contact_no_optional ?? "—",
     wharfStaff: gdn.wharf_staff_name ?? "—",
-    wharfStaffContactNo: gdn.wharf_staff_contact_no ?? "—",
-    dispatchLocation: gdn.dispatch_location ?? "—",
+    wharfStaffContactNo: gdn.wharf_contact_no ?? "—",
+    wharfStaffContactNoOptional: gdn.wharf_contact_no_optional ?? "—",
+    dispatchLocation: dispatchLocationLabel,
     transportMode: gdn.transport_mode ?? "—",
     containerNo: gdn.container_no ?? "—",
     containerSize: gdn.container_size ?? "—",
     primarySealNo: gdn.primary_seal_no ?? "—",
     secondarySealNo: gdn.secondary_seal_no ?? "—",
     customDocStatus: gdn.custom_doc_status ?? "—",
-    cartons: gdn.cartoons ?? "—",
-    actualCartons: gdn.actual_cartoons ?? "—",
+    packingListQuantity,
+    quantityLoaded: gdn.cartoons ?? "—",
     grossWeight: gdn.gross_weight ?? "—",
-    actualGrossWeight: gdn.actual_gross_weight ?? "—",
-    grossVolume: gdn.gross_volume ?? "—",
-    actualGrossVolume: gdn.actual_gross_volume ?? "—",
+    cartoonLength: cartoonLength || "—",
+    cartoonWidth: cartoonWidth || "—",
+    cartoonHeight: cartoonHeight || "—",
+    volumeM3: Number.isFinite(volumeM3) ? volumeM3 : 0,
+    calculatedVolume: gdn.gross_volume ?? "—",
     remarks: gdn.remarks ?? "—",
-    packingLists:
-      gdn.packing_lists?.map((pl: any) => ({
-        id: pl.id,
-        packingListNo: pl.packing_list_no ?? `PL-${pl.id}`,
-        clientName: pl.client_name ?? gdn.client_name ?? "—",
-        forwarderName: pl.forwarder_name ?? gdn.forwarder_name ?? "—",
-        shippingMode: pl.shipping_mode ?? "—",
-        poNumber: pl.po_number ?? "—",
-        date: pl.date
-          ? (() => {
-              try {
-                const parsable = pl.date.includes(" ")
-                  ? pl.date.replace(" ", "T")
-                  : pl.date
-                return format(new Date(parsable), "PPP")
-              } catch {
-                return pl.date
-              }
-            })()
-          : "—",
-        totalCartons: pl.total_cartons ?? "—",
-        totalQuantity: pl.total_quantity ?? "—",
-        totalCbm: pl.total_cbm ?? "—",
-        totalNetWeightKg: pl.total_net_weight_kg ?? "—",
-        totalGrossWeightKg: pl.total_gross_weight_kg ?? "—",
-        status: pl.status ?? "—",
-      })) ?? [],
+    packingLists,
   }
 }
 
 export default function GdnByID() {
+  const router = useRouter()
   const { id } = useParams<{ id: string }>()
 
   const {
@@ -89,41 +125,35 @@ export default function GdnByID() {
     queryFn: () => fetchGoodsDispatchNoteById(id),
   })
 
-  const formatDateValue = (val?: string) => {
-    if (!val) return ""
-    try {
-      const parsable = val.includes(" ") ? val.replace(" ", "T") : val
-      return format(new Date(parsable), "PPP")
-    } catch {
-      return val
-    }
-  }
-
   if (isLoading) return <div>Loading…</div>
   if (isError || !res?.data) return <>Not found</>
 
   const data = res.data
-
   const gdn = createGDNObject(data)
+
+  const onEditClick = () => {
+    router.push(`/gdn/${id}/edit`)
+  }
 
   return (
     <div className="mx-6 mb-5 space-y-5">
-      <div className="mt-3">
+      <div className="mt-4">
         <PageTitleWithBreadcrumb
-          title={`GDN ${data?.gdn_no ?? ""}`}
+          title={`${data?.gdn_no ?? ""}`}
           breadcrumbs={[
             { title: "Dashboard", href: "/dashboard" },
-            { title: "GDN", href: "/gdn" },
+            { title: "Goods Dispatched Notes", href: "/gdn" },
           ]}
         />
       </div>
 
       <div className="flex justify-end gap-3">
-        <Button className="rounded-md" disabled>
+        <Button className="rounded-md" onClick={onEditClick}>
           Edit
         </Button>
       </div>
 
+      {/* Shipment Details / Business Partners */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
@@ -146,7 +176,6 @@ export default function GdnByID() {
                 </Label>
                 <Input
                   id="date"
-                  placeholder="Enter Date"
                   value={formatDateValue(gdn.date)}
                   disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
@@ -162,8 +191,69 @@ export default function GdnByID() {
                 </Label>
                 <Input
                   id="gdn-reference"
-                  placeholder="Enter GDN/GRN Reference"
                   value={gdn.gdnReference}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="status"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Status
+                </Label>
+                <Input
+                  id="status"
+                  value={gdn.status}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              Business Partners
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Client and Forwarder derived from the linked packing list(s).
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="client"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Customer (Client)
+                </Label>
+                <Input
+                  id="client"
+                  value={gdn.client}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="forwarder"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Forwarder
+                </Label>
+                <Input
+                  id="forwarder"
+                  value={gdn.forwarder}
                   disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
@@ -180,71 +270,7 @@ export default function GdnByID() {
                 </Label>
                 <Input
                   id="manufacturer"
-                  placeholder="Enter Manufacturer"
                   value={gdn.manufacturer}
-                  disabled
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="status"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Status
-                </Label>
-                <Input
-                  id="status"
-                  placeholder="Enter Status"
-                  value={gdn.status}
-                  disabled
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-zinc-100">
-              Business Partners
-            </h2>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Organizations involved in the shipment.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="client"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Customer (Client)
-                </Label>
-                <Input
-                  id="client"
-                  placeholder="Enter Client"
-                  value={gdn.client}
-                  disabled
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="forwarder"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Forwarder
-                </Label>
-                <Input
-                  id="forwarder"
-                  placeholder="Enter Forwarder"
-                  value={gdn.forwarder}
                   disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
@@ -254,6 +280,7 @@ export default function GdnByID() {
         </div>
       </div>
 
+      {/* Dispatch Location & Transport / Vehicle & Personnel */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
@@ -266,53 +293,36 @@ export default function GdnByID() {
           </div>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="dispatch-location"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Dispatch Location
-                </Label>
-                <Input
-                  id="dispatch-location"
-                  placeholder="Enter Dispatch Location"
-                  value={gdn.dispatchLocation}
-                  disabled
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-foreground">
+                Delivered To
+              </Label>
+              <Input
+                value={gdn.dispatchLocation}
+                disabled
+                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+              />
+            </div>
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="transport-mode"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Cargo Transport Mode
-                </Label>
-                <Input
-                  id="transport-mode"
-                  placeholder="Enter Transport Mode"
-                  value={gdn.transportMode}
-                  disabled
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-foreground">
+                Cargo Transport Mode
+              </Label>
+              <Input
+                value={gdn.transportMode}
+                disabled
+                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+              />
             </div>
 
             {gdn.transportMode === "FCL container" && (
               <div className="space-y-4 rounded-md border border-neutral-800 bg-neutral-950/40 p-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <Label
-                      htmlFor="container-no"
-                      className="text-xs font-medium text-foreground"
-                    >
+                    <Label className="text-xs font-medium text-foreground">
                       Container Number
                     </Label>
                     <Input
-                      id="container-no"
-                      placeholder="Enter Container Number"
                       value={gdn.containerNo}
                       disabled
                       className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
@@ -320,15 +330,10 @@ export default function GdnByID() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <Label
-                      htmlFor="container-size"
-                      className="text-xs font-medium text-foreground"
-                    >
+                    <Label className="text-xs font-medium text-foreground">
                       Container Size
                     </Label>
                     <Input
-                      id="container-size"
-                      placeholder="Enter Container Size"
                       value={gdn.containerSize}
                       disabled
                       className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
@@ -338,15 +343,10 @@ export default function GdnByID() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <Label
-                      htmlFor="primary-seal-no"
-                      className="text-xs font-medium text-foreground"
-                    >
+                    <Label className="text-xs font-medium text-foreground">
                       Primary Seal Number
                     </Label>
                     <Input
-                      id="primary-seal-no"
-                      placeholder="Enter Primary Seal Number"
                       value={gdn.primarySealNo}
                       disabled
                       className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
@@ -354,15 +354,10 @@ export default function GdnByID() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <Label
-                      htmlFor="secondary-seal-no"
-                      className="text-xs font-medium text-foreground"
-                    >
+                    <Label className="text-xs font-medium text-foreground">
                       Secondary (Final) Seal Number
                     </Label>
                     <Input
-                      id="secondary-seal-no"
-                      placeholder="Enter Secondary Seal Number"
                       value={gdn.secondarySealNo}
                       disabled
                       className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
@@ -387,15 +382,10 @@ export default function GdnByID() {
 
           <div className="space-y-4">
             <div className="flex flex-col gap-1.5">
-              <Label
-                htmlFor="vehicle-no"
-                className="text-xs font-medium text-foreground"
-              >
+              <Label className="text-xs font-medium text-foreground">
                 Vehicle No
               </Label>
               <Input
-                id="vehicle-no"
-                placeholder="Enter Vehicle No"
                 value={gdn.vehicleNo}
                 disabled
                 className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
@@ -403,15 +393,10 @@ export default function GdnByID() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label
-                htmlFor="driver"
-                className="text-xs font-medium text-foreground"
-              >
+              <Label className="text-xs font-medium text-foreground">
                 Driver
               </Label>
               <Input
-                id="driver"
-                placeholder="Enter Driver"
                 value={gdn.driver}
                 disabled
                 className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
@@ -420,15 +405,10 @@ export default function GdnByID() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="driver-nic"
-                  className="text-xs font-medium text-foreground"
-                >
+                <Label className="text-xs font-medium text-foreground">
                   Driver NIC
                 </Label>
                 <Input
-                  id="driver-nic"
-                  placeholder="Enter Driver NIC"
                   value={gdn.driverNic}
                   disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
@@ -436,16 +416,22 @@ export default function GdnByID() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="driver-contact-no"
-                  className="text-xs font-medium text-foreground"
-                >
+                <Label className="text-xs font-medium text-foreground">
                   Driver Contact No
                 </Label>
                 <Input
-                  id="driver-contact-no"
-                  placeholder="Enter Driver Contact No"
                   value={gdn.driverContactNo}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Driver Contact No (Optional)
+                </Label>
+                <Input
+                  value={gdn.driverContactNoOptional}
                   disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
@@ -453,15 +439,10 @@ export default function GdnByID() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label
-                htmlFor="wharf-staff"
-                className="text-xs font-medium text-foreground"
-              >
+              <Label className="text-xs font-medium text-foreground">
                 Wharf Staff
               </Label>
               <Input
-                id="wharf-staff"
-                placeholder="Enter Wharf Staff"
                 value={gdn.wharfStaff}
                 disabled
                 className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
@@ -469,16 +450,22 @@ export default function GdnByID() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label
-                htmlFor="wharf-staff-contact-no"
-                className="text-xs font-medium text-foreground"
-              >
+              <Label className="text-xs font-medium text-foreground">
                 Wharf Staff Contact No
               </Label>
               <Input
-                id="wharf-staff-contact-no"
-                placeholder="Enter Wharf Staff Contact No"
                 value={gdn.wharfStaffContactNo}
+                disabled
+                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-foreground">
+                Wharf Staff Contact No (Optional)
+              </Label>
+              <Input
+                value={gdn.wharfStaffContactNoOptional}
                 disabled
                 className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
               />
@@ -487,6 +474,7 @@ export default function GdnByID() {
         </div>
       </div>
 
+      {/* Packing Information / Shipment Measurements */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
@@ -501,32 +489,22 @@ export default function GdnByID() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="cartons"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Cartons (Planned)
+                <Label className="text-xs font-medium text-foreground">
+                  Packing List Quantity
                 </Label>
                 <Input
-                  id="cartons"
-                  placeholder="Enter Cartons"
-                  value={gdn.cartons}
+                  value={gdn.packingListQuantity}
                   disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="actual-cartons"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Total Quantity (Actual Loaded)
+                <Label className="text-xs font-medium text-foreground">
+                  Quantity Loaded
                 </Label>
                 <Input
-                  id="actual-cartons"
-                  placeholder="Enter Actual Cartons Loaded"
-                  value={gdn.actualCartons}
+                  value={gdn.quantityLoaded}
                   disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
@@ -534,15 +512,10 @@ export default function GdnByID() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label
-                htmlFor="custom-doc-status"
-                className="text-xs font-medium text-foreground"
-              >
+              <Label className="text-xs font-medium text-foreground">
                 Customs Document Status
               </Label>
               <Input
-                id="custom-doc-status"
-                placeholder="Enter Customs Document Status"
                 value={gdn.customDocStatus}
                 disabled
                 className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
@@ -564,15 +537,10 @@ export default function GdnByID() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="gross-weight"
-                  className="text-xs font-medium text-foreground"
-                >
+                <Label className="text-xs font-medium text-foreground">
                   Gross Weight
                 </Label>
                 <Input
-                  id="gross-weight"
-                  placeholder="Enter Gross Weight"
                   value={gdn.grossWeight}
                   disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
@@ -580,16 +548,11 @@ export default function GdnByID() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="actual-gross-weight"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Actual Gross Weight
+                <Label className="text-xs font-medium text-foreground">
+                  Cartoon Dimensions - L (cm)
                 </Label>
                 <Input
-                  id="actual-gross-weight"
-                  placeholder="Enter Actual Gross Weight"
-                  value={gdn.actualGrossWeight}
+                  value={gdn.cartoonLength}
                   disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
@@ -598,32 +561,46 @@ export default function GdnByID() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="gross-volume"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Gross Volume
+                <Label className="text-xs font-medium text-foreground">
+                  Cartoon Dimensions - W (cm)
                 </Label>
                 <Input
-                  id="gross-volume"
-                  placeholder="Enter Gross Volume"
-                  value={gdn.grossVolume}
+                  value={gdn.cartoonWidth}
                   disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="actual-gross-volume"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Actual Gross Volume
+                <Label className="text-xs font-medium text-foreground">
+                  Cartoon Dimensions - H (cm)
                 </Label>
                 <Input
-                  id="actual-gross-volume"
-                  placeholder="Enter Actual Gross Volume"
-                  value={gdn.actualGrossVolume}
+                  value={gdn.cartoonHeight}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Per Cartoon Volume (m³)
+                </Label>
+                <Input
+                  value={gdn.volumeM3}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Calculated Volume (m³)
+                </Label>
+                <Input
+                  value={gdn.calculatedVolume}
                   disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
@@ -633,6 +610,7 @@ export default function GdnByID() {
         </div>
       </div>
 
+      {/* Associated Packing Lists */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-1">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
@@ -653,31 +631,25 @@ export default function GdnByID() {
                       Packing List No
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Client
-                    </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
-                      Forwarder
+                      Date
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Shipping Mode
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Date
+                      Total Cartons
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Cartons
+                      Total CBM
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Quantity
+                      Total Net Weight(kg)
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      CBM
+                      Total Gross Weight(kg)
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Net Weight (kg)
-                    </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
-                      Gross Weight (kg)
+                      Total Quantity
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Status
@@ -695,22 +667,13 @@ export default function GdnByID() {
                           {row.packingListNo}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.clientName}
-                        </TableCell>
-                        <TableCell className="text-sm text-zinc-300">
-                          {row.forwarderName}
+                          {row.date}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
                           {row.shippingMode}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.date}
-                        </TableCell>
-                        <TableCell className="text-sm text-zinc-300">
                           {row.totalCartons}
-                        </TableCell>
-                        <TableCell className="text-sm text-zinc-300">
-                          {row.totalQuantity}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
                           {row.totalCbm}
@@ -720,6 +683,9 @@ export default function GdnByID() {
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
                           {row.totalGrossWeightKg}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.totalQuantity}
                         </TableCell>
                         <TableCell>
                           <span className="inline-flex items-center rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-400">
@@ -731,7 +697,7 @@ export default function GdnByID() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={10}
+                        colSpan={9}
                         className="h-24 text-center text-sm text-zinc-500"
                       >
                         No results.
@@ -745,6 +711,7 @@ export default function GdnByID() {
         </div>
       </div>
 
+      {/* Additional Information */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-1">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
@@ -763,7 +730,6 @@ export default function GdnByID() {
                   Remarks
                 </Label>
                 <Textarea
-                  placeholder="Type your message here."
                   value={gdn.remarks}
                   disabled
                   className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"

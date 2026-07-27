@@ -31,7 +31,7 @@ export default function GDNPage() {
   })
 
   const actions = {
-    onEdit: (id: string) => router.push(`/gdn/edit/${id}`),
+    onEdit: (id: string) => router.push(`/gdn/${id}/edit`),
     onDelete: (id: string) => {
       const gdn = (data?.data as GOODS_DELIVER_NOTE[] | undefined)?.find(
         (item) => item.id === Number(id)

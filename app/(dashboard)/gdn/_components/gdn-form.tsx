@@ -53,10 +53,10 @@ import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 
 const DISPATCH_LOCATION_OPTIONS = [
-  { label: "Airport – Katunayaka", value: "Katunayaka Airport" },
-  { label: "Sea Port – Colombo Port", value: "Colombo Port" },
+  { label: "Airport – Katunayaka (Air)", value: "Katunayaka Airport" },
+  { label: "Sea Port – Colombo Port (FCL)", value: "Colombo Port" },
   {
-    label: "Consolidator's Warehouse – ACE Yard",
+    label: "Consolidator's Warehouse – ACE Yard (LCL)",
     value: "ACE Yard",
   },
 ]
@@ -221,6 +221,11 @@ export default function GoodsDispatchNoteForm() {
     [selectedRows, packingLists]
   )
 
+  const quantityExceedsAvailable = useMemo(() => {
+    const loaded = Number(quantityLoaded)
+    return quantityLoaded !== "" && loaded > packingListQuantity
+  }, [quantityLoaded, packingListQuantity])
+
   const handleSave = async () => {
     if (!derivedClient || !derivedForwarder) {
       alert(
@@ -263,6 +268,16 @@ export default function GoodsDispatchNoteForm() {
     }
     if (!client || !forwarder) {
       alert("Please select a Client and Forwarder.")
+      return
+    }
+    if (!quantityLoaded || Number(quantityLoaded) <= 0) {
+      alert("Please enter a valid Quantity Loaded.")
+      return
+    }
+    if (Number(quantityLoaded) > packingListQuantity) {
+      alert(
+        `Quantity Loaded (${quantityLoaded}) cannot exceed the Packing List Quantity (${packingListQuantity}).`
+      )
       return
     }
 
@@ -830,18 +845,37 @@ export default function GoodsDispatchNoteForm() {
 
               <div className="flex flex-col gap-1.5">
                 <Label
-                  htmlFor="cartons"
+                  htmlFor="quantity-loaded"
                   className="text-xs font-medium text-foreground"
                 >
                   Quantity Loaded
                 </Label>
                 <Input
                   id="quantity-loaded"
+                  type="number"
+                  max={packingListQuantity}
                   placeholder="Enter Quantity Loaded"
                   value={quantityLoaded}
-                  onChange={(e) => setQuantityLoaded(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  onChange={(e) => {
+                    const val = e.target.value
+                    // Clamp so the user can't type past the available quantity
+                    if (val !== "" && Number(val) > packingListQuantity) {
+                      setQuantityLoaded(String(packingListQuantity))
+                    } else {
+                      setQuantityLoaded(val)
+                    }
+                  }}
+                  className={cn(
+                    "h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                    quantityExceedsAvailable &&
+                      "border-red-500 focus-visible:ring-red-500"
+                  )}
                 />
+                {quantityExceedsAvailable && (
+                  <p className="text-xs text-red-500">
+                    Cannot exceed Packing List Quantity ({packingListQuantity})
+                  </p>
+                )}
               </div>
             </div>
 

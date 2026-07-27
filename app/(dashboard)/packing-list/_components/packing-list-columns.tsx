@@ -7,6 +7,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { PACKING_LIST } from "@/modules/packing-list/types"
 import {
   IconArrowsSort,
@@ -17,6 +22,7 @@ import {
 } from "@tabler/icons-react"
 import { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
+import Link from "next/link"
 
 interface PackingListTableActions {
   onEdit: (id: string) => void
@@ -56,6 +62,22 @@ export const packingListColumns = (
           <IconArrowsSort className="ml-2 h-4 w-4" />
         </Button>
       ),
+      cell: ({ row }) => {
+        const poNumbers = row.original.purchase_orders?.map((po) => po.po_number) || []
+        const visibleValue = poNumbers.slice(0, 2).join(", ") || "-"
+        const fullValue = poNumbers.join(", ") || "-"
+
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap">
+                {poNumbers.length > 2 ? `${visibleValue}, ...` : visibleValue}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>{fullValue}</TooltipContent>
+          </Tooltip>
+        )
+      },
     },
     {
       accessorKey: "date",
@@ -103,6 +125,20 @@ export const packingListColumns = (
     {
       accessorKey: "gdn_id",
       header: "GDN Number",
+      cell: ({ row }) => {
+        const gdnId = row.original.gdn_id
+
+        if (!gdnId) return "-"
+
+        return (
+          <Link
+            href={`/gdn/${gdnId}`}
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            {gdnId}
+          </Link>
+        )
+      },
     },
 
     {

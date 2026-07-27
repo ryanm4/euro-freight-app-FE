@@ -448,7 +448,7 @@ export default function PackingListForm({
               className="bg-primary text-white"
               disabled={isLoading}
             >
-              {isLoading ? "Creating..." : "Create Packing List"}
+              {isLoading ? "Saving..." : "Save"}
             </Button>
           </div>
 

@@ -953,7 +953,7 @@ export default function GoodsDispatchNoteForm() {
                   htmlFor="gross-volume"
                   className="text-xs font-medium text-foreground"
                 >
-                  Cartoon Volume (m³)
+                  Per Cartoon Volume (m³)
                 </Label>
                 <Input
                   disabled

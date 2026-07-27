@@ -460,24 +460,6 @@ export default function GoodsDispatchNoteForm() {
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-foreground">
-                  Manufacturer
-                </Label>
-                <Select value={manufacturer} onValueChange={setManufacturer}>
-                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                    <SelectValue placeholder="Choose Manufacturer" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    {manufacturerOptions.map((c: any) => (
-                      <SelectItem key={c.id} value={String(c.id)}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
                   Status
                 </Label>
                 <Select value={status} onValueChange={setStatus}>
@@ -538,6 +520,26 @@ export default function GoodsDispatchNoteForm() {
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
                     {forwarderOptions.map((c: any) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Manufacturer
+                </Label>
+                <Select value={manufacturer} onValueChange={setManufacturer}>
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Choose Manufacturer" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {manufacturerOptions.map((c: any) => (
                       <SelectItem key={c.id} value={String(c.id)}>
                         {c.name}
                       </SelectItem>

@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { fetchGoodsDispatchNoteById } from "@/lib/api/goods_dispatch_notes"
 import { useQuery } from "@tanstack/react-query"
 import { format } from "date-fns"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 
 const DISPATCH_LOCATION_OPTIONS = [
   { label: "Airport – Katunayaka (Air)", value: "Katunayaka Airport" },
@@ -113,6 +113,7 @@ const createGDNObject = (gdn: any) => {
 }
 
 export default function GdnByID() {
+  const router = useRouter()
   const { id } = useParams<{ id: string }>()
 
   const {
@@ -130,6 +131,10 @@ export default function GdnByID() {
   const data = res.data
   const gdn = createGDNObject(data)
 
+  const onEditClick = () => {
+    router.push(`/gdn/${id}/edit`)
+  }
+
   return (
     <div className="mx-6 mb-5 space-y-5">
       <div className="mt-4">
@@ -137,13 +142,13 @@ export default function GdnByID() {
           title={`${data?.gdn_no ?? ""}`}
           breadcrumbs={[
             { title: "Dashboard", href: "/dashboard" },
-            { title: "Goods Dispatched Notes", href: "/gdn" },  
+            { title: "Goods Dispatched Notes", href: "/gdn" },
           ]}
         />
       </div>
 
       <div className="flex justify-end gap-3">
-        <Button className="rounded-md" disabled>
+        <Button className="rounded-md" onClick={onEditClick}>
           Edit
         </Button>
       </div>

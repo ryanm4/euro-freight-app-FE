@@ -13,6 +13,7 @@ export interface PACKING_LIST {
   ship_to?: string
 
   gdn_id?: number | null
+  gdn_no?: string | null
   grn_id?: number | null
 
   date?: string | null
@@ -34,4 +35,11 @@ export interface PACKING_LIST {
   updated_on?: string | null
 
   purchase_orders?: PACKING_LIST_PURCHASE_ORDER[]
+}
+
+export enum PackingListStatus {
+  DRAFT = "DRAFT",
+  CONFIRMED = "CONFIRMED",
+  SHIPPED = "SHIPPED",
+  CANCELLED = "CANCELLED",
 }

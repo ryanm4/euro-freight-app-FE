@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { GOODS_DELIVER_NOTE } from "@/modules/gdn/types"
+import { StatusBadge } from "@/components/shared/status-badge"
 import {
   IconArrowsSort,
   IconDots,
@@ -141,24 +142,9 @@ export const goodsDeliverNoteColumns = (
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }) => {
-        const status = row.original.status
-        return (
-          <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-              status === "active"
-                ? "bg-green-500/10 text-green-400"
-                : status === "inactive"
-                  ? "bg-red-500/10 text-red-400"
-                  : status === "pending"
-                    ? "bg-yellow-500/10 text-yellow-400"
-                    : "bg-neutral-500/10 text-neutral-400"
-            }`}
-          >
-            {status ?? "N/A"}
-          </span>
-        )
-      },
+      cell: ({ row }) => (
+        <StatusBadge status={row.original.status || "N/A"} type="GDN" />
+      ),
     },
     {
       id: "actions",

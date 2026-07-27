@@ -43,6 +43,8 @@ export default function PackingListViewPage() {
   } = useQuery({
     queryKey: ["packing-list", id],
     queryFn: () => fetchPackingListById(id),
+    refetchOnMount: "always",
+    staleTime: 0,
   })
 
   const formatDateValue = (val?: string | null) => {

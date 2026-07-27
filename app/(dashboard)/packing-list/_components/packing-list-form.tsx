@@ -50,10 +50,12 @@ import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
 import { CLIENT_LIST } from "@/modules/clients/types"
 import { packingListSchema } from "@/modules/packing-list/validation"
+import { PackingListStatus } from "@/modules/packing-list/types"
 import { PurchaseOrderApi } from "@/modules/purchase-order/api"
 import { PURCHASE_ORDER } from "@/modules/purchase-order/types"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { IconCalendarFilled, IconSearch } from "@tabler/icons-react"
+import { IconCalendarFilled, IconSearch, IconUpload, IconX, IconFileText } from "@tabler/icons-react"
+import { UploadPackingList } from "@/lib/api/packing_lists"
 import { useQuery } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
@@ -102,19 +104,24 @@ interface UploadedPackingListData {
 
 interface PackingListFormProps {
   uploadedData?: UploadedPackingListData | null
+  initialData?: any | null
+  mode?: "create" | "edit"
+  packingListId?: string
 }
 
 export default function PackingListForm({
-  uploadedData,
+  uploadedData: initialUploadedData,
+  initialData,
+  mode = "create",
+  packingListId,
 }: PackingListFormProps) {
   const router = useRouter()
+  const [uploadedData, setUploadedData] = useState<UploadedPackingListData | null>(
+    initialUploadedData || null
+  )
+  const [isUploading, setIsUploading] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [pos, setPos] = useState<PURCHASE_ORDER[]>([])
-  const [isPosLoading, setIsPosLoading] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
   const [uploadedItemsCurrentPage, setUploadedItemsCurrentPage] = useState(1)
-  const itemsPerPage = 5
   const uploadedItemsPerPage = 10
 
 
@@ -126,7 +133,7 @@ export default function PackingListForm({
     ship_to: "",
     shipping_mode: "",
     total_volume: "",
-    status: "DRAFT",
+    status: PackingListStatus.DRAFT,
     created_by: "ryan",
     items: [],
     additional_info: "",
@@ -138,38 +145,38 @@ export default function PackingListForm({
     shouldUnregister: false,
   })
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files && files.length > 0) {
+      const file = files[0]
+      try {
+        setIsUploading(true)
+        const formData = new FormData()
+        formData.append("packing_list", file)
+
+        const response = await UploadPackingList(formData)
+        setUploadedData(response)
+        toast.success("Packing list uploaded and parsed successfully!")
+      } catch (error) {
+        console.error(error)
+        toast.error("Failed to upload packing list. Please try again.")
+      } finally {
+        setIsUploading(false)
+      }
+    }
+  }
+
+  const handleRemoveFile = () => {
+    setUploadedData(null)
+    form.setValue("items", [], { shouldValidate: true })
+  }
+
   const renderFormField = <TName extends FieldPath<PackingListFormValues>>(
     name: TName,
     render: Parameters<
       typeof FormField<PackingListFormValues, TName>
     >["0"]["render"]
   ) => <FormField control={form.control} name={name} render={render} />
-
-  const fetchPOs = useCallback(async () => {
-    try {
-      setIsPosLoading(true)
-      const response = await PurchaseOrderApi.getAll()
-      if (response.status === 200) {
-        const raw = response.data as unknown
-        if (Array.isArray(raw)) {
-          setPos(raw)
-        } else if (raw && typeof raw === "object") {
-          const obj = raw as Record<string, unknown>
-          const extracted =
-            obj.data ?? obj.purchase_orders ?? obj.results ?? obj.items
-          setPos(
-            Array.isArray(extracted) ? (extracted as PURCHASE_ORDER[]) : []
-          )
-        } else {
-          setPos([])
-        }
-      }
-    } catch (error) {
-      console.error("Failed to fetch purchase orders", error)
-    } finally {
-      setIsPosLoading(false)
-    }
-  }, [])
 
   const { data } = useQuery({
     queryKey: ["clients"],
@@ -210,54 +217,85 @@ export default function PackingListForm({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploadedData])
 
-  useEffect(() => {
-    fetchPOs()
-  }, [fetchPOs])
-
-  const activePOs = useMemo(() => {
-    return pos.filter((po) => !po.packing_list_id)
-  }, [pos])
-
-  const selectedClientId = form.watch("client_id")
-  const selectedClient = useMemo(() => {
-    return clientOptions.find(
-      (c: any) => String(c.id) === String(selectedClientId)
-    )
-  }, [clientOptions, selectedClientId])
-
-  const filteredPOs = useMemo(() => {
-    let result = activePOs
-
-    if (selectedClient) {
-      result = result.filter(
-        (po) =>
-          po.supplier_id &&
-          String(po.supplier_id).toLowerCase() ===
-            selectedClient.name.toLowerCase()
-      )
-    }
-
-    if (searchQuery) {
-      result = result.filter(
-        (po) =>
-          po.po_number &&
-          po.po_number.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    }
-
-    return result
-  }, [activePOs, selectedClient, searchQuery])
+  const normalizeShippingMode = (val?: string | null) => {
+    if (!val) return ""
+    const lower = val.toLowerCase()
+    if (lower === "air") return "Air"
+    if (lower === "sea") return "Sea"
+    if (lower === "land") return "Land"
+    return val
+  }
 
   useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery, selectedClientId])
+    if (initialData) {
+      const matchedClient = clientOptions.find(
+        (c: any) => c.name === initialData.client_name
+      )
+      const clientId = matchedClient
+        ? matchedClient.id
+        : (Number(initialData.client_id) || 0)
 
-  const paginatedPOs = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
-    return filteredPOs.slice(startIndex, startIndex + itemsPerPage)
-  }, [filteredPOs, currentPage])
+      const matchedManufacturer = manufacturerOptions.find(
+        (m: any) => m.name === initialData.manufacturer_name
+      )
+      const manufacturerId = matchedManufacturer
+        ? matchedManufacturer.id
+        : (Number(initialData.manufacturer_id) || 0)
 
-  const totalPages = Math.ceil(filteredPOs.length / itemsPerPage)
+      form.reset({
+        client_id: clientId,
+        manufacturer_id: manufacturerId,
+        date: initialData.date ? format(new Date(initialData.date), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+        document_date: initialData.document_date ? format(new Date(initialData.document_date), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+        ship_to: initialData.ship_to || "",
+        shipping_mode: normalizeShippingMode(initialData.shipping_mode),
+        total_volume: initialData.total_volume || "",
+        status: initialData.status || PackingListStatus.DRAFT,
+        created_by: initialData.created_by || "ryan",
+        items: initialData.items || [],
+        additional_info: initialData.additional_info || "",
+      })
+
+      if (initialData.items && initialData.items.length > 0) {
+        const mappedItems = initialData.items.map((item: any) => ({
+          poNumber: item.poNumber || item.po_number || "",
+          sku: item.sku || "",
+          itemName: item.itemDescription || item.item_name || item.itemName || "",
+          size: item.size || "",
+          unitCost: Number(item.unitCost) || 0,
+          quantity: Number(item.quantity) || 0,
+          ctn: Number(item.ctnCount || item.ctn_count || item.ctn) || 0,
+          grossWeightKg: Number(item.grossWeightKg || item.gross_weight_kg) || 0,
+          netWeightKg: Number(item.netWeightKg || item.net_weight_kg) || 0,
+          ctnDemi: item.ctnDemi || item.cartonDimensions || "",
+          cbm: Number(item.cbm) || 0,
+        }))
+
+        const totalQuantity = mappedItems.reduce((acc: number, item: any) => acc + Number(item.quantity || 0), 0)
+        const totalCartons = mappedItems.reduce((acc: number, item: any) => acc + Number(item.ctn || 0), 0)
+        const totalGrossWeight = mappedItems.reduce((acc: number, item: any) => acc + Number(item.grossWeightKg || 0), 0)
+        const totalNetWeight = mappedItems.reduce((acc: number, item: any) => acc + Number(item.netWeightKg || 0), 0)
+        const totalCbm = mappedItems.reduce((acc: number, item: any) => acc + Number(item.cbm || 0), 0)
+
+        setUploadedData({
+          success: true,
+          filename: initialData.packing_list_no || "Existing File",
+          pages: 1,
+          rowCount: mappedItems.length,
+          rowsFailedToParse: 0,
+          totals: {
+            totalQuantity,
+            totalCartons,
+            totalGrossWeight,
+            totalNetWeight,
+            totalCbm,
+          },
+          items: mappedItems,
+          parseErrors: [],
+        })
+      }
+    }
+  }, [initialData, form, clientOptions, manufacturerOptions])
 
   const uploadedItemsTotalPages = uploadedData
     ? Math.ceil(uploadedData.items.length / uploadedItemsPerPage)
@@ -271,37 +309,6 @@ export default function PackingListForm({
     : []
 
   const selectedItems = form.watch("items") || []
-
-  const handleSelectItem = (po: PURCHASE_ORDER) => {
-    const currentItems = form.getValues("items") || []
-    const existingIndex = currentItems.findIndex(
-      (item) => item.poNumber === po.po_number
-    )
-
-    let newItems
-    if (existingIndex >= 0) {
-      newItems = currentItems.filter((item) => item.poNumber !== po.po_number)
-    } else {
-      newItems = [
-        ...currentItems,
-        {
-          poNumber: po.po_number || "",
-          sku: po.sku || "",
-          itemDescription: po.item_description || "",
-          size: po.size || "",
-          unitCost: po.unit_cost || 0,
-          quantity: po.po_quantity || 0,
-          ctnCount: po.carton_count || 0,
-          grossWeightKg: po.gross_weight || 0,
-          netWeightKg: po.net_weight || 0,
-          cartonDimensions: po.carton_dimensions || "",
-          cbm: po.cbm || 0,
-        },
-      ]
-    }
-
-    form.setValue("items", newItems, { shouldValidate: true })
-  }
 
   const handleSelectUploadedItem = (
     uploadedItem: UploadedPackingListData["items"][0]
@@ -365,37 +372,53 @@ export default function PackingListForm({
         cbm: item.cbm || 0,
       }))
 
-      const response = await fetch("/api/packing-list", {
-        method: "POST",
+      const url = mode === "edit" ? `/api/packing_lists/${packingListId}` : "/api/packing-list"
+      const method = mode === "edit" ? "PUT" : "POST"
+
+      const payload: any = {
+        client_id: Number(data.client_id),
+        manufacturer_id: Number(data.manufacturer_id),
+        date: data.date,
+        document_date: data.document_date,
+        ship_to: data.ship_to,
+        shipping_mode: data.shipping_mode,
+        total_volume: data.total_volume,
+        status: data.status || PackingListStatus.DRAFT,
+        items: allItems,
+        additional_info: data.additional_info || "",
+      }
+
+      if (mode === "edit") {
+        payload.updated_by = "ruwan"
+        payload.gdn_id = initialData?.gdn_id ?? null
+        payload.grn_id = initialData?.grn_id ?? null
+      } else {
+        payload.created_by = data.created_by || "ryan"
+      }
+
+      const response = await fetch(url, {
+        method: method,
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          client_id: Number(data.client_id),
-          manufacturer_id: Number(data.manufacturer_id),
-          date: data.date,
-          document_date: data.document_date,
-          ship_to: data.ship_to,
-          shipping_mode: data.shipping_mode,
-          total_volume: data.total_volume,
-          status: "DRAFT",
-          created_by: data.created_by,
-          items: allItems,
-          additional_info: data.additional_info || "",
-        }),
+        body: JSON.stringify(payload),
       })
 
       const resData = await response.json()
 
       if (response.ok) {
-        toast.success("Packing list created successfully!")
+        toast.success(
+          mode === "edit"
+            ? "Packing list updated successfully!"
+            : "Packing list created successfully!"
+        )
         router.push("/packing-list")
       } else {
-        toast.error(resData.message || "Failed to create packing list")
+        toast.error(resData.message || `Failed to ${mode === "edit" ? "update" : "create"} packing list`)
       }
     } catch (error) {
-      console.error("Error creating packing list:", error)
-      toast.error("Failed to create packing list due to a server error")
+      console.error(`Error ${mode === "edit" ? "updating" : "creating"} packing list:`, error)
+      toast.error(`Failed to ${mode === "edit" ? "update" : "create"} packing list due to a server error`)
     } finally {
       setIsLoading(false)
     }
@@ -446,18 +469,18 @@ export default function PackingListForm({
               size="lg"
               type="submit"
               className="bg-primary text-white"
-              disabled={isLoading}
+              disabled={isLoading || isUploading || !uploadedData}
             >
-              {isLoading ? "Saving..." : "Save"}
+              {isLoading ? "Saving..." : mode === "edit" ? "Update" : "Save"}
             </Button>
           </div>
 
           <div className="grid grid-cols-1 gap-4">
-            {/* Card 1: Create Packing List */}
+            {/* Card 1: Create/Edit Packing List */}
             <Card className="flex w-full flex-col shadow-sm transition-shadow hover:shadow-md">
               <CardHeader className="flex flex-col gap-[0.5px]">
                 <h3 className="text-md mb-2 font-medium">
-                  Create Packing List
+                  {mode === "edit" ? "Edit Packing List" : "Create Packing List"}
                 </h3>
                 <p className="mb-4 text-xs text-muted-foreground">
                   Important dates, documents, and shipment instructions.
@@ -609,7 +632,7 @@ export default function PackingListForm({
                   <FormItem className="flex flex-col">
                     <FormLabel className="mb-1">Shipping Mode</FormLabel>
                     <Select
-                      value={field.value}
+                      value={field.value || ""}
                       onValueChange={field.onChange}
                     >
                       <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
@@ -637,6 +660,27 @@ export default function PackingListForm({
                         className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                ))}
+                {renderFormField("status", ({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel className="mb-1">Status</FormLabel>
+                    <Select
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                        <SelectValue placeholder="Select Status" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                        {Object.values(PackingListStatus).map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 ))}
@@ -697,39 +741,38 @@ export default function PackingListForm({
               </Card>
             )}
 
-            {/* Card 2: Active Purchase Orders / Uploaded Items */}
+            {/* Card 2: Uploaded Items / Import Packing List */}
             <Card className="flex w-full flex-col shadow-sm transition-shadow hover:shadow-md">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div className="flex flex-col gap-[0.5px]">
                   <h3 className="text-md font-medium">
-                    {uploadedData ? "Uploaded Items" : "Active Purchase Orders"}
+                    {uploadedData ? "Uploaded Items" : "Import Items from Packing List"}
                   </h3>
                   <p className="text-xs text-muted-foreground">
                     {uploadedData
                       ? `Items from ${uploadedData.filename}`
-                      : "overview of the active orders"}
+                      : "Please upload your packing list Excel file to import items."}
                   </p>
                 </div>
-                {!uploadedData && (
-                  <div className="relative w-[280px]">
-                    <IconSearch className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="search"
-                      placeholder="Search Purchase Order"
-                      className="h-9 w-full pl-9"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
+                {uploadedData && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    onClick={handleRemoveFile}
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive h-9"
+                  >
+                    <IconX className="mr-1 h-4 w-4" /> Remove File
+                  </Button>
                 )}
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="overflow-x-auto rounded-md border border-border">
-                  <Table className="min-w-[900px]">
-                    <TableHeader>
-                      <TableRow>
-                        {uploadedData ? (
-                          <>
+                {uploadedData ? (
+                  <>
+                    <div className="overflow-x-auto rounded-md border border-border">
+                      <Table className="min-w-[900px]">
+                        <TableHeader>
+                          <TableRow>
                             <TableHead className="min-w-[120px]">PO Number</TableHead>
                             <TableHead className="min-w-[80px]">SKU</TableHead>
                             <TableHead className="min-w-[150px]">Item Name</TableHead>
@@ -741,300 +784,175 @@ export default function PackingListForm({
                             <TableHead className="min-w-[120px]">Net Weight (kg)</TableHead>
                             <TableHead className="min-w-[150px]">Carton Dimensions</TableHead>
                             <TableHead className="min-w-[70px]">CBM</TableHead>
-
-                          </>
-                        ) : (
-                          <>
-                            <TableHead className="min-w-[120px]">PO Number</TableHead>
-                            <TableHead className="min-w-[110px]">Order Quantity</TableHead>
-                            <TableHead className="min-w-[120px]">EX Factory Date</TableHead>
-                            <TableHead className="min-w-[120px]">Shipping Mode</TableHead>
-                            <TableHead className="min-w-[140px]">Final Destination</TableHead>
-                            <TableHead className="min-w-[100px]">Supplier ID</TableHead>
-                            <TableHead className="min-w-[150px]">Cargo Dispatch Date</TableHead>
-                            <TableHead className="min-w-[80px]">Status</TableHead>
-
-                          </>
-                        )}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {uploadedData ? (
-                        uploadedData.items.length > 0 ? (
-                          paginatedUploadedItems.map((item, index) => (
-                            <TableRow
-                              key={index}
-                              onClick={() => handleSelectUploadedItem(item)}
-                              className={cn(
-                                "cursor-pointer transition-colors",
-                                selectedItems.some(
-                                  (selectedItem) =>
-                                    selectedItem.poNumber === item.poNumber &&
-                                    selectedItem.sku === item.sku
-                                )
-                                  ? "bg-primary/10 hover:bg-primary/15"
-                                  : "hover:bg-muted/50"
-                              )}
-                            >
-                              <TableCell className="font-medium">
-                                {item.poNumber || "N/A"}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {uploadedData.items.length > 0 ? (
+                            paginatedUploadedItems.map((item, index) => (
+                              <TableRow
+                                key={index}
+                                onClick={() => handleSelectUploadedItem(item)}
+                                className={cn(
+                                  "cursor-pointer transition-colors",
+                                  selectedItems.some(
+                                    (selectedItem) =>
+                                      selectedItem.poNumber === item.poNumber &&
+                                      selectedItem.sku === item.sku
+                                  )
+                                    ? "bg-primary/10 hover:bg-primary/15"
+                                    : "hover:bg-muted/50"
+                                )}
+                              >
+                                <TableCell className="font-medium">
+                                  {item.poNumber || "N/A"}
+                                </TableCell>
+                                <TableCell>{item.sku || "N/A"}</TableCell>
+                                <TableCell>
+                                  {item.itemName || "N/A"}
+                                </TableCell>
+                                <TableCell>{item.color || "N/A"}</TableCell>
+                                <TableCell>{item.size || "N/A"}</TableCell>
+                                <TableCell>{item.quantity ?? 0}</TableCell>
+                                <TableCell>{item.ctn ?? 0}</TableCell>
+                                <TableCell>{item.grossWeightKg ?? 0}</TableCell>
+                                <TableCell>{item.netWeightKg ?? 0}</TableCell>
+                                <TableCell>
+                                  {item.ctnDemi || "N/A"}
+                                </TableCell>
+                                <TableCell>{item.cbm ?? 0}</TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell
+                                colSpan={12}
+                                className="h-24 text-center text-sm text-muted-foreground"
+                              >
+                                No items found in the uploaded file.
                               </TableCell>
-                              <TableCell>{item.sku || "N/A"}</TableCell>
-                              <TableCell>
-                                {item.itemName || "N/A"}
-                              </TableCell>
-                              <TableCell>{item.color || "N/A"}</TableCell>
-                              <TableCell>{item.size || "N/A"}</TableCell>
-                              <TableCell>{item.quantity ?? 0}</TableCell>
-                              <TableCell>{item.ctn ?? 0}</TableCell>
-                              <TableCell>{item.grossWeightKg ?? 0}</TableCell>
-                              <TableCell>{item.netWeightKg ?? 0}</TableCell>
-                              <TableCell>
-                                {item.ctnDemi || "N/A"}
-                              </TableCell>
-                              <TableCell>{item.cbm ?? 0}</TableCell>
-
                             </TableRow>
-                          ))
-                        ) : (
-                          <TableRow>
-                            <TableCell
-                              colSpan={12}
-                              className="h-24 text-center text-sm text-muted-foreground"
-                            >
-                              No items found in the uploaded file.
-                            </TableCell>
-                          </TableRow>
-                        )
-                      ) : isPosLoading ? (
-                        Array.from({ length: 3 }).map((_, i) => (
-                          <TableRow key={i}>
-                            {Array.from({ length: 9 }).map((_, j) => (
-                              <TableCell key={j}>
-                                <div className="h-4 w-full animate-pulse rounded bg-muted" />
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      ) : paginatedPOs.length > 0 ? (
-                        paginatedPOs.map((po) => (
-                          <TableRow
-                            key={po.id}
-                            onClick={() => handleSelectItem(po)}
-                            className={cn(
-                              "cursor-pointer transition-colors",
-                              selectedItems.some(
-                                (item) => item.poNumber === po.po_number
-                              )
-                                ? "bg-primary/10 hover:bg-primary/15"
-                                : "hover:bg-muted/50"
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {uploadedItemsTotalPages > 1 && (
+                      <div className="flex items-center justify-between py-2">
+                        <div className="text-xs text-muted-foreground">
+                          Showing{" "}
+                          {(uploadedItemsCurrentPage - 1) * uploadedItemsPerPage +
+                            1}{" "}
+                          to{" "}
+                          {Math.min(
+                            uploadedItemsCurrentPage * uploadedItemsPerPage,
+                            uploadedData.items.length
+                          )}{" "}
+                          of {uploadedData.items.length} items
+                        </div>
+                        <Pagination>
+                          <PaginationContent>
+                            <PaginationItem>
+                              {uploadedItemsCurrentPage > 1 ? (
+                                <PaginationPrevious
+                                  onClick={() =>
+                                    setUploadedItemsCurrentPage((p) =>
+                                      Math.max(1, p - 1)
+                                    )
+                                  }
+                                  className="cursor-pointer"
+                                />
+                              ) : (
+                                <PaginationPrevious className="pointer-events-none opacity-50" />
+                              )}
+                            </PaginationItem>
+                            {Array.from({ length: uploadedItemsTotalPages }).map(
+                              (_, idx) => {
+                                const pageNum = idx + 1
+                                if (
+                                  pageNum === 1 ||
+                                  pageNum === uploadedItemsTotalPages ||
+                                  (pageNum >= uploadedItemsCurrentPage - 1 &&
+                                    pageNum <= uploadedItemsCurrentPage + 1)
+                                ) {
+                                  return (
+                                    <PaginationItem key={pageNum}>
+                                      <PaginationLink
+                                        onClick={() =>
+                                          setUploadedItemsCurrentPage(pageNum)
+                                        }
+                                        isActive={
+                                          uploadedItemsCurrentPage === pageNum
+                                        }
+                                        className="cursor-pointer"
+                                      >
+                                        {pageNum}
+                                      </PaginationLink>
+                                    </PaginationItem>
+                                  )
+                                }
+                                if (
+                                  pageNum === uploadedItemsCurrentPage - 2 ||
+                                  pageNum === uploadedItemsCurrentPage + 2
+                                ) {
+                                  return (
+                                    <PaginationItem key={pageNum}>
+                                      <PaginationEllipsis />
+                                    </PaginationItem>
+                                  )
+                                }
+                                return null
+                              }
                             )}
-                          >
-                            <TableCell className="font-medium">
-                              {po.po_number || "N/A"}
-                            </TableCell>
-                            <TableCell>{po.po_quantity ?? 0}</TableCell>
-                            <TableCell>
-                              {po.ex_factory_date
-                                ? format(
-                                    new Date(po.ex_factory_date),
-                                    "dd MMM yyyy"
-                                  )
-                                : "N/A"}
-                            </TableCell>
-                            <TableCell>{po.shipping_mode || "N/A"}</TableCell>
-                            <TableCell>
-                              {po.final_destination || "N/A"}
-                            </TableCell>
-                            <TableCell>{po.supplier_id || "N/A"}</TableCell>
-                            <TableCell>
-                              {po.cargo_dispatch_date
-                                ? format(
-                                    new Date(po.cargo_dispatch_date),
-                                    "dd MMM yyyy"
-                                  )
-                                : "N/A"}
-                            </TableCell>
-                            <TableCell>
-                              <StatusBadge
-                                status={po.status || "Pending"}
-                                type="PURCHASE_ORDER"
-                              />
-                            </TableCell>
-
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell
-                            colSpan={9}
-                            className="h-24 text-center text-sm text-muted-foreground"
-                          >
-                            {selectedClientId
-                              ? "No active purchase orders found for this client."
-                              : "No active purchase orders. Please select a client name."}
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {uploadedData && uploadedItemsTotalPages > 1 && (
-                  <div className="flex items-center justify-between py-2">
-                    <div className="text-xs text-muted-foreground">
-                      Showing{" "}
-                      {(uploadedItemsCurrentPage - 1) * uploadedItemsPerPage +
-                        1}{" "}
-                      to{" "}
-                      {Math.min(
-                        uploadedItemsCurrentPage * uploadedItemsPerPage,
-                        uploadedData.items.length
-                      )}{" "}
-                      of {uploadedData.items.length} items
-                    </div>
-                    <Pagination>
-                      <PaginationContent>
-                        <PaginationItem>
-                          {uploadedItemsCurrentPage > 1 ? (
-                            <PaginationPrevious
-                              onClick={() =>
-                                setUploadedItemsCurrentPage((p) =>
-                                  Math.max(1, p - 1)
-                                )
-                              }
-                              className="cursor-pointer"
-                            />
-                          ) : (
-                            <PaginationPrevious className="pointer-events-none opacity-50" />
-                          )}
-                        </PaginationItem>
-                        {Array.from({ length: uploadedItemsTotalPages }).map(
-                          (_, idx) => {
-                            const pageNum = idx + 1
-                            if (
-                              pageNum === 1 ||
-                              pageNum === uploadedItemsTotalPages ||
-                              (pageNum >= uploadedItemsCurrentPage - 1 &&
-                                pageNum <= uploadedItemsCurrentPage + 1)
-                            ) {
-                              return (
-                                <PaginationItem key={pageNum}>
-                                  <PaginationLink
-                                    onClick={() =>
-                                      setUploadedItemsCurrentPage(pageNum)
-                                    }
-                                    isActive={
-                                      uploadedItemsCurrentPage === pageNum
-                                    }
-                                    className="cursor-pointer"
-                                  >
-                                    {pageNum}
-                                  </PaginationLink>
-                                </PaginationItem>
-                              )
-                            }
-                            if (
-                              pageNum === uploadedItemsCurrentPage - 2 ||
-                              pageNum === uploadedItemsCurrentPage + 2
-                            ) {
-                              return (
-                                <PaginationItem key={pageNum}>
-                                  <PaginationEllipsis />
-                                </PaginationItem>
-                              )
-                            }
-                            return null
-                          }
-                        )}
-                        <PaginationItem>
-                          {uploadedItemsCurrentPage < uploadedItemsTotalPages ? (
-                            <PaginationNext
-                              onClick={() =>
-                                setUploadedItemsCurrentPage((p) =>
-                                  Math.min(uploadedItemsTotalPages, p + 1)
-                                )
-                              }
-                              className="cursor-pointer"
-                            />
-                          ) : (
-                            <PaginationNext className="pointer-events-none opacity-50" />
-                          )}
-                        </PaginationItem>
-                      </PaginationContent>
-                    </Pagination>
+                            <PaginationItem>
+                              {uploadedItemsCurrentPage < uploadedItemsTotalPages ? (
+                                <PaginationNext
+                                  onClick={() =>
+                                    setUploadedItemsCurrentPage((p) =>
+                                      Math.min(uploadedItemsTotalPages, p + 1)
+                                    )
+                                  }
+                                  className="cursor-pointer"
+                                />
+                              ) : (
+                                <PaginationNext className="pointer-events-none opacity-50" />
+                              )}
+                            </PaginationItem>
+                          </PaginationContent>
+                        </Pagination>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex flex-col gap-2 py-4">
+                    <label
+                      htmlFor="file-upload"
+                      className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${
+                        isUploading
+                          ? "cursor-not-allowed border-muted-foreground/10 bg-muted/30 opacity-50"
+                          : "border-muted-foreground/25 bg-muted/50 hover:border-muted-foreground/50 hover:bg-muted/70"
+                      }`}
+                    >
+                      <IconUpload className="mb-2 h-10 w-10 text-muted-foreground" />
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {isUploading
+                          ? "Uploading and parsing file..."
+                          : "Click to upload packing list file"}
+                      </span>
+                      <span className="text-xs text-muted-foreground/70">
+                        {!isUploading && "PDF files only (.pdf)"}
+                      </span>
+                      <input
+                        id="file-upload"
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={handleFileUpload}
+                        disabled={isUploading}
+                      />
+                    </label>
                   </div>
                 )}
-
-                {!uploadedData && totalPages > 1 && (
-                  <div className="flex items-center justify-between py-2">
-                    <div className="text-xs text-muted-foreground">
-                      Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-                      {Math.min(currentPage * itemsPerPage, filteredPOs.length)}{" "}
-                      of {filteredPOs.length} entries
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setCurrentPage((p) => Math.max(1, p - 1))
-                        }
-                        disabled={currentPage === 1}
-                      >
-                        Previous
-                      </Button>
-                      {Array.from({ length: totalPages }).map((_, idx) => {
-                        const pageNum = idx + 1
-                        if (
-                          pageNum === 1 ||
-                          pageNum === totalPages ||
-                          (pageNum >= currentPage - 1 &&
-                            pageNum <= currentPage + 1)
-                        ) {
-                          return (
-                            <Button
-                              key={pageNum}
-                              variant={
-                                currentPage === pageNum ? "default" : "outline"
-                              }
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => setCurrentPage(pageNum)}
-                            >
-                              {pageNum}
-                            </Button>
-                          )
-                        }
-                        if (
-                          pageNum === currentPage - 2 ||
-                          pageNum === currentPage + 2
-                        ) {
-                          return (
-                            <span
-                              key={pageNum}
-                              className="px-1 text-muted-foreground"
-                            >
-                              ...
-                            </span>
-                          )
-                        }
-                        return null
-                      })}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setCurrentPage((p) => Math.min(totalPages, p + 1))
-                        }
-                        disabled={currentPage === totalPages}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                )}
-                {!uploadedData && form.formState.errors.items && (
+                {form.formState.errors.items && (
                   <p className="text-sm font-medium text-destructive">
                     {form.formState.errors.items.message}
                   </p>

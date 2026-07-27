@@ -178,7 +178,7 @@ export default function PackingListForm({
     >["0"]["render"]
   ) => <FormField control={form.control} name={name} render={render} />
 
-  const { data } = useQuery({
+  const { data, isSuccess: isClientsLoaded } = useQuery({
     queryKey: ["clients"],
     queryFn: fetchClients,
   })
@@ -228,6 +228,8 @@ export default function PackingListForm({
 
   useEffect(() => {
     if (initialData) {
+      if (!isClientsLoaded) return
+
       const matchedClient = clientOptions.find(
         (c: any) => c.name === initialData.client_name
       )
@@ -242,6 +244,20 @@ export default function PackingListForm({
         ? matchedManufacturer.id
         : (Number(initialData.manufacturer_id) || 0)
 
+      const mappedFormItems = (initialData.items || []).map((item: any) => ({
+        poNumber: item.poNumber || item.po_number || "",
+        sku: item.sku || "",
+        itemDescription: item.itemDescription || item.item_name || item.itemName || "",
+        size: item.size || "",
+        unitCost: Number(item.unitCost) || 0,
+        quantity: Number(item.quantity) || 0,
+        ctnCount: Number(item.ctnCount || item.ctn_count || item.ctn) || 0,
+        grossWeightKg: Number(item.grossWeightKg || item.gross_weight_kg) || 0,
+        netWeightKg: Number(item.netWeightKg || item.net_weight_kg) || 0,
+        cartonDimensions: item.cartonDimensions || item.ctnDemi || "",
+        cbm: Number(item.cbm) || 0,
+      }))
+
       form.reset({
         client_id: clientId,
         manufacturer_id: manufacturerId,
@@ -252,36 +268,36 @@ export default function PackingListForm({
         total_volume: initialData.total_volume || "",
         status: initialData.status || PackingListStatus.DRAFT,
         created_by: initialData.created_by || "ryan",
-        items: initialData.items || [],
+        items: mappedFormItems,
         additional_info: initialData.additional_info || "",
       })
 
       if (initialData.items && initialData.items.length > 0) {
-        const mappedItems = initialData.items.map((item: any) => ({
-          poNumber: item.poNumber || item.po_number || "",
-          sku: item.sku || "",
-          itemName: item.itemDescription || item.item_name || item.itemName || "",
-          size: item.size || "",
-          unitCost: Number(item.unitCost) || 0,
-          quantity: Number(item.quantity) || 0,
-          ctn: Number(item.ctnCount || item.ctn_count || item.ctn) || 0,
-          grossWeightKg: Number(item.grossWeightKg || item.gross_weight_kg) || 0,
-          netWeightKg: Number(item.netWeightKg || item.net_weight_kg) || 0,
-          ctnDemi: item.ctnDemi || item.cartonDimensions || "",
-          cbm: Number(item.cbm) || 0,
+        const mappedUploadedItems = mappedFormItems.map((item: any) => ({
+          poNumber: item.poNumber,
+          sku: item.sku,
+          itemName: item.itemDescription,
+          size: item.size,
+          unitCost: item.unitCost,
+          quantity: item.quantity,
+          ctn: item.ctnCount,
+          grossWeightKg: item.grossWeightKg,
+          netWeightKg: item.netWeightKg,
+          ctnDemi: item.cartonDimensions,
+          cbm: item.cbm,
         }))
 
-        const totalQuantity = mappedItems.reduce((acc: number, item: any) => acc + Number(item.quantity || 0), 0)
-        const totalCartons = mappedItems.reduce((acc: number, item: any) => acc + Number(item.ctn || 0), 0)
-        const totalGrossWeight = mappedItems.reduce((acc: number, item: any) => acc + Number(item.grossWeightKg || 0), 0)
-        const totalNetWeight = mappedItems.reduce((acc: number, item: any) => acc + Number(item.netWeightKg || 0), 0)
-        const totalCbm = mappedItems.reduce((acc: number, item: any) => acc + Number(item.cbm || 0), 0)
+        const totalQuantity = mappedUploadedItems.reduce((acc: number, item: any) => acc + Number(item.quantity || 0), 0)
+        const totalCartons = mappedUploadedItems.reduce((acc: number, item: any) => acc + Number(item.ctn || 0), 0)
+        const totalGrossWeight = mappedUploadedItems.reduce((acc: number, item: any) => acc + Number(item.grossWeightKg || 0), 0)
+        const totalNetWeight = mappedUploadedItems.reduce((acc: number, item: any) => acc + Number(item.netWeightKg || 0), 0)
+        const totalCbm = mappedUploadedItems.reduce((acc: number, item: any) => acc + Number(item.cbm || 0), 0)
 
         setUploadedData({
           success: true,
           filename: initialData.packing_list_no || "Existing File",
           pages: 1,
-          rowCount: mappedItems.length,
+          rowCount: mappedUploadedItems.length,
           rowsFailedToParse: 0,
           totals: {
             totalQuantity,
@@ -290,12 +306,12 @@ export default function PackingListForm({
             totalNetWeight,
             totalCbm,
           },
-          items: mappedItems,
+          items: mappedUploadedItems,
           parseErrors: [],
         })
       }
     }
-  }, [initialData, form, clientOptions, manufacturerOptions])
+  }, [initialData, form, clientOptions, manufacturerOptions, isClientsLoaded])
 
   const uploadedItemsTotalPages = uploadedData
     ? Math.ceil(uploadedData.items.length / uploadedItemsPerPage)
@@ -444,6 +460,20 @@ export default function PackingListForm({
     }
   }
 
+  if (mode === "edit" && !isClientsLoaded) {
+    return (
+      <div className="mx-auto space-y-5">
+        <div className="mt-6 flex w-full items-center justify-end gap-[16px] sm:justify-end">
+          <div className="h-10 w-24 animate-pulse rounded bg-muted" />
+          <div className="h-10 w-24 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="grid grid-cols-1 gap-4">
+          <div className="h-96 w-full animate-pulse rounded-lg bg-muted" />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto space-y-5">
       <Form {...form}>
@@ -491,6 +521,7 @@ export default function PackingListForm({
                   <FormItem className="flex flex-col">
                     <FormLabel className="mb-1">Client Name</FormLabel>
                     <Select
+                      key={field.value}
                       value={field.value ? String(field.value) : ""}
                       onValueChange={(val) => field.onChange(Number(val))}
                     >
@@ -515,6 +546,7 @@ export default function PackingListForm({
                     <FormItem className="flex flex-col">
                       <FormLabel className="mb-1">Manufacturer Name</FormLabel>
                       <Select
+                        key={field.value}
                         value={field.value ? String(field.value) : ""}
                         onValueChange={(val) => field.onChange(Number(val))}
                       >
@@ -632,6 +664,7 @@ export default function PackingListForm({
                   <FormItem className="flex flex-col">
                     <FormLabel className="mb-1">Shipping Mode</FormLabel>
                     <Select
+                      key={field.value}
                       value={field.value || ""}
                       onValueChange={field.onChange}
                     >
@@ -667,6 +700,7 @@ export default function PackingListForm({
                   <FormItem className="flex flex-col">
                     <FormLabel className="mb-1">Status</FormLabel>
                     <Select
+                      key={field.value}
                       value={field.value || ""}
                       onValueChange={field.onChange}
                     >

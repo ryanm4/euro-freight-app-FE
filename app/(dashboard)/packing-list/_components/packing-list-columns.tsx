@@ -2,20 +2,14 @@
 
 import { Button } from "@/components/ui/button"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { StatusBadge } from "@/components/shared/status-badge"
 import { PACKING_LIST } from "@/modules/packing-list/types"
 import {
   IconArrowsSort,
-  IconDots,
   IconEye,
   IconPencil,
   IconTrash,
@@ -123,10 +117,19 @@ export const packingListColumns = (
       header: "Total volume",
     },
     {
-      accessorKey: "gdn_id",
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const status = row.original.status
+        return <StatusBadge status={status || "N/A"} type="PACKING_LIST" />
+      },
+    },
+    {
+      accessorKey: "gdn_no",
       header: "GDN Number",
       cell: ({ row }) => {
         const gdnId = row.original.gdn_id
+        const gdnNo = row.original.gdn_no
 
         if (!gdnId) return "-"
 
@@ -135,7 +138,7 @@ export const packingListColumns = (
             href={`/gdn/${gdnId}`}
             className="text-primary underline-offset-4 hover:underline"
           >
-            {gdnId}
+            {gdnNo || gdnId}
           </Link>
         )
       },
@@ -148,32 +151,51 @@ export const packingListColumns = (
         const id = String(row.original.packing_list_id)
 
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <IconDots />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {canModify && (
-                <>
-                  <DropdownMenuItem onClick={() => actions.onEdit(id)}>
-                    <IconPencil className="mr-2 h-4 w-4" /> Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onClick={() => actions.onDelete(id)}
-                  >
-                    <IconTrash className="mr-2 h-4 w-4" /> Delete
-                  </DropdownMenuItem>
-                </>
-              )}
-              <DropdownMenuItem onClick={() => actions.onView(id)}>
-                <IconEye className="mr-2 h-4 w-4" /> View
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 p-0"
+                  onClick={() => actions.onView(id)}
+                >
+                  <IconEye className="h-4 w-4 text-zinc-400 hover:text-zinc-100" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>View</TooltipContent>
+            </Tooltip>
+            {canModify && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 p-0"
+                      onClick={() => actions.onEdit(id)}
+                    >
+                      <IconPencil className="h-4 w-4 text-zinc-400 hover:text-zinc-100" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Edit</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 p-0"
+                      onClick={() => actions.onDelete(id)}
+                    >
+                      <IconTrash className="h-4 w-4 text-destructive hover:text-red-400" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Delete</TooltipContent>
+                </Tooltip>
+              </>
+            )}
+          </div>
         )
       },
     },

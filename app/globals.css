@@ -130,3 +130,72 @@
     @apply font-sans;
     }
 }
+
+/* Light mode theme overrides for hardcoded dark backgrounds/borders/texts */
+html:not(.dark) .bg-\[\#0A0A0A\],
+html:not(.dark) [data-slot="select-trigger"].bg-\[\#0A0A0A\] {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+html:not(.dark) .bg-neutral-900,
+html:not(.dark) .bg-neutral-950 {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+}
+
+html:not(.dark) .border-zinc-700,
+html:not(.dark) .border-neutral-700 {
+  border-color: var(--border) !important;
+}
+
+html:not(.dark) .text-zinc-100,
+html:not(.dark) .text-neutral-100 {
+  color: var(--foreground) !important;
+}
+
+html:not(.dark) .placeholder\:text-zinc-600::placeholder,
+html:not(.dark) .placeholder\:text-neutral-600::placeholder {
+  color: var(--muted-foreground) !important;
+}
+
+/* Light mode table text and status badge readable color overrides */
+html:not(.dark) td.text-zinc-200,
+html:not(.dark) td.text-zinc-300,
+html:not(.dark) td.text-zinc-400,
+html:not(.dark) td.text-neutral-200,
+html:not(.dark) td.text-neutral-300,
+html:not(.dark) th.text-zinc-200,
+html:not(.dark) th.text-zinc-300,
+html:not(.dark) th.text-zinc-400,
+html:not(.dark) th.text-neutral-200,
+html:not(.dark) th.text-neutral-300,
+html:not(.dark) .text-zinc-200,
+html:not(.dark) .text-zinc-300,
+html:not(.dark) .text-zinc-400,
+html:not(.dark) .text-neutral-200,
+html:not(.dark) .text-neutral-300 {
+  color: var(--foreground) !important;
+}
+
+html:not(.dark) tr.border-neutral-800,
+html:not(.dark) tr.border-neutral-700 {
+  border-color: var(--border) !important;
+}
+
+html:not(.dark) tr.hover\:bg-neutral-800\/40:hover {
+  background-color: var(--muted) !important;
+}
+
+html:not(.dark) .text-green-400 {
+  color: oklch(0.5 0.15 140) !important;
+}
+html:not(.dark) .text-red-400 {
+  color: oklch(0.55 0.2 25) !important;
+}
+html:not(.dark) .text-yellow-400 {
+  color: oklch(0.6 0.15 75) !important;
+}
+html:not(.dark) .text-neutral-400 {
+  color: var(--muted-foreground) !important;
+}

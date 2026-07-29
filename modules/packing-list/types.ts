@@ -39,7 +39,7 @@ export interface PACKING_LIST {
 
 export enum PackingListStatus {
   DRAFT = "DRAFT",
-  CONFIRMED = "CONFIRMED",
+  COMPLETED = "COMPLETED",
   SHIPPED = "SHIPPED",
   CANCELLED = "CANCELLED",
 }

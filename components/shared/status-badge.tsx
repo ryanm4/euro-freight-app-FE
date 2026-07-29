@@ -30,7 +30,6 @@ const statusStyles: Record<string, string> = {
     "COMPLETED": "border-green-200 bg-green-50 text-green-800 hover:bg-green-100",
     "REJECTED": "border-red-200 bg-red-50 text-red-800 hover:bg-red-100",
     "DRAFT": "border-slate-200 bg-slate-50 text-slate-800 hover:bg-slate-100",
-    "CONFIRMED": "border-blue-200 bg-blue-50 text-[#223F7A] hover:bg-blue-100",
     "SHIPPED": "border-purple-200 bg-purple-50 text-purple-800 hover:bg-purple-100",
 
     // Job Ticket specific

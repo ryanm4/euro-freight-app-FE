@@ -696,7 +696,7 @@ export default function PackingListForm({
                     <FormMessage />
                   </FormItem>
                 ))}
-                {renderFormField("status", ({ field }) => (
+                {mode === "edit" && renderFormField("status", ({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel className="mb-1">Status</FormLabel>
                     <Select

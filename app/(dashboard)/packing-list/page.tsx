@@ -31,6 +31,8 @@ export default function PackingListPage() {
   } = useQuery({
     queryKey: ["packing-lists"],
     queryFn: () => fetchPackingLists(),
+    refetchOnMount: "always",
+    staleTime: 0,
   })
 
   const columns = useMemo(() => packingListColumns(actions), [actions])

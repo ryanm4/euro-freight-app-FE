@@ -207,6 +207,16 @@ export default function PackingListViewPage() {
                 className={inputCls}
               />
             </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="view-status" className={labelCls}>Status</Label>
+              <Input
+                id="view-status"
+                value={d.status ?? "—"}
+                disabled
+                className={inputCls}
+              />
+            </div>
           </CardContent>
         </Card>
 

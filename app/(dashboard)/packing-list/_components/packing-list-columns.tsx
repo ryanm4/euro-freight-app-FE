@@ -79,7 +79,7 @@ export const packingListColumns = (
       header: "Date",
       cell: ({ row }) => {
         const date = row.original.created_on
-        return date ? format(new Date(date), "dd/MMM/yyyy HH:mm a") : "N/A"
+        return date ? format(new Date(date), "dd/MMM/yy HH:mm a") : "N/A"
       },
     },
     {

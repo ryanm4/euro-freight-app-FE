@@ -26,6 +26,12 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { fetchClients } from "@/lib/api/clients"
 import { createGoodsReceiveNote } from "@/lib/api/goods_receive_notes"
 import { fetchPackingLists } from "@/lib/api/packing_lists"
@@ -40,12 +46,14 @@ import { useMemo, useState } from "react"
 interface PackingListRow {
   id: number
   packingListNo: string
-  client: string
-  manufacturer: string
-  date: string
-  quantity: number
-  gdnNo: string
-  status: string
+  documentDate: string
+  shipTo: string
+  shippingMode: string
+  totalCartons: number
+  totalCbm: string
+  totalNetWeightKg: string
+  totalQuantity: number
+  totalVolume: string
 }
 
 export default function GoodsReceiveNoteForm() {
@@ -56,8 +64,8 @@ export default function GoodsReceiveNoteForm() {
   const [client, setClient] = useState("")
   const [forwarder, setForwarder] = useState("")
   const [manufacturer, setManufacturer] = useState("")
-  const [quantity, setQuantity] = useState("")
-  const [packingList, setPackingList] = useState("")
+  // const [quantity, setQuantity] = useState("")
+  // const [packingList, setPackingList] = useState("")
   const [remarks, setRemarks] = useState("")
 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
@@ -72,11 +80,9 @@ export default function GoodsReceiveNoteForm() {
   })
 
   const { data: packingLists } = useQuery({
-    queryKey: ["packingLists"],
-    queryFn: () => fetchPackingLists(),
+    queryKey: ["packingLists", "completed"],
+    queryFn: () => fetchPackingLists("completed"),
   })
-
-  console.log("data", data)
 
   const clientOptions = useMemo(() => {
     return (
@@ -97,6 +103,86 @@ export default function GoodsReceiveNoteForm() {
 
   console.log("manufacturerOptions", manufacturerOptions)
   console.log("forwarderOptions", forwarderOptions)
+
+  const rows: PackingListRow[] = useMemo(() => {
+    return (
+      packingLists?.data?.map((pl: any) => ({
+        id: pl.packing_list_id,
+        packingListNo: pl.packing_list_no ?? "",
+        documentDate: pl.document_date
+          ? new Date(pl.document_date).toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })
+          : "—",
+        shipTo: pl.ship_to ?? "",
+        shippingMode: pl.shipping_mode ?? "",
+        totalCartons: pl.total_cartons ?? 0,
+        totalCbm: pl.total_cbm ?? "0",
+        totalNetWeightKg: pl.total_net_weight_kg ?? "0",
+        totalQuantity: pl.total_quantity ?? 0,
+        totalVolume: pl.total_volume ?? "0",
+      })) ?? []
+    )
+  }, [packingLists])
+
+  const selectedPackingListRows = useMemo(
+    () => rows.filter((r) => selectedRows.includes(r.id)),
+    [rows, selectedRows]
+  )
+
+  console.log("selectedPackingListRows", selectedPackingListRows)
+
+  const lockedShippingMode = useMemo(() => {
+    return selectedPackingListRows[0]?.shippingMode ?? null
+  }, [selectedPackingListRows])
+
+  const totalCartonCount = useMemo(
+    () =>
+      selectedRows.reduce((accumulator, id) => {
+        const packingList = packingLists?.data?.find(
+          (pl: any) => pl.packing_list_id === id
+        )
+        return accumulator + (packingList?.total_cartons ?? 0)
+      }, 0),
+    [selectedRows, packingLists]
+  )
+
+  const totalVolume = useMemo(
+    () =>
+      selectedRows.reduce((accumulator, id) => {
+        const packingList = packingLists?.data?.find(
+          (pl: any) => pl.packing_list_id === id
+        )
+
+        return accumulator + Number(packingList?.total_volume ?? 0)
+      }, 0),
+    [selectedRows, packingLists]
+  )
+
+  const totalGrossWeight = useMemo(
+    () =>
+      selectedRows.reduce((accumulator, id) => {
+        const packingList = packingLists?.data?.find(
+          (pl: any) => pl.packing_list_id === id
+        )
+
+        return accumulator + Number(packingList?.total_gross_weight_kg ?? 0)
+      }, 0),
+    [selectedRows, packingLists]
+  )
+
+  const quantity = useMemo(
+    () =>
+      selectedRows.reduce((accumulator, id) => {
+        const packingList = packingLists?.data?.find(
+          (pl: any) => pl.packing_list_id === id
+        )
+        return accumulator + Number(packingList?.total_quantity ?? 0)
+      }, 0),
+    [selectedRows, packingLists]
+  )
 
   const toggleRow = (id: number) => {
     setSelectedRows((prev) =>
@@ -122,25 +208,6 @@ export default function GoodsReceiveNoteForm() {
       setIsSaving(false)
     }
   }
-
-  const rows: PackingListRow[] = useMemo(() => {
-    return (
-      packingLists?.data?.map((pl: any) => ({
-        id: pl.packing_list_id,
-        packingListNo: `PL-${pl.packing_list_id}`,
-        client: pl.client_id,
-        manufacturer: pl.grn_id ? `GRN-${pl.grn_id}` : "—",
-        date: new Date(pl.date).toLocaleDateString("en-GB", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        }),
-        quantity: pl.quantity,
-        gdnNo: pl.gdn_id ? `GDN-${pl.gdn_id}` : "—",
-        status: pl.purchase_orders?.[0]?.status ?? "—",
-      })) ?? []
-    )
-  }, [packingLists])
 
   return (
     <div className="mx-auto space-y-5">
@@ -307,7 +374,52 @@ export default function GoodsReceiveNoteForm() {
                   id="quantity"
                   placeholder="Enter Quantity"
                   value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="total-carton-count"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Total Carton Count
+                </Label>
+                <Input
+                  id="total-carton-count"
+                  placeholder="Enter Total Carton Count"
+                  value={totalCartonCount}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="total-carton-count"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Total Volume
+                </Label>
+                <Input
+                  id="total-volume"
+                  placeholder="Enter Total Volume"
+                  value={totalVolume}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="total-gross-weight"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Total Gross Weight (Kg)
+                </Label>
+                <Input
+                  id="total-gross-weight"
+                  placeholder="Enter Total Gross Weight"
+                  value={totalGrossWeight}
+                  disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -344,22 +456,28 @@ export default function GoodsReceiveNoteForm() {
                       Packing List No
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Client
-                    </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
-                      Manufacturer
-                    </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
                       Date
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Quantity
+                      Ship To
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      GDN No
+                      Shipping Mode
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Status
+                      Total Cartons
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total CBM
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total Net Weight(kg)
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total Quantity
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total Volume
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Actions
@@ -368,47 +486,83 @@ export default function GoodsReceiveNoteForm() {
                 </TableHeader>
                 <TableBody>
                   {rows.length ? (
-                    rows.map((row, index) => (
+                    rows.map((row) => (
                       <TableRow
-                        key={index}
+                        key={row.id}
                         className="border-neutral-800 hover:bg-neutral-800/40"
                       >
                         <TableCell className="text-sm text-zinc-100">
                           {row.packingListNo}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.client}
+                          {row.documentDate}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.manufacturer}
+                          {row.shipTo}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.date}
+                          {row.shippingMode}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.quantity}
+                          {row.totalCartons}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.gdnNo}
+                          {row.totalCbm}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.totalNetWeightKg}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.totalQuantity}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.totalVolume}
                         </TableCell>
                         <TableCell>
-                          <span className="inline-flex items-center rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-400">
-                            {row.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedRows.includes(row.id)}
-                            onCheckedChange={() => toggleRow(row.id)}
-                            className="border-neutral-600"
-                          />
+                          {(() => {
+                            const isDisabled =
+                              !!lockedShippingMode &&
+                              row.shippingMode !== lockedShippingMode &&
+                              !selectedRows.includes(row.id)
+
+                            const checkboxEl = (
+                              <Checkbox
+                                checked={selectedRows.includes(row.id)}
+                                disabled={isDisabled}
+                                onCheckedChange={() => toggleRow(row.id)}
+                                className="border-neutral-600"
+                              />
+                            )
+
+                            if (!isDisabled) return checkboxEl
+
+                            return (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    {/* span wrapper so the tooltip still fires on a disabled checkbox */}
+                                    <span className="inline-flex cursor-not-allowed">
+                                      {checkboxEl}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="border-neutral-700 bg-[#0A0A0A] text-xs text-zinc-100">
+                                    Shipping Mode locked to{" "}
+                                    {/* <span className="font-medium"> */}
+                                    {lockedShippingMode}
+                                    {/* </span> */}. Deselect all rows to switch
+                                    modes.
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )
+                          })()}
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={8}
+                        colSpan={9}
                         className="h-24 text-center text-sm text-zinc-500"
                       >
                         No results.

@@ -39,6 +39,12 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { fetchClients } from "@/lib/api/clients"
 import { fetchDrivers } from "@/lib/api/drivers"
 import { createGoodsDispatchNote } from "@/lib/api/goods_dispatch_notes"
@@ -162,9 +168,25 @@ export default function GoodsDispatchNoteForm() {
   }, [volumeM3, quantityLoaded])
 
   const toggleRow = (id: number) => {
-    setSelectedRows((prev) =>
-      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
-    )
+    setSelectedRows((prev) => {
+      // Always allow unchecking
+      if (prev.includes(id)) {
+        return prev.filter((r) => r !== id)
+      }
+
+      const row = rows.find((r) => r.id === id)
+      if (!row) return prev
+
+      // If something is already selected, block a different shipping mode
+      if (lockedShippingMode && row.shippingMode !== lockedShippingMode) {
+        alert(
+          `You can only select packing lists with the same Shipping Mode (${lockedShippingMode}).`
+        )
+        return prev
+      }
+
+      return [...prev, id]
+    })
   }
 
   const rows: PackingListRow[] = useMemo(() => {
@@ -225,6 +247,10 @@ export default function GoodsDispatchNoteForm() {
     const loaded = Number(quantityLoaded)
     return quantityLoaded !== "" && loaded > packingListQuantity
   }, [quantityLoaded, packingListQuantity])
+
+  const lockedShippingMode = useMemo(() => {
+    return selectedPackingListRows[0]?.shippingMode ?? null
+  }, [selectedPackingListRows])
 
   const handleSave = async () => {
     if (!derivedClient || !derivedForwarder) {
@@ -1104,11 +1130,43 @@ export default function GoodsDispatchNoteForm() {
                           {row.totalVolume}
                         </TableCell>
                         <TableCell>
-                          <Checkbox
-                            checked={selectedRows.includes(row.id)}
-                            onCheckedChange={() => toggleRow(row.id)}
-                            className="border-neutral-600"
-                          />
+                          {(() => {
+                            const isDisabled =
+                              !!lockedShippingMode &&
+                              row.shippingMode !== lockedShippingMode &&
+                              !selectedRows.includes(row.id)
+
+                            const checkboxEl = (
+                              <Checkbox
+                                checked={selectedRows.includes(row.id)}
+                                disabled={isDisabled}
+                                onCheckedChange={() => toggleRow(row.id)}
+                                className="border-neutral-600"
+                              />
+                            )
+
+                            if (!isDisabled) return checkboxEl
+
+                            return (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    {/* span wrapper so the tooltip still fires on a disabled checkbox */}
+                                    <span className="inline-flex cursor-not-allowed">
+                                      {checkboxEl}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="border-neutral-700 bg-[#0A0A0A] text-xs text-zinc-100">
+                                    Shipping Mode locked to{" "}
+                                    {/* <span className="font-medium"> */}
+                                    {lockedShippingMode}
+                                    {/* </span> */}. Deselect all rows to switch
+                                    modes.
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )
+                          })()}
                         </TableCell>
                       </TableRow>
                     ))

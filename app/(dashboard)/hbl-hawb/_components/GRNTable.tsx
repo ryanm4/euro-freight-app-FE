@@ -6,7 +6,31 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { format } from "date-fns"
 
+export interface PackingList {
+  id: number
+  packing_list_no: string
+  client_id: number
+  manufacturer_id: number
+  date: string
+  gdn_id: number
+  grn_id: number
+  total_quantity: number
+  ship_to: string
+  shipping_mode: string
+  status: string
+  created_by: string
+  created_on: string
+  updated_by: string | null
+  updated_on: string | null
+}
 export interface GRN {
   id: number
   client_id: string
@@ -21,18 +45,7 @@ export interface GRN {
   created_on: string
   updated_by: string | null
   updated_on: string | null
-  packing_lists: {
-    id: number
-    client_id: number
-    date: string
-    gdn_id: string | null
-    grn_id: number
-    quantity: number
-    created_by: string
-    created_on: string
-    updated_by: string | null
-    updated_on: string | null
-  }[]
+  packing_lists: PackingList[] | null
 }
 
 export default function GRNTable({
@@ -48,12 +61,14 @@ export default function GRNTable({
 }) {
   const headers = [
     "GRN ID",
+    "Packing List IDs",
     "Client",
     "Manufacturer",
     "Forwarder",
     "Date",
     "Qty",
     "Packing Lists",
+    "Status",
   ]
   if (!readOnly) headers.push("Actions")
 
@@ -90,7 +105,51 @@ export default function GRNTable({
               } ${readOnly ? "hover:bg-neutral-800/40" : "hover:bg-zinc-800/40"}`}
             >
               <TableCell className="font-mono text-xs text-zinc-300">
-                #{grn.id}
+                {grn.id}
+              </TableCell>
+              <TableCell className="text-zinc-300">
+                <TooltipProvider>
+                  <div className="flex flex-wrap gap-2">
+                    {grn.packing_lists?.map((pl) => (
+                      <Tooltip key={pl.id}>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-pointer text-primary hover:underline">
+                            {pl.id}
+                          </span>
+                        </TooltipTrigger>
+
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="space-y-1 text-sm">
+                            <p>
+                              <strong>Packing List:</strong>{" "}
+                              {pl.packing_list_no}
+                            </p>
+                            <p>
+                              <strong>GDN:</strong> {pl.gdn_id}
+                            </p>
+                            <p>
+                              <strong>Shipping Mode:</strong> {pl.shipping_mode}
+                            </p>
+                            <p>
+                              <strong>Recipient:</strong> {pl.ship_to}
+                            </p>
+                            <p>
+                              <strong>Total Cartons:</strong>{" "}
+                              {pl.total_quantity}
+                            </p>
+                            <p>
+                              <strong>Date:</strong>{" "}
+                              {format(new Date(pl.date), "PPP")}
+                            </p>
+                            <p>
+                              <strong>Status:</strong> {pl.status}
+                            </p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </div>
+                </TooltipProvider>
               </TableCell>
               <TableCell className="text-zinc-200">{grn.client_id}</TableCell>
               <TableCell className="text-zinc-300">
@@ -112,6 +171,7 @@ export default function GRNTable({
               <TableCell className="text-zinc-400">
                 {grn?.packing_lists?.length}
               </TableCell>
+              <TableCell className="text-zinc-400">{grn?.status}</TableCell>
               {!readOnly && (
                 <TableCell onClick={(e) => e.stopPropagation()}>
                   <input

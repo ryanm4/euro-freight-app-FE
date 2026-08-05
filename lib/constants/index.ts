@@ -7,9 +7,9 @@ export const PAYMENT_MODE_OPTIONS = [
 ]
 
 export const SHIPPING_MODE_OPTIONS = [
-  { value: "Sea", label: "Sea" },
-  { value: "Air", label: "Air" },
-  { value: "Land", label: "Land" },
+  { value: "LCL", label: "LCL" },
+  { value: "FCL", label: "FCL" },
+  { value: "AIR", label: "AIR" },
 ]
 
 export const STATUS_OPTIONS = [

@@ -75,11 +75,11 @@ export const packingListColumns = (
       },
     },
     {
-      accessorKey: "date",
+      accessorKey: "created_on",
       header: "Date",
       cell: ({ row }) => {
-        const date = row.original.date
-        return date ? format(new Date(date), "dd/MMM/yy HH:mm") : "N/A"
+        const date = row.original.created_on
+        return date ? format(new Date(date), "dd/MMM/yy HH:mm a") : "N/A"
       },
     },
     {

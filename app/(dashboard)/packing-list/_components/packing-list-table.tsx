@@ -31,6 +31,7 @@ import {
 import { useEffect, useState } from "react"
 
 import { DataTablePagination } from "@/components/shared/data-table-pagination"
+import { useRouter } from "next/navigation"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -47,6 +48,7 @@ export function DataTable<TData, TValue>({
   searchColumn,
   isLoading = false,
 }: DataTableProps<TData, TValue>) {
+  const router = useRouter()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = useState("")
@@ -144,9 +146,22 @@ export function DataTable<TData, TValue>({
                 </TableRow>
               ))
             ) : table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
+              table.getRowModel().rows.map((row) => {
+                const isClosed = (row.original as any).status === "Closed"
+                return (
+                  <TableRow
+                    key={row.id}
+                    className={`cursor-pointer ${
+                      isClosed ? "bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800" : ""
+                    }`}
+                    onClick={() => {
+                      const id = (row.original as any).packing_list_id
+                      if (id) {
+                        router.push(`/packing-list/${id}`)
+                      }
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
@@ -154,8 +169,9 @@ export function DataTable<TData, TValue>({
                       )}
                     </TableCell>
                   ))}
-                </TableRow>
-              ))
+                  </TableRow>
+                )
+              })
             ) : (
               <TableRow>
                 <TableCell

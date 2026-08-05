@@ -214,15 +214,15 @@ export default function PackingListForm({
       }))
       form.setValue("items", autoItems, { shouldValidate: false })
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploadedData])
 
   const normalizeShippingMode = (val?: string | null) => {
     if (!val) return ""
     const lower = val.toLowerCase()
-    if (lower === "air") return "Air"
-    if (lower === "sea") return "Sea"
-    if (lower === "land") return "Land"
+    if (lower === "lcl") return "LCL"
+    if (lower === "fcl") return "FCL"
+    if (lower === "air") return "AIR"
     return val
   }
 
@@ -319,9 +319,9 @@ export default function PackingListForm({
 
   const paginatedUploadedItems = uploadedData
     ? uploadedData.items.slice(
-        (uploadedItemsCurrentPage - 1) * uploadedItemsPerPage,
-        uploadedItemsCurrentPage * uploadedItemsPerPage
-      )
+      (uploadedItemsCurrentPage - 1) * uploadedItemsPerPage,
+      uploadedItemsCurrentPage * uploadedItemsPerPage
+    )
     : []
 
   const selectedItems = form.watch("items") || []
@@ -394,7 +394,7 @@ export default function PackingListForm({
       const payload: any = {
         client_id: Number(data.client_id),
         manufacturer_id: Number(data.manufacturer_id),
-        date: data.date,
+        date: format(new Date(), "yyyy-MM-dd"),
         document_date: data.document_date,
         ship_to: data.ship_to,
         shipping_mode: data.shipping_mode,
@@ -573,6 +573,7 @@ export default function PackingListForm({
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
+                            disabled
                             type="button"
                             variant="outline"
                             className={cn(
@@ -960,11 +961,10 @@ export default function PackingListForm({
                   <div className="flex flex-col gap-2 py-4">
                     <label
                       htmlFor="file-upload"
-                      className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${
-                        isUploading
+                      className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${isUploading
                           ? "cursor-not-allowed border-muted-foreground/10 bg-muted/30 opacity-50"
                           : "border-muted-foreground/25 bg-muted/50 hover:border-muted-foreground/50 hover:bg-muted/70"
-                      }`}
+                        }`}
                     >
                       <IconUpload className="mb-2 h-10 w-10 text-muted-foreground" />
                       <span className="text-sm font-medium text-muted-foreground">

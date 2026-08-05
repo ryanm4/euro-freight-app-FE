@@ -159,11 +159,7 @@ export default function GRNTable({
                 {grn.forwarder_id}
               </TableCell>
               <TableCell className="whitespace-nowrap text-zinc-300">
-                {new Date(grn.date).toLocaleDateString("en-GB", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })}
+                {format(new Date(grn.date), "dd/MMM/yy HH:mm")}
               </TableCell>
               <TableCell className="text-zinc-300">
                 {grn.quantity.toLocaleString()}

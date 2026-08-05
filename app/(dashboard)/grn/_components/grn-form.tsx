@@ -110,12 +110,8 @@ export default function GoodsReceiveNoteForm() {
         id: pl.packing_list_id,
         packingListNo: pl.packing_list_no ?? "",
         documentDate: pl.document_date
-          ? new Date(pl.document_date).toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            })
-          : "—",
+          ? format(new Date(pl.document_date), "dd/MMM/yy HH:mm")
+          : "N/A",
         shipTo: pl.ship_to ?? "",
         shippingMode: pl.shipping_mode ?? "",
         totalCartons: pl.total_cartons ?? 0,

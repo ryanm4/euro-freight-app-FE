@@ -13,7 +13,6 @@ import {
   IconArrowsSort,
   IconDots,
   IconEye,
-  IconLink,
   IconPencil,
   IconTrash,
 } from "@tabler/icons-react"
@@ -33,7 +32,7 @@ export const purchaseOrderColumns = (
   const canModify = options?.canModify ?? true
 
   const formatDate = (date?: string | null) =>
-    date ? format(new Date(date), "PPP") : "N/A"
+    date ? format(new Date(date), "dd/MMM/yy HH:mm") : "N/A"
 
   return [
     // {

@@ -1,12 +1,12 @@
 "use client"
 
+import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { StatusBadge } from "@/components/shared/status-badge"
 import { PACKING_LIST } from "@/modules/packing-list/types"
 import {
   IconArrowsSort,
@@ -57,7 +57,8 @@ export const packingListColumns = (
         </Button>
       ),
       cell: ({ row }) => {
-        const poNumbers = row.original.purchase_orders?.map((po) => po.po_number) || []
+        const poNumbers =
+          row.original.purchase_orders?.map((po) => po.po_number) || []
         const visibleValue = poNumbers.slice(0, 2).join(", ") || "-"
         const fullValue = poNumbers.join(", ") || "-"
 
@@ -78,7 +79,7 @@ export const packingListColumns = (
       header: "Date",
       cell: ({ row }) => {
         const date = row.original.date
-        return date ? format(new Date(date), "PPP p") : "N/A"
+        return date ? format(new Date(date), "dd/MMM/yy HH:mm") : "N/A"
       },
     },
     {

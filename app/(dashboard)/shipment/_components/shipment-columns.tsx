@@ -32,7 +32,7 @@ export const shipmentColumns = (
   const canModify = options?.canModify ?? true
 
   const formatDate = (date?: string | null) =>
-    date ? format(new Date(date), "PPP") : "N/A"
+    date ? format(new Date(date), "dd/MMM/yy HH:mm") : "N/A"
 
   return [
     {

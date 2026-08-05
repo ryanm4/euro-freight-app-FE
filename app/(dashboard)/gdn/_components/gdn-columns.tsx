@@ -1,5 +1,6 @@
 "use client"
 
+import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -8,7 +9,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { GOODS_DELIVER_NOTE } from "@/modules/gdn/types"
-import { StatusBadge } from "@/components/shared/status-badge"
 import {
   IconArrowsSort,
   IconDots,
@@ -131,7 +131,7 @@ export const goodsDeliverNoteColumns = (
       ),
       cell: ({ row }) => {
         const date = row.original.date
-        return date ? format(new Date(date), "PPP p") : "N/A"
+        return date ? format(new Date(date), "dd/MMM/yy HH:mm") : "N/A"
       },
     },
     {

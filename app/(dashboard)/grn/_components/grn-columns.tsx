@@ -1,5 +1,6 @@
 "use client"
 
+import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -8,7 +9,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { GOODS_RECEIVE_NOTE } from "@/modules/grn/types"
-import { StatusBadge } from "@/components/shared/status-badge"
 import {
   IconArrowsSort,
   IconDots,
@@ -18,7 +18,6 @@ import {
 } from "@tabler/icons-react"
 import { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
-import { useRouter } from "next/navigation"
 
 interface GoodsReceiveNoteTableActions {
   onEdit: (id: string) => void
@@ -40,7 +39,7 @@ export const goodsReceiveNoteColumns = (
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          ID
+          GDN Number
           <IconArrowsSort className="ml-2 h-4 w-4" />
         </Button>
       ),
@@ -49,68 +48,46 @@ export const goodsReceiveNoteColumns = (
       ),
     },
     {
-      accessorKey: "client_name",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Client
-          <IconArrowsSort className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => <div>{row.original.client_name ?? "N/A"}</div>,
+      accessorKey: "client_id",
+      header: "Customer",
+      cell: ({ row }) => <div>{row.original.client_id ?? "N/A"}</div>,
     },
     {
       accessorKey: "manufacture_id",
-      header: "Manufacturer ID",
+      header: "Manufacturer",
       cell: ({ row }) => <div>{row.original.manufacture_id ?? "N/A"}</div>,
     },
     {
-      accessorKey: "forwarder_id",
-      header: "Forwarder ID",
-      cell: ({ row }) => <div>{row.original.forwarder_id ?? "N/A"}</div>,
-    },
-    {
       accessorKey: "date",
-      header: "Date",
+      header: "Received Date",
       cell: ({ row }) => {
         const date = row.original.date
         return date ? format(new Date(date), "PPP p") : "N/A"
       },
     },
     {
+      accessorKey: "total_gdn_carton_count",
+      header: "Total GDN Carton Count",
+      cell: ({ row }) => {
+        const total = row.original.packing_lists?.reduce(
+          (sum, packingList) => sum + (packingList.total_quantity ?? 0),
+          0
+        )
+
+        return <div>{total ?? "N/A"}</div>
+      },
+    },
+    {
       accessorKey: "quantity",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Quantity
-          <IconArrowsSort className="ml-2 h-4 w-4" />
-        </Button>
-      ),
+      header: "Actual Carton Received",
       cell: ({ row }) => <div>{row.original.quantity ?? "N/A"}</div>,
     },
     {
-      accessorKey: "bill_id",
-      header: "Bill ID",
-      // cell: ({ row }) => <div>{row.original.bill_id ?? "N/A"}</div>,
+      accessorKey: "shipping_mode",
+      header: "Shipping Mode",
       cell: ({ row }) => {
-        const router = useRouter()
-        const ref = row.original.bill_id ?? "N/A"
-
         return (
-          <button
-            type="button"
-            className="text-primary underline-offset-4 hover:underline"
-            onClick={(e) => {
-              e.stopPropagation() // prevents any row-level click handler from also firing
-              router.push(`/gdn/${ref}`)
-            }}
-          >
-            {ref}
-          </button>
+          <div>{row.original.packing_lists?.[0]?.shipping_mode ?? "N/A"}</div>
         )
       },
     },
@@ -120,32 +97,6 @@ export const goodsReceiveNoteColumns = (
       cell: ({ row }) => (
         <StatusBadge status={row.original.status || "N/A"} type="GRN" />
       ),
-    },
-    {
-      accessorKey: "created_by",
-      header: "Created By",
-      cell: ({ row }) => <div>{row.original.created_by ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "created_on",
-      header: "Created On",
-      cell: ({ row }) => {
-        const date = row.original.created_on
-        return date ? format(new Date(date), "PPP p") : "N/A"
-      },
-    },
-    {
-      accessorKey: "updated_by",
-      header: "Updated By",
-      cell: ({ row }) => <div>{row.original.updated_by ?? "N/A"}</div>,
-    },
-    {
-      accessorKey: "updated_on",
-      header: "Updated On",
-      cell: ({ row }) => {
-        const date = row.original.updated_on
-        return date ? format(new Date(date), "PPP p") : "N/A"
-      },
     },
     {
       id: "actions",

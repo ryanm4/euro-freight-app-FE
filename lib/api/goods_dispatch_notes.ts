@@ -1,3 +1,10 @@
+export interface Measurement {
+  length_cm: number
+  width_cm: number
+  height_cm: number
+  per_carton_volume_m3: number
+  calculated_volume_m3: number
+}
 export interface CreateGoodsDispatchNotePayload {
   client_id: number
   manufacture_id: number
@@ -25,12 +32,13 @@ export interface CreateGoodsDispatchNotePayload {
   wharf_staff_id: number
   driver_contact_no: string
   wharf_contact_no: string
-  length_cm: number
-  width_cm: number
-  height_cm: number
+  length_cm?: number
+  width_cm?: number
+  height_cm?: number
   driver_contact_no_optional?: string
   wharf_contact_no_optional?: string
   remarks?: string
+  measurements: Measurement[]
 }
 
 export type UpdateGoodsDispatchNotePayload = Partial<

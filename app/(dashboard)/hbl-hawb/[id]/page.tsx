@@ -179,22 +179,20 @@ export default function HBLHAWBByID() {
                 <Label className="text-xs font-medium text-foreground">
                   Client
                 </Label>
-                <Select value={data.client_id}>
-                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                    <SelectValue placeholder="Choose Client" />
-                  </SelectTrigger>
-                </Select>
+
+                <div className="flex h-9 w-full items-center rounded-md border border-zinc-700 bg-[#0A0A0A] px-3 text-sm text-zinc-100">
+                  {data.client_name || data.client_id || "—"}
+                </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-foreground">
                   Manufacturer
                 </Label>
-                <Select value={data.manufacturer}>
-                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                    <SelectValue placeholder="Choose Manufacturer" />
-                  </SelectTrigger>
-                </Select>
+
+                <div className="flex h-9 w-full items-center rounded-md border border-zinc-700 bg-[#0A0A0A] px-3 text-sm text-zinc-100">
+                  {data.manufacture_id || data.manufacture_id || "—"}
+                </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -207,7 +205,7 @@ export default function HBLHAWBByID() {
                 <Input
                   id="mbl-mawb-no"
                   placeholder="Enter MBL / MAWB No"
-                  value={data.mblMawbNo}
+                  value={data.mbl_mawb_no}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -228,7 +226,7 @@ export default function HBLHAWBByID() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
               <GRNTable
-                grns={(data.grnData?.data ?? []) as GRN[]}
+                grns={(data.grns ?? []) as GRN[]}
                 selectedIds={data.selectedGrnIds}
                 onToggle={data.toggleGrn}
               />
@@ -260,7 +258,7 @@ export default function HBLHAWBByID() {
                 <Input
                   id="vessel-name"
                   placeholder="Enter Vessel Name"
-                  value={data.vesselName}
+                  value={data.planned_vessel_name}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -275,7 +273,7 @@ export default function HBLHAWBByID() {
                 <Input
                   id="voyage-no"
                   placeholder="Enter Voyage No"
-                  value={data.voyageNo}
+                  value={data.voyage_no}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -294,10 +292,10 @@ export default function HBLHAWBByID() {
                       variant="outline"
                       className={cn(
                         "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                        !data.estimatedTimeOfDelivery && "text-zinc-500"
+                        !data.etd && "text-zinc-500"
                       )}
                     >
-                      {data.estimatedTimeOfDelivery
+                      {data.etd
                         ? (() => {
                             const parseDate = (
                               val: string
@@ -315,9 +313,7 @@ export default function HBLHAWBByID() {
                               if (isValid(d)) return d
                               return undefined
                             }
-                            const selectedDate = parseDate(
-                              data.estimatedTimeOfDelivery
-                            )
+                            const selectedDate = parseDate(data.etd)
                             return selectedDate
                               ? format(selectedDate, "PPP")
                               : "Pick a date"
@@ -340,7 +336,7 @@ export default function HBLHAWBByID() {
                           if (isValid(d)) return d
                           return undefined
                         }
-                        return parseDate(data.estimatedTimeOfDelivery)
+                        return parseDate(data.etd)
                       })()}
                       captionLayout="dropdown"
                     />
@@ -362,10 +358,10 @@ export default function HBLHAWBByID() {
                       variant="outline"
                       className={cn(
                         "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                        !data.estimatedTimeOfArrival && "text-zinc-500"
+                        !data.eta && "text-zinc-500"
                       )}
                     >
-                      {data.estimatedTimeOfArrival
+                      {data.eta
                         ? (() => {
                             const parseDate = (
                               val: string
@@ -383,9 +379,7 @@ export default function HBLHAWBByID() {
                               if (isValid(d)) return d
                               return undefined
                             }
-                            const selectedDate = parseDate(
-                              data.estimatedTimeOfArrival
-                            )
+                            const selectedDate = parseDate(data.eta)
                             return selectedDate
                               ? format(selectedDate, "PPP")
                               : "Pick a date"
@@ -408,7 +402,7 @@ export default function HBLHAWBByID() {
                           if (isValid(d)) return d
                           return undefined
                         }
-                        return parseDate(data.estimatedTimeOfArrival)
+                        return parseDate(data.eta)
                       })()}
                       captionLayout="dropdown"
                     />
@@ -430,10 +424,10 @@ export default function HBLHAWBByID() {
                       variant="outline"
                       className={cn(
                         "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                        !data.actualTimeOfDelivery && "text-zinc-500"
+                        !data.actual_etd && "text-zinc-500"
                       )}
                     >
-                      {data.actualTimeOfDelivery
+                      {data.actual_etd
                         ? (() => {
                             const parseDate = (
                               val: string
@@ -451,9 +445,7 @@ export default function HBLHAWBByID() {
                               if (isValid(d)) return d
                               return undefined
                             }
-                            const selectedDate = parseDate(
-                              data.actualTimeOfDelivery
-                            )
+                            const selectedDate = parseDate(data.actual_etd)
                             return selectedDate
                               ? format(selectedDate, "PPP")
                               : "Pick a date"
@@ -476,7 +468,7 @@ export default function HBLHAWBByID() {
                           if (isValid(d)) return d
                           return undefined
                         }
-                        return parseDate(data.actualTimeOfDelivery)
+                        return parseDate(data.actual_etd)
                       })()}
                       captionLayout="dropdown"
                     />
@@ -498,10 +490,10 @@ export default function HBLHAWBByID() {
                       variant="outline"
                       className={cn(
                         "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                        !data.actualTimeOfArrival && "text-zinc-500"
+                        !data.actual_eta && "text-zinc-500"
                       )}
                     >
-                      {data.actualTimeOfArrival
+                      {data.actual_eta
                         ? (() => {
                             const parseDate = (
                               val: string
@@ -519,9 +511,7 @@ export default function HBLHAWBByID() {
                               if (isValid(d)) return d
                               return undefined
                             }
-                            const selectedDate = parseDate(
-                              data.actualTimeOfArrival
-                            )
+                            const selectedDate = parseDate(data.actual_eta)
                             return selectedDate
                               ? format(selectedDate, "PPP")
                               : "Pick a date"
@@ -544,7 +534,7 @@ export default function HBLHAWBByID() {
                           if (isValid(d)) return d
                           return undefined
                         }
-                        return parseDate(data.actualTimeOfArrival)
+                        return parseDate(data.actual_eta)
                       })()}
                       captionLayout="dropdown"
                     />
@@ -577,7 +567,7 @@ export default function HBLHAWBByID() {
                 <Input
                   id="arrival-port"
                   placeholder="Enter Arrival Port"
-                  value={data.arrivalPort}
+                  value={data.arrival_port}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -592,7 +582,7 @@ export default function HBLHAWBByID() {
                 <Input
                   id="inland-location"
                   placeholder="Enter Inland Location"
-                  value={data.inlandLocation}
+                  value={data.inland_location}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -607,7 +597,7 @@ export default function HBLHAWBByID() {
                 <Input
                   id="no-of-pieces"
                   placeholder="Enter No. of Pieces"
-                  value={data.noOfPieces}
+                  value={data.no_pieces}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -622,7 +612,7 @@ export default function HBLHAWBByID() {
                 <Input
                   id="gross-weight"
                   placeholder="Enter Gross Weight"
-                  value={data.grossWeight}
+                  value={data.gross_weight}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -637,7 +627,7 @@ export default function HBLHAWBByID() {
                 <Input
                   id="chargeable-weight"
                   placeholder="Enter Chargeable Weight"
-                  value={data.hargeableWeight}
+                  value={data.chargeable_weight}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -667,7 +657,7 @@ export default function HBLHAWBByID() {
                 <Input
                   id="container-seal-no"
                   placeholder="Enter Container Seal No"
-                  value={data.containerSealNo}
+                  value={data.container_seal_no}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -686,10 +676,10 @@ export default function HBLHAWBByID() {
                       variant="outline"
                       className={cn(
                         "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                        !data.onboardedDate && "text-zinc-500"
+                        !data.onboard_date && "text-zinc-500"
                       )}
                     >
-                      {data.onboardedDate
+                      {data.onboard_date
                         ? (() => {
                             const parseDate = (
                               val: string
@@ -707,7 +697,7 @@ export default function HBLHAWBByID() {
                               if (isValid(d)) return d
                               return undefined
                             }
-                            const selectedDate = parseDate(data.onboardedDate)
+                            const selectedDate = parseDate(data.onboard_date)
                             return selectedDate
                               ? format(selectedDate, "PPP")
                               : "Pick a date"
@@ -730,7 +720,7 @@ export default function HBLHAWBByID() {
                           if (isValid(d)) return d
                           return undefined
                         }
-                        return parseDate(data.onboardedDate)
+                        return parseDate(data.onboard_date)
                       })()}
                       captionLayout="dropdown"
                     />
@@ -802,7 +792,7 @@ export default function HBLHAWBByID() {
                     <Input
                       id={`port-${port.id}`}
                       placeholder="Enter port name"
-                      value={port.value}
+                      value={port.port}
                       className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                     />
                   </div>

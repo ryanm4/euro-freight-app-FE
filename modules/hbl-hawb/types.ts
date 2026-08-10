@@ -1,6 +1,6 @@
 export interface HBL_HAWB {
   id: number
-  client_name?: string
+  client_id?: string
   manufacture_id?: number | null
   date?: string | null
   type?: string | null

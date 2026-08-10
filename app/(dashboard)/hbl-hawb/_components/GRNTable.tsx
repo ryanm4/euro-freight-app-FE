@@ -61,13 +61,13 @@ export default function GRNTable({
 }) {
   const headers = [
     "GRN ID",
-    "Packing List IDs",
+    // "Packing List IDs",
     "Client",
     "Manufacturer",
-    "Forwarder",
+    // "Forwarder",
     "Date",
     "Qty",
-    "Packing Lists",
+    // "Packing Lists",
     "Status",
   ]
   if (!readOnly) headers.push("Actions")
@@ -107,7 +107,7 @@ export default function GRNTable({
               <TableCell className="font-mono text-xs text-zinc-300">
                 {grn.id}
               </TableCell>
-              <TableCell className="text-zinc-300">
+              {/* <TableCell className="text-zinc-300">
                 <TooltipProvider>
                   <div className="flex flex-wrap gap-2">
                     {grn.packing_lists?.map((pl) => (
@@ -150,23 +150,23 @@ export default function GRNTable({
                     ))}
                   </div>
                 </TooltipProvider>
-              </TableCell>
+              </TableCell> */}
               <TableCell className="text-zinc-200">{grn.client_id}</TableCell>
               <TableCell className="text-zinc-300">
                 {grn.manufacture_id}
               </TableCell>
-              <TableCell className="text-zinc-300">
+              {/* <TableCell className="text-zinc-300">
                 {grn.forwarder_id}
-              </TableCell>
+              </TableCell> */}
               <TableCell className="whitespace-nowrap text-zinc-300">
                 {format(new Date(grn.date), "dd/MMM/yy HH:mm")}
               </TableCell>
               <TableCell className="text-zinc-300">
                 {grn.quantity.toLocaleString()}
               </TableCell>
-              <TableCell className="text-zinc-400">
+              {/* <TableCell className="text-zinc-400">
                 {grn?.packing_lists?.length}
-              </TableCell>
+              </TableCell> */}
               <TableCell className="text-zinc-400">{grn?.status}</TableCell>
               {!readOnly && (
                 <TableCell onClick={(e) => e.stopPropagation()}>

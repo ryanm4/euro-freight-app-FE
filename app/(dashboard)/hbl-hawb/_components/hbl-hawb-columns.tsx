@@ -61,13 +61,13 @@ export const hblHawbColumns = (
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="font-semibold">{row.original.mbl_mawb_no ?? "N/A"}</div>
+        <div className="font-semibold">{row.original.mbl_mawb_no === "" ? "Pending" : row.original.mbl_mawb_no}</div>
       ),
     },
     {
-      accessorKey: "client_name",
+      accessorKey: "client_id",
       header: "Client",
-      cell: ({ row }) => <div>{row.original.client_name ?? "N/A"}</div>,
+      cell: ({ row }) => <div>{row.original.client_id ?? "N/A"}</div>,
     },
     {
       accessorKey: "manufacture_id",
@@ -100,6 +100,7 @@ export const hblHawbColumns = (
               e.stopPropagation() // prevents any row-level click handler from also firing
               router.push(`/grn/${ref}`)
             }}
+            disabled={row.original.shipment_id === null} // Disable button if shipment_id is null
           >
             {ref}
           </button>

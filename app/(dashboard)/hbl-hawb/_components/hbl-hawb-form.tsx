@@ -135,6 +135,8 @@ export default function HBLHABWForm() {
         cbm,
         containerSealNo,
         onboardedDate,
+        actualTimeOfDelivery,
+        actualTimeOfArrival,
         selectedGrnIds,
         ports,
       })
@@ -183,7 +185,8 @@ export default function HBLHABWForm() {
                     <SelectValue placeholder="Choose Type" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    <SelectItem value="SEA">Sea</SelectItem>
+                    <SelectItem value="FCL">FCL</SelectItem>
+                    <SelectItem value="LCL">LCL</SelectItem>
                     <SelectItem value="AIR">Air</SelectItem>
                   </SelectContent>
                 </Select>

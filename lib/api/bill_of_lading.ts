@@ -18,6 +18,8 @@ export interface CreateBillOfLadingPayload {
   voyage_no: string
   etd: string
   eta: string
+  actual_etd: string
+  actual_eta: string
   arrival_port: string
   inland_location: string
   mbl_mawb_no: string
@@ -51,6 +53,8 @@ export interface CreateBillOfLadingInput {
   cbm: string
   containerSealNo: string
   onboardedDate: string
+  actualTimeOfDelivery: string
+  actualTimeOfArrival: string
   selectedGrnIds: Set<number>
   ports: { id: number; value: string }[]
 }
@@ -70,6 +74,8 @@ function buildBillOfLadingPayload(
     voyage_no: input.voyageNo,
     etd: formatDate(input.estimatedTimeOfDelivery),
     eta: formatDate(input.estimatedTimeOfArrival),
+    actual_etd: formatDate(input.actualTimeOfDelivery),
+    actual_eta: formatDate(input.actualTimeOfArrival),
     arrival_port: input.arrivalPort,
     inland_location: input.inlandLocation,
     mbl_mawb_no: input.mblMawbNo,

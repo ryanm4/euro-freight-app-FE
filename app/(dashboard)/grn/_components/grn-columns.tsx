@@ -3,12 +3,6 @@
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -16,7 +10,6 @@ import {
 import { GOODS_RECEIVE_NOTE } from "@/modules/grn/types"
 import {
   IconArrowsSort,
-  IconDots,
   IconEye,
   IconPencil,
   IconTrash,
@@ -201,32 +194,53 @@ export const goodsReceiveNoteColumns = (
         const id = String(row.original.id)
 
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <IconDots />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {canModify && (
-                <>
-                  <DropdownMenuItem onClick={() => actions.onEdit(id)}>
-                    <IconPencil className="mr-2 h-4 w-4" /> Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onClick={() => actions.onDelete(id)}
-                  >
-                    <IconTrash className="mr-2 h-4 w-4" /> Delete
-                  </DropdownMenuItem>
-                </>
-              )}
-              <DropdownMenuItem onClick={() => actions.onView(id)}>
-                <IconEye className="mr-2 h-4 w-4" /> View
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 p-0"
+                  onClick={() => actions.onView(id)}
+                >
+                  <IconEye className="h-4 w-4 text-zinc-400 hover:text-zinc-100" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>View</TooltipContent>
+            </Tooltip>
+
+            {canModify && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 p-0"
+                      onClick={() => actions.onEdit(id)}
+                    >
+                      <IconPencil className="h-4 w-4 text-zinc-400 hover:text-zinc-100" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Edit</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 p-0"
+                      onClick={() => actions.onDelete(id)}
+                    >
+                      <IconTrash className="h-4 w-4 text-destructive hover:text-red-400" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Delete</TooltipContent>
+                </Tooltip>
+              </>
+            )}
+          </div>
         )
       },
     },

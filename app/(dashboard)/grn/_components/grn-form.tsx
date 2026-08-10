@@ -35,6 +35,7 @@ import {
 import { fetchClients } from "@/lib/api/clients"
 import { createGoodsReceiveNote } from "@/lib/api/goods_receive_notes"
 import { fetchPackingLists } from "@/lib/api/packing_lists"
+import { fetchRecipients } from "@/lib/api/recipients"
 import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
 import { IconCalendarFilled } from "@tabler/icons-react"
@@ -64,9 +65,14 @@ export default function GoodsReceiveNoteForm() {
   const [client, setClient] = useState("")
   const [forwarder, setForwarder] = useState("")
   const [manufacturer, setManufacturer] = useState("")
+  const [recipient, setRecipient] = useState("")
+  const [recipientContact, setRecipientContact] = useState("")
+  const [status, setStatus] = useState("draft")
   // const [quantity, setQuantity] = useState("")
   // const [packingList, setPackingList] = useState("")
   const [remarks, setRemarks] = useState("")
+
+  console.log("recipient", recipient)
 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
 
@@ -84,6 +90,13 @@ export default function GoodsReceiveNoteForm() {
     queryFn: () => fetchPackingLists("completed"),
   })
 
+  const { data: recipientsList } = useQuery({
+    queryKey: ["recipientsList"],
+    queryFn: fetchRecipients,
+  })
+
+  console.log("recipientsList", recipientsList)
+
   const clientOptions = useMemo(() => {
     return (
       data?.data?.filter((client: any) => client.type === UserRole.Client) || []
@@ -100,9 +113,6 @@ export default function GoodsReceiveNoteForm() {
   const manufacturerOptions = useMemo(() => {
     return data?.data?.filter((c: any) => c.type === UserRole.Supplier) || []
   }, [data])
-
-  console.log("manufacturerOptions", manufacturerOptions)
-  console.log("forwarderOptions", forwarderOptions)
 
   const rows: PackingListRow[] = useMemo(() => {
     return (
@@ -193,6 +203,9 @@ export default function GoodsReceiveNoteForm() {
         client,
         manufacturer,
         forwarder,
+        recipient,
+        recipientContact,
+        status,
         date,
         quantity,
         selectedRows,
@@ -357,6 +370,73 @@ export default function GoodsReceiveNoteForm() {
               </div>
             </div>
 
+            <div className="grid grid-cols-4 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Recipient
+                </Label>
+                <Select value={recipient} onValueChange={setRecipient}>
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Select Recipient" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {recipientsList?.data?.map((m: any) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Phone Number
+                </Label>
+                <Input
+                  disabled
+                  value={
+                    recipientsList?.data?.find((m: any) => m.id === recipient)
+                      ?.contact_no ?? ""
+                  }
+                  placeholder="No phone number"
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 disabled:cursor-not-allowed disabled:opacity-60"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="recipient-contact"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Additional Phone Number
+                </Label>
+                <Input
+                  id="recipient-contact"
+                  placeholder="Enter Additional Phone Number"
+                  value={recipientContact}
+                  onChange={(e) => setRecipientContact(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Status
+                </Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Select Status" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="saved">Saved</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             {/* Row 2: Quantity, Packing List */}
             <div className="grid grid-cols-4 gap-4">
               <div className="flex flex-col gap-1.5">
@@ -419,16 +499,6 @@ export default function GoodsReceiveNoteForm() {
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
-              {/* <div className="flex flex-col gap-1.5">
-                <Label htmlFor="packing-list" className="text-xs font-medium text-foreground">Packing List</Label>
-                <Input
-                  id="packing-list"
-                  placeholder="Enter Packing List"
-                  value={packingList}
-                  onChange={(e) => setPackingList(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div> */}
             </div>
           </div>
         </div>

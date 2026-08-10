@@ -76,8 +76,8 @@ export default function HBLHABWForm() {
     // isLoading,
     // error,
   } = useQuery({
-    queryKey: ["grns"],
-    queryFn: fetchGRNs,
+    queryKey: ["grns","COMPLETED"],
+    queryFn: () => fetchGRNs("COMPLETED"),
   })
   // data={(data?.data ?? []) as GOODS_RECEIVE_NOTE[]}
 

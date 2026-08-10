@@ -39,12 +39,12 @@ export const goodsReceiveNoteColumns = (
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          GDN Number
+          GRN Number
           <IconArrowsSort className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="font-semibold">#{row.original.id}</div>
+        <div className="font-semibold">GRN-{row.original.id}</div>
       ),
     },
     {

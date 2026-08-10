@@ -89,11 +89,27 @@ export default function PackingListViewPage() {
   )
 
   // Totals row
-  const totalQty = items.reduce((s: number, i: any) => s + Number(i.quantity ?? 0), 0)
-  const totalCartons = items.reduce((s: number, i: any) => s + Number(i.ctnCount ?? i.ctn_count ?? i.ctn ?? 0), 0)
-  const totalGrossWeight = items.reduce((s: number, i: any) => s + Number(i.grossWeightKg ?? i.gross_weight_kg ?? 0), 0)
-  const totalNetWeight = items.reduce((s: number, i: any) => s + Number(i.netWeightKg ?? i.net_weight_kg ?? 0), 0)
-  const totalCbm = items.reduce((s: number, i: any) => s + Number(i.cbm ?? 0), 0)
+  const totalQty = items.reduce(
+    (s: number, i: any) => s + Number(i.quantity ?? 0),
+    0
+  )
+  const totalCartons = items.reduce(
+    (s: number, i: any) => s + Number(i.ctnCount ?? i.ctn_count ?? i.ctn ?? 0),
+    0
+  )
+  const totalGrossWeight = items.reduce(
+    (s: number, i: any) =>
+      s + Number(i.grossWeightKg ?? i.gross_weight_kg ?? 0),
+    0
+  )
+  const totalNetWeight = items.reduce(
+    (s: number, i: any) => s + Number(i.netWeightKg ?? i.net_weight_kg ?? 0),
+    0
+  )
+  const totalCbm = items.reduce(
+    (s: number, i: any) => s + Number(i.cbm ?? 0),
+    0
+  )
 
   const inputCls =
     "h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 disabled:opacity-100 disabled:cursor-default"
@@ -139,27 +155,53 @@ export default function PackingListViewPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-3 gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="view-client-name" className={labelCls}>Client Name</Label>
+              <Label htmlFor="view-client-name" className={labelCls}>
+                Client Name
+              </Label>
               <Input
                 id="view-client-name"
-                value={d.client_name ?? (d.client_id ? String(d.client_id) : "—")}
+                value={
+                  d.client_name ?? (d.client_id ? String(d.client_id) : "—")
+                }
                 disabled
                 className={inputCls}
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="view-manufacturer-name" className={labelCls}>Manufacturer Name</Label>
+              <Label htmlFor="view-manufacturer-name" className={labelCls}>
+                Manufacturer Name
+              </Label>
               <Input
                 id="view-manufacturer-name"
-                value={d.manufacturer_name ?? (d.manufacturer_id ? String(d.manufacturer_id) : "—")}
+                value={
+                  d.manufacturer_name ??
+                  (d.manufacturer_id ? String(d.manufacturer_id) : "—")
+                }
                 disabled
                 className={inputCls}
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="view-date" className={labelCls}>Date</Label>
+              <Label htmlFor="view-forwarder-name" className={labelCls}>
+                Forwarder Name
+              </Label>
+              <Input
+                id="view-forwarder-name"
+                value={
+                  d.forwarder_name ??
+                  (d.forwarder_id ? String(d.forwarder_id) : "—")
+                }
+                disabled
+                className={inputCls}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="view-date" className={labelCls}>
+                Date
+              </Label>
               <Input
                 id="view-date"
                 value={formatDateValue(d.date)}
@@ -169,7 +211,21 @@ export default function PackingListViewPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="view-doc-date" className={labelCls}>Document Date</Label>
+              <Label htmlFor="view-date" className={labelCls}>
+                Date
+              </Label>
+              <Input
+                id="view-date"
+                value={formatDateValue(d.date)}
+                disabled
+                className={inputCls}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="view-doc-date" className={labelCls}>
+                Document Date
+              </Label>
               <Input
                 id="view-doc-date"
                 value={formatDateValue(d.document_date)}
@@ -179,7 +235,9 @@ export default function PackingListViewPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="view-ship-to" className={labelCls}>Ship To</Label>
+              <Label htmlFor="view-ship-to" className={labelCls}>
+                Ship To
+              </Label>
               <Input
                 id="view-ship-to"
                 value={d.ship_to ?? "—"}
@@ -189,7 +247,9 @@ export default function PackingListViewPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="view-shipping-mode" className={labelCls}>Shipping Mode</Label>
+              <Label htmlFor="view-shipping-mode" className={labelCls}>
+                Shipping Mode
+              </Label>
               <Input
                 id="view-shipping-mode"
                 value={d.shipping_mode ?? "—"}
@@ -199,7 +259,9 @@ export default function PackingListViewPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="view-total-volume" className={labelCls}>Total Volume</Label>
+              <Label htmlFor="view-total-volume" className={labelCls}>
+                Total Volume
+              </Label>
               <Input
                 id="view-total-volume"
                 value={d.total_volume ?? "—"}
@@ -209,7 +271,9 @@ export default function PackingListViewPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="view-status" className={labelCls}>Status</Label>
+              <Label htmlFor="view-status" className={labelCls}>
+                Status
+              </Label>
               <Input
                 id="view-status"
                 value={d.status ?? "—"}
@@ -230,24 +294,59 @@ export default function PackingListViewPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-3 gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="view-total-qty" className={labelCls}>Total Quantity</Label>
-              <Input id="view-total-qty" value={totalQty} disabled className={inputCls} />
+              <Label htmlFor="view-total-qty" className={labelCls}>
+                Total Quantity
+              </Label>
+              <Input
+                id="view-total-qty"
+                value={totalQty}
+                disabled
+                className={inputCls}
+              />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="view-total-cartons" className={labelCls}>Total Cartons</Label>
-              <Input id="view-total-cartons" value={totalCartons} disabled className={inputCls} />
+              <Label htmlFor="view-total-cartons" className={labelCls}>
+                Total Cartons
+              </Label>
+              <Input
+                id="view-total-cartons"
+                value={totalCartons}
+                disabled
+                className={inputCls}
+              />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="view-total-gross" className={labelCls}>Total Gross Weight (kg)</Label>
-              <Input id="view-total-gross" value={totalGrossWeight.toFixed(3)} disabled className={inputCls} />
+              <Label htmlFor="view-total-gross" className={labelCls}>
+                Total Gross Weight (kg)
+              </Label>
+              <Input
+                id="view-total-gross"
+                value={totalGrossWeight.toFixed(3)}
+                disabled
+                className={inputCls}
+              />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="view-total-net" className={labelCls}>Total Net Weight (kg)</Label>
-              <Input id="view-total-net" value={totalNetWeight.toFixed(3)} disabled className={inputCls} />
+              <Label htmlFor="view-total-net" className={labelCls}>
+                Total Net Weight (kg)
+              </Label>
+              <Input
+                id="view-total-net"
+                value={totalNetWeight.toFixed(3)}
+                disabled
+                className={inputCls}
+              />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="view-total-cbm" className={labelCls}>Total CBM</Label>
-              <Input id="view-total-cbm" value={totalCbm.toFixed(3)} disabled className={inputCls} />
+              <Label htmlFor="view-total-cbm" className={labelCls}>
+                Total CBM
+              </Label>
+              <Input
+                id="view-total-cbm"
+                value={totalCbm.toFixed(3)}
+                disabled
+                className={inputCls}
+              />
             </div>
           </CardContent>
         </Card>
@@ -258,7 +357,8 @@ export default function PackingListViewPage() {
             <div className="flex flex-col gap-[0.5px]">
               <h3 className="text-md font-medium">Line Items</h3>
               <p className="text-xs text-muted-foreground">
-                {items.length} item{items.length !== 1 ? "s" : ""} on this packing list
+                {items.length} item{items.length !== 1 ? "s" : ""} on this
+                packing list
               </p>
             </div>
           </CardHeader>
@@ -269,13 +369,23 @@ export default function PackingListViewPage() {
                   <TableRow>
                     <TableHead className="min-w-[120px]">PO Number</TableHead>
                     <TableHead className="min-w-[80px]">SKU</TableHead>
-                    <TableHead className="min-w-[160px]">Item Description</TableHead>
+                    <TableHead className="min-w-[160px]">
+                      Item Description
+                    </TableHead>
                     <TableHead className="min-w-[70px]">Size</TableHead>
                     <TableHead className="min-w-[80px]">Quantity</TableHead>
-                    <TableHead className="min-w-[100px]">Carton Count</TableHead>
-                    <TableHead className="min-w-[130px]">Gross Weight (kg)</TableHead>
-                    <TableHead className="min-w-[120px]">Net Weight (kg)</TableHead>
-                    <TableHead className="min-w-[150px]">Carton Dimensions</TableHead>
+                    <TableHead className="min-w-[100px]">
+                      Carton Count
+                    </TableHead>
+                    <TableHead className="min-w-[130px]">
+                      Gross Weight (kg)
+                    </TableHead>
+                    <TableHead className="min-w-[120px]">
+                      Net Weight (kg)
+                    </TableHead>
+                    <TableHead className="min-w-[150px]">
+                      Carton Dimensions
+                    </TableHead>
                     <TableHead className="min-w-[70px]">CBM</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -288,9 +398,7 @@ export default function PackingListViewPage() {
                             {item.poNumber ?? item.po_number ?? "—"}
                           </TableCell>
                           <TableCell>{item.sku ?? "—"}</TableCell>
-                          <TableCell>
-                            {item.item_name ?? "—"}
-                          </TableCell>
+                          <TableCell>{item.item_name ?? "—"}</TableCell>
                           <TableCell>{item.size ?? "—"}</TableCell>
                           <TableCell>{item.quantity ?? 0}</TableCell>
                           <TableCell>
@@ -302,16 +410,17 @@ export default function PackingListViewPage() {
                           <TableCell>
                             {item.netWeightKg ?? item.net_weight_kg ?? 0}
                           </TableCell>
-                          <TableCell>
-                            {item.ctnDemi ?? "—"}
-                          </TableCell>
+                          <TableCell>{item.ctnDemi ?? "—"}</TableCell>
                           <TableCell>{item.cbm ?? 0}</TableCell>
                         </TableRow>
                       ))}
                       {/* Totals row — only on last page */}
                       {currentPage === totalPages && (
                         <TableRow className="border-t-2 font-semibold">
-                          <TableCell colSpan={4} className="text-right text-xs text-muted-foreground">
+                          <TableCell
+                            colSpan={4}
+                            className="text-right text-xs text-muted-foreground"
+                          >
                             Totals
                           </TableCell>
                           <TableCell>{totalQty}</TableCell>
@@ -341,18 +450,18 @@ export default function PackingListViewPage() {
             {totalPages > 1 && (
               <div className="flex items-center justify-between py-2">
                 <div className="text-xs text-muted-foreground">
-                  Showing{" "}
-                  {(currentPage - 1) * ITEMS_PER_PAGE + 1}{" "}
-                  to{" "}
-                  {Math.min(currentPage * ITEMS_PER_PAGE, items.length)}{" "}
-                  of {items.length} items
+                  Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
+                  {Math.min(currentPage * ITEMS_PER_PAGE, items.length)} of{" "}
+                  {items.length} items
                 </div>
                 <Pagination>
                   <PaginationContent>
                     <PaginationItem>
                       {currentPage > 1 ? (
                         <PaginationPrevious
-                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          onClick={() =>
+                            setCurrentPage((p) => Math.max(1, p - 1))
+                          }
                           className="cursor-pointer"
                         />
                       ) : (
@@ -364,7 +473,8 @@ export default function PackingListViewPage() {
                       if (
                         pageNum === 1 ||
                         pageNum === totalPages ||
-                        (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                        (pageNum >= currentPage - 1 &&
+                          pageNum <= currentPage + 1)
                       ) {
                         return (
                           <PaginationItem key={pageNum}>
@@ -393,7 +503,9 @@ export default function PackingListViewPage() {
                     <PaginationItem>
                       {currentPage < totalPages ? (
                         <PaginationNext
-                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          onClick={() =>
+                            setCurrentPage((p) => Math.min(totalPages, p + 1))
+                          }
                           className="cursor-pointer"
                         />
                       ) : (
@@ -406,7 +518,6 @@ export default function PackingListViewPage() {
             )}
           </CardContent>
         </Card>
-
       </div>
     </div>
   )

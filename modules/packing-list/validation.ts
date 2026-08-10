@@ -5,6 +5,8 @@ export const packingListSchema = z.object({
 
   manufacturer_id: z.number().min(1, "Manufacturer should be selected"),
 
+  forwarder_id: z.number().min(1, "Forwarder should be selected"),
+
   date: z.string().min(1, "Date is required"),
 
   document_date: z.string().min(1, "Document Date is required"),

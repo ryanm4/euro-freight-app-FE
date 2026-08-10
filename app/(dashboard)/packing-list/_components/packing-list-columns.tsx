@@ -13,6 +13,7 @@ import {
   IconEye,
   IconPencil,
   IconTrash,
+  IconCloudDownload
 } from "@tabler/icons-react"
 import { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
@@ -89,7 +90,11 @@ export const packingListColumns = (
 
     {
       accessorKey: "total_quantity",
-      header: "Quantity",
+      header: "PL Quantity",
+    },
+    {
+      accessorKey: "total_cartons",
+      header: "Total Carton Count",
     },
     // {
     //   accessorKey: "quantity",
@@ -110,8 +115,8 @@ export const packingListColumns = (
     },
 
     {
-      accessorKey: "total_net_weight_kg",
-      header: "Total Weight",
+      accessorKey: "total_gross_weight_kg",
+      header: "Total Weight (Kg)",
     },
     {
       accessorKey: "total_volume",
@@ -165,6 +170,19 @@ export const packingListColumns = (
                 </Button>
               </TooltipTrigger>
               <TooltipContent>View</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 p-0"
+                  // onClick={() => actions.onDelete(id)}
+                >
+                  <IconCloudDownload className="h-4 w-4 text-zinc-400 hover:text-zinc-100" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Download Packing List</TooltipContent>
             </Tooltip>
             {canModify && (
               <>

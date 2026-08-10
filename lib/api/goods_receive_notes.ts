@@ -8,14 +8,15 @@ export async function fetchGRNs(status?: string) {
 }
 
 export async function createGoodsReceiveNote(data: any) {
-  debugger
   const payload = {
     client_id: parseInt(data.client),
     manufacture_id: parseInt(data.manufacturer),
     forwarder_id: parseInt(data.forwarder),
+    recipient_id: parseInt(data.recipient),
+    recipient_contact: data.recipientContact,
     date: data.date,
     quantity: parseInt(data.quantity),
-    status: "Pending",
+    status: data.status,
     created_by: "admin",
     packing_list_ids: data.selectedRows.map((r: any) => parseInt(r)),
   }

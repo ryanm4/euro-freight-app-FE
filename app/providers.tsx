@@ -1,9 +1,9 @@
 // app/providers.tsx
 "use client"
 
+import { PackingListProvider } from "@/contexts/packing-list-context"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
-import { PackingListProvider } from "@/contexts/packing-list-context"
 import { useState } from "react"
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -13,7 +13,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60 * 1000, // 1 minute
+            // staleTime: 60 * 1000, // 1 minute
           },
         },
       })

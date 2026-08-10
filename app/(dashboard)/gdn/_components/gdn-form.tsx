@@ -13,6 +13,15 @@ interface PackingListRow {
   totalVolume: string
 }
 
+interface MeasurementRow {
+  id: number
+  length: string
+  width: string
+  height: string
+  total: string
+  uom: string
+}
+
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -52,7 +61,7 @@ import { fetchPackingLists } from "@/lib/api/packing_lists"
 import { fetchWharfStaff } from "@/lib/api/wharf_staff"
 import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
-import { IconCalendarFilled } from "@tabler/icons-react"
+import { IconCalendarFilled, IconPlus, IconTrash } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
 import { format, isValid, parse } from "date-fns"
 import { useRouter } from "next/navigation"
@@ -75,6 +84,8 @@ const CUSTOM_DOC_STATUS_OPTIONS = ["Pending", "In Progress", "Completed"]
 
 const STATUS_OPTIONS = ["Draft", "Saved", "Completed"]
 
+const UOM_OPTIONS = ["cm", "m"]
+
 export default function GoodsDispatchNoteForm() {
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
@@ -93,12 +104,7 @@ export default function GoodsDispatchNoteForm() {
   const [secondarySealNo, setSecondarySealNo] = useState("")
   const [customDocStatus, setCustomDocStatus] = useState("")
   const [status, setStatus] = useState("")
-  // const [cartons, setCartons] = useState("")
-  // const [actualCartons, setActualCartons] = useState("")
   const [grossWeight, setGrossWeight] = useState("")
-  // const [actualGrossWeight, setActualGrossWeight] = useState("")
-  // const [grossVolume, setGrossVolume] = useState("")
-  // const [actualGrossVolume, setActualGrossVolume] = useState("")
   const [remarks, setRemarks] = useState("")
   const [client, setClient] = useState("")
   const [forwarder, setForwarder] = useState("")
@@ -110,12 +116,13 @@ export default function GoodsDispatchNoteForm() {
   const [wharfStaffContactNoOptional, setWharfStaffContactNoOptional] =
     useState("")
   const [quantityLoaded, setQuantityLoaded] = useState("")
-  const [cartoonLength, setCartoonLength] = useState("")
-  const [cartoonWidth, setCartoonWidth] = useState("")
-  const [cartoonHeight, setCartoonHeight] = useState("")
+
+  // Shipment Measurements — repeatable rows
+  const [measurements, setMeasurements] = useState<MeasurementRow[]>([
+    { id: 1, length: "", width: "", height: "", total: "", uom: "cm" },
+  ])
 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
-  console.log("selectedRows", selectedRows)
 
   const { data } = useQuery({
     queryKey: ["clients"],
@@ -156,16 +163,64 @@ export default function GoodsDispatchNoteForm() {
     return data?.data?.filter((c: any) => c.type === UserRole.Forwarder) || []
   }, [data])
 
-  const volumeM3 = useMemo(() => {
-    const l = Number(cartoonLength)
-    const w = Number(cartoonWidth)
-    const h = Number(cartoonHeight)
-    return (l * w * h) / 1_000_000
-  }, [cartoonLength, cartoonWidth, cartoonHeight])
+  // Per-row helpers
+  const addMeasurement = () => {
+    setMeasurements((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        length: "",
+        width: "",
+        height: "",
+        total: "",
+        uom: "cm",
+      },
+    ])
+  }
 
-  const calculatedVolume = useMemo(() => {
-    return volumeM3 * Number(quantityLoaded)
-  }, [volumeM3, quantityLoaded])
+  const removeMeasurement = (id: number) => {
+    setMeasurements((prev) => prev.filter((m) => m.id !== id))
+  }
+
+  const updateMeasurement = (
+    id: number,
+    field: "length" | "width" | "height" | "total" | "uom",
+    value: string
+  ) => {
+    setMeasurements((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, [field]: value } : m))
+    )
+  }
+
+  const getRowVolumeM3 = (row: MeasurementRow) => {
+    const l = Number(row.length)
+    const w = Number(row.width)
+    const h = Number(row.height)
+
+    if (row.uom === "m") {
+      // Already in meters — straight multiplication gives m³
+      return l * w * h
+    }
+
+    // cm — convert to m³
+    return (l * w * h) / 1_000_000
+  }
+
+  const getRowCbm = (row: MeasurementRow) => {
+    return getRowVolumeM3(row)
+  }
+
+  const getRowTotalVolume = (row: MeasurementRow) => {
+    return getRowCbm(row) * Number(row.total)
+  }
+
+  const getRowCalculatedVolume = (row: MeasurementRow) => {
+    return getRowVolumeM3(row) * Number(quantityLoaded)
+  }
+
+  const totalCalculatedVolume = useMemo(() => {
+    return measurements.reduce((sum, row) => sum + getRowTotalVolume(row), 0)
+  }, [measurements])
 
   const toggleRow = (id: number) => {
     setSelectedRows((prev) => {
@@ -208,8 +263,6 @@ export default function GoodsDispatchNoteForm() {
     )
   }, [packingLists])
 
-  // Client & Forwarder are derived from the selected packing list(s) —
-  // the GDN generator cannot amend these directly.
   const selectedPackingListRows = useMemo(
     () => rows.filter((r) => selectedRows.includes(r.id)),
     [rows, selectedRows]
@@ -315,11 +368,8 @@ export default function GoodsDispatchNoteForm() {
         date: formattedDate,
         packing_list_ids: selectedRows,
         cartoons: quantityLoaded,
-        // actual_cartoons: actualCartons,
         gross_weight: grossWeight,
-        // actual_gross_weight: actualGrossWeight,
-        gross_volume: calculatedVolume,
-        // actual_gross_volume: actualGrossVolume,
+        gross_volume: totalCalculatedVolume,
         status: "Draft",
         // TODO: replace with the actual logged-in user (e.g. from an auth/session context)
         created_by: "admin",
@@ -340,9 +390,13 @@ export default function GoodsDispatchNoteForm() {
         wharf_staff_id: Number(wharfStaff),
         driver_contact_no: driverContactNoOptional,
         wharf_contact_no: wharfStaffContactNoOptional,
-        length_cm: Number(cartoonLength),
-        width_cm: Number(cartoonWidth),
-        height_cm: Number(cartoonHeight),
+        measurements: measurements.map((m) => ({
+          length_cm: Number(m.length),
+          width_cm: Number(m.width),
+          height_cm: Number(m.height),
+          per_carton_volume_m3: getRowVolumeM3(m),
+          calculated_volume_m3: getRowCalculatedVolume(m),
+        })),
       })
       router.push("/gdn")
     } catch (err) {
@@ -838,7 +892,7 @@ export default function GoodsDispatchNoteForm() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
             <h2 className="text-sm font-semibold text-zinc-100">
@@ -903,41 +957,28 @@ export default function GoodsDispatchNoteForm() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-foreground">
-                Customs Document Status
-              </Label>
-              <Select
-                value={customDocStatus}
-                onValueChange={setCustomDocStatus}
-              >
-                <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                  <SelectValue placeholder="Choose Status" />
-                </SelectTrigger>
-                <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                  {CUSTOM_DOC_STATUS_OPTIONS.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-zinc-100">
-              Shipment Measurements
-            </h2>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Planned versus actual shipment measurements.
-            </p>
-          </div>
-
-          <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Customs Document Status
+                </Label>
+                <Select
+                  value={customDocStatus}
+                  onValueChange={setCustomDocStatus}
+                >
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Choose Status" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {CUSTOM_DOC_STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="flex flex-col gap-1.5">
                 <Label
                   htmlFor="gross-weight"
@@ -953,89 +994,211 @@ export default function GoodsDispatchNoteForm() {
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="actual-gross-weight"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Cartoon Dimensions - L (cm)
-                </Label>
-                <Input
-                  id="actual-gross-weight"
-                  placeholder="Enter Actual Gross Weight"
-                  value={cartoonLength}
-                  onChange={(e) => setCartoonLength(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
             </div>
+          </div>
+        </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="gross-volume"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Cartoon Dimensions - W (cm)
-                </Label>
-                <Input
-                  id="gross-volume"
-                  placeholder="Enter Gross Volume"
-                  value={cartoonWidth}
-                  onChange={(e) => setCartoonWidth(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="actual-gross-volume"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Cartoon Dimensions - H (cm)
-                </Label>
-                <Input
-                  id="actual-gross-volume"
-                  placeholder="Enter Actual Gross Volume"
-                  value={cartoonHeight}
-                  onChange={(e) => setCartoonHeight(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4 flex items-start justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-zinc-100">
+                Shipment Measurements
+              </h2>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Add a row per carton dimension type. Volumes are calculated
+                automatically.
+              </p>
             </div>
+            <button
+              onClick={addMeasurement}
+              className="flex items-center gap-1.5 rounded-md border border-neutral-600 bg-neutral-800 px-3 py-1.5 text-xs text-zinc-100 transition-colors hover:bg-neutral-700"
+            >
+              <IconPlus size={13} />
+              Add Measurement
+            </button>
+          </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="gross-volume"
-                  className="text-xs font-medium text-foreground"
+          <div className="space-y-3">
+            {measurements.map((row) => (
+              <div
+                key={row.id}
+                className="flex items-end gap-2 rounded-md border border-neutral-800 bg-neutral-950/40 p-3"
+              >
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label
+                    htmlFor={`length-${row.id}`}
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Cartoon Dimensions - L ({row.uom})
+                  </Label>
+                  <Input
+                    id={`length-${row.id}`}
+                    placeholder="Length"
+                    value={row.length}
+                    onChange={(e) =>
+                      updateMeasurement(row.id, "length", e.target.value)
+                    }
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label
+                    htmlFor={`width-${row.id}`}
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Cartoon Dimensions - W ({row.uom})
+                  </Label>
+                  <Input
+                    id={`width-${row.id}`}
+                    placeholder="Width"
+                    value={row.width}
+                    onChange={(e) =>
+                      updateMeasurement(row.id, "width", e.target.value)
+                    }
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label
+                    htmlFor={`height-${row.id}`}
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Cartoon Dimensions - H ({row.uom})
+                  </Label>
+                  <Input
+                    id={`height-${row.id}`}
+                    placeholder="Height"
+                    value={row.height}
+                    onChange={(e) =>
+                      updateMeasurement(row.id, "height", e.target.value)
+                    }
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                {/* Per Cartoon Volume — commented out per request, replaced by CBM below
+    <div className="flex flex-1 flex-col gap-1.5">
+      <Label
+        htmlFor={`per-carton-volume-${row.id}`}
+        className="text-xs font-medium text-foreground"
+      >
+        Per Cartoon Volume (m³)
+      </Label>
+      <Input
+        disabled
+        id={`per-carton-volume-${row.id}`}
+        value={getRowVolumeM3(row).toFixed(4)}
+        className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+      />
+    </div>
+    */}
+
+                {/* Calculated Volume — commented out per request, replaced by Volume below
+    <div className="flex flex-1 flex-col gap-1.5">
+      <Label
+        htmlFor={`calculated-volume-${row.id}`}
+        className="text-xs font-medium text-foreground"
+      >
+        Calculated Volume (m³)
+      </Label>
+      <Input
+        disabled
+        id={`calculated-volume-${row.id}`}
+        value={getRowCalculatedVolume(row).toFixed(4)}
+        className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+      />
+    </div>
+    */}
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label
+                    htmlFor={`total-${row.id}`}
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Total
+                  </Label>
+                  <Input
+                    id={`total-${row.id}`}
+                    placeholder="Total Cartons"
+                    value={row.total}
+                    onChange={(e) =>
+                      updateMeasurement(row.id, "total", e.target.value)
+                    }
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-foreground">
+                    UOM
+                  </Label>
+                  <Select
+                    value={row.uom}
+                    onValueChange={(val) =>
+                      updateMeasurement(row.id, "uom", val)
+                    }
+                  >
+                    <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                      <SelectValue placeholder="UOM" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                      {UOM_OPTIONS.map((u) => (
+                        <SelectItem key={u} value={u}>
+                          {u}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label
+                    htmlFor={`cbm-${row.id}`}
+                    className="text-xs font-medium text-foreground"
+                  >
+                    CBM (m³)
+                  </Label>
+                  <Input
+                    disabled
+                    id={`cbm-${row.id}`}
+                    value={getRowCbm(row).toFixed(4)}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label
+                    htmlFor={`volume-${row.id}`}
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Volume (m³)
+                  </Label>
+                  <Input
+                    disabled
+                    id={`volume-${row.id}`}
+                    value={getRowTotalVolume(row).toFixed(4)}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <button
+                  onClick={() => removeMeasurement(row.id)}
+                  disabled={measurements.length === 1}
+                  className="mb-0.5 flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 p-2 text-zinc-400 transition-colors hover:bg-neutral-700 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
                 >
-                  Per Cartoon Volume (m³)
-                </Label>
-                <Input
-                  disabled
-                  id="gross-volume"
-                  placeholder="Enter Gross Volume"
-                  value={volumeM3}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
+                  <IconTrash size={15} />
+                </button>
               </div>
+            ))}
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="gross-volume"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Calculated Volume (m³)
-                </Label>
-                <Input
-                  disabled
-                  id="gross-volume"
-                  placeholder="Enter Gross Volume"
-                  value={calculatedVolume}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
+            <div className="flex justify-end border-t border-neutral-800 pt-3">
+              <div className="text-xs text-zinc-400">
+                Total Calculated Volume:{" "}
+                <span className="font-medium text-zinc-100">
+                  {totalCalculatedVolume.toFixed(4)} m³
+                </span>
               </div>
             </div>
           </div>
@@ -1153,11 +1316,8 @@ export default function GoodsDispatchNoteForm() {
                                     </span>
                                   </TooltipTrigger>
                                   <TooltipContent className="border-neutral-700 bg-[#0A0A0A] text-xs text-zinc-100">
-                                    Shipping Mode locked to{" "}
-                                    {/* <span className="font-medium"> */}
-                                    {lockedShippingMode}
-                                    {/* </span> */}. Deselect all rows to switch
-                                    modes.
+                                    Shipping Mode locked to {lockedShippingMode}
+                                    . Deselect all rows to switch modes.
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>

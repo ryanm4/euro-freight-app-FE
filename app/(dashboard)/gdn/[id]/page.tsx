@@ -37,6 +37,23 @@ const formatDateValue = (val?: string) => {
   }
 }
 
+// Computes CBM (m³) for a single measurement row, honoring its UOM.
+const getMeasurementCbm = (m: {
+  length_cm?: number
+  width_cm?: number
+  height_cm?: number
+  uom?: string
+}) => {
+  const l = Number(m.length_cm) || 0
+  const w = Number(m.width_cm) || 0
+  const h = Number(m.height_cm) || 0
+
+  if (m.uom === "m") {
+    return l * w * h
+  }
+  return (l * w * h) / 1_000_000
+}
+
 const createGDNObject = (gdn: any) => {
   const packingLists =
     gdn.packing_lists?.map((pl: any) => ({
@@ -59,13 +76,28 @@ const createGDNObject = (gdn: any) => {
     0
   )
 
-  const cartoonLength = gdn.length_cm ?? ""
-  const cartoonWidth = gdn.width_cm ?? ""
-  const cartoonHeight = gdn.height_cm ?? ""
+  // Shipment Measurements — repeatable rows, mirroring the create form.
+  // Falls back to an empty array if the API hasn't returned any yet.
+  const measurements =
+    gdn.measurements?.map((m: any, idx: number) => {
+      const cbm = getMeasurementCbm(m)
+      const total = m.total ?? m.quantity ?? 0
+      return {
+        id: m.id ?? idx,
+        length: m.length_cm ?? "—",
+        width: m.width_cm ?? "—",
+        height: m.height_cm ?? "—",
+        uom: m.uom ?? "cm",
+        total,
+        cbm,
+        volume: cbm * Number(total || 0),
+      }
+    }) ?? []
 
-  const volumeM3 =
-    (Number(cartoonLength) * Number(cartoonWidth) * Number(cartoonHeight)) /
-    1_000_000
+  const totalCalculatedVolume = measurements.reduce(
+    (sum: number, m: any) => sum + (m.volume ?? 0),
+    0
+  )
 
   const dispatchLocationLabel =
     DISPATCH_LOCATION_OPTIONS.find((opt) => opt.value === gdn.dispatch_location)
@@ -102,11 +134,8 @@ const createGDNObject = (gdn: any) => {
     packingListQuantity,
     quantityLoaded: gdn.cartoons ?? "—",
     grossWeight: gdn.gross_weight ?? "—",
-    cartoonLength: cartoonLength || "—",
-    cartoonWidth: cartoonWidth || "—",
-    cartoonHeight: cartoonHeight || "—",
-    volumeM3: Number.isFinite(volumeM3) ? volumeM3 : 0,
-    calculatedVolume: gdn.gross_volume ?? "—",
+    measurements,
+    totalCalculatedVolume,
     remarks: gdn.remarks ?? "—",
     packingLists,
   }
@@ -474,8 +503,8 @@ export default function GdnByID() {
         </div>
       </div>
 
-      {/* Packing Information / Shipment Measurements */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      {/* Packing Information */}
+      <div className="grid grid-cols-1 gap-5">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
             <h2 className="text-sm font-semibold text-zinc-100">
@@ -511,31 +540,18 @@ export default function GdnByID() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-foreground">
-                Customs Document Status
-              </Label>
-              <Input
-                value={gdn.customDocStatus}
-                disabled
-                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-zinc-100">
-              Shipment Measurements
-            </h2>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Planned versus actual shipment measurements.
-            </p>
-          </div>
-
-          <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Customs Document Status
+                </Label>
+                <Input
+                  value={gdn.customDocStatus}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-foreground">
                   Gross Weight
@@ -546,64 +562,98 @@ export default function GdnByID() {
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
+            </div>
+          </div>
+        </div>
 
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
-                  Cartoon Dimensions - L (cm)
-                </Label>
-                <Input
-                  value={gdn.cartoonLength}
-                  disabled
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              Shipment Measurements
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Carton dimensions recorded for this dispatch.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="overflow-x-auto rounded-md border border-neutral-700">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-neutral-700 hover:bg-transparent">
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Length
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Width
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Height
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      UOM
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      CBM (m³)
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Volume (m³)
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {gdn.measurements.length ? (
+                    gdn.measurements.map((m: any) => (
+                      <TableRow
+                        key={m.id}
+                        className="border-neutral-800 hover:bg-neutral-800/40"
+                      >
+                        <TableCell className="text-sm text-zinc-300">
+                          {m.length}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {m.width}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {m.height}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {m.uom}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {m.total}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {m.cbm.toFixed(4)}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {m.volume.toFixed(4)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="h-24 text-center text-sm text-zinc-500"
+                      >
+                        No measurements recorded.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
-                  Cartoon Dimensions - W (cm)
-                </Label>
-                <Input
-                  value={gdn.cartoonWidth}
-                  disabled
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
-                  Cartoon Dimensions - H (cm)
-                </Label>
-                <Input
-                  value={gdn.cartoonHeight}
-                  disabled
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
-                  Per Cartoon Volume (m³)
-                </Label>
-                <Input
-                  value={gdn.volumeM3}
-                  disabled
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
-                  Calculated Volume (m³)
-                </Label>
-                <Input
-                  value={gdn.calculatedVolume}
-                  disabled
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
+            <div className="flex justify-end border-t border-neutral-800 pt-3">
+              <div className="text-xs text-zinc-400">
+                Total Calculated Volume:{" "}
+                <span className="font-medium text-zinc-100">
+                  {gdn.totalCalculatedVolume.toFixed(4)} m³
+                </span>
               </div>
             </div>
           </div>

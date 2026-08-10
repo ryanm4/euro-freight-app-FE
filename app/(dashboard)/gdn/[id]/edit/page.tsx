@@ -84,6 +84,19 @@ const parseDateValue = (val: string): Date | undefined => {
   return undefined
 }
 
+const findOptionValueByName = (
+  options: any[] | undefined,
+  name?: string | null
+): string => {
+  if (!name) return ""
+  const normalized = name.toString().trim().toLowerCase()
+  const match = options?.find((item: any) => {
+    const label = item?.name ?? item?.full_name ?? ""
+    return label.toString().trim().toLowerCase() === normalized
+  })
+  return match ? String(match.id) : ""
+}
+
 export default function GDNEdit() {
   const router = useRouter()
   const { id } = useParams<{ id: string }>()
@@ -284,16 +297,38 @@ export default function GDNEdit() {
     if (hasHydrated || !gdnRes?.data) return
     const gdn = gdnRes.data
 
+    const readyToHydrate =
+      (!gdn.client_name || clientOptions.length > 0) &&
+      (!gdn.forwarder_name || forwarderOptions.length > 0) &&
+      (!gdn.manufacture_name || manufacturerOptions.length > 0) &&
+      (!gdn.driver_name || driverOptions.length > 0) &&
+      (!gdn.wharf_staff_name || wharfStaffOptions.length > 0)
+
+    if (!readyToHydrate) return
+
     setDate(
       gdn.date
         ? format(parseDateValue(gdn.date) ?? new Date(gdn.date), "yyyy-MM-dd")
         : ""
     )
+
     setGdnReference(gdn.gdn_grn_ref ?? "")
     setVehicleNo(gdn.vehicle_no ?? "")
-    setManufacturer(gdn.manufacture_id ? String(gdn.manufacture_id) : "")
-    setDriver(gdn.driver_id ? String(gdn.driver_id) : "")
-    setWharfStaff(gdn.wharf_staff_id ? String(gdn.wharf_staff_id) : "")
+    setManufacturer(
+      gdn.manufacture_id
+        ? String(gdn.manufacture_id)
+        : findOptionValueByName(manufacturerOptions, gdn.manufacture_name)
+    )
+    setDriver(
+      gdn.driver_id
+        ? String(gdn.driver_id)
+        : findOptionValueByName(driverOptions, gdn.driver_name)
+    )
+    setWharfStaff(
+      gdn.wharf_staff_id
+        ? String(gdn.wharf_staff_id)
+        : findOptionValueByName(wharfStaffOptions, gdn.wharf_staff_name)
+    )
     setDeliveredTo(gdn.dispatch_location ?? "")
     setTransportMode(gdn.transport_mode ?? "")
     setContainerNo(gdn.container_no ?? "")
@@ -304,18 +339,37 @@ export default function GDNEdit() {
     setStatus(gdn.status ?? "")
     setGrossWeight(gdn.gross_weight ? String(gdn.gross_weight) : "")
     setRemarks(gdn.remarks ?? "")
-    setClient(gdn.client_id ? String(gdn.client_id) : "")
-    setForwarder(gdn.forwarder_id ? String(gdn.forwarder_id) : "")
+    setClient(
+      gdn.client_id
+        ? String(gdn.client_id)
+        : findOptionValueByName(clientOptions, gdn.client_name)
+    )
+    setForwarder(
+      gdn.forwarder_id
+        ? String(gdn.forwarder_id)
+        : findOptionValueByName(forwarderOptions, gdn.forwarder_name)
+    )
     setDriverContactNoOptional(gdn.driver_contact_no_optional ?? "")
     setWharfStaffContactNoOptional(gdn.wharf_contact_no_optional ?? "")
     setQuantityLoaded(gdn.cartoons ? String(gdn.cartoons) : "")
     setCartoonLength(gdn.length_cm ? String(gdn.length_cm) : "")
     setCartoonWidth(gdn.width_cm ? String(gdn.width_cm) : "")
     setCartoonHeight(gdn.height_cm ? String(gdn.height_cm) : "")
+    setDriverNic(gdn.driver_nic_no ?? "")
+    setDriverContactNo(gdn.driver_contact_no ?? "")
+    setWharfStaffContactNo(gdn.wharf_contact_no ?? "")
     setSelectedRows(gdn.packing_lists?.map((pl: any) => pl.id) ?? [])
 
     setHasHydrated(true)
-  }, [gdnRes, hasHydrated])
+  }, [
+    gdnRes,
+    hasHydrated,
+    clientOptions,
+    forwarderOptions,
+    manufacturerOptions,
+    driverOptions,
+    wharfStaffOptions,
+  ])
 
   const handleSave = async () => {
     if (!derivedClient || !derivedForwarder) {

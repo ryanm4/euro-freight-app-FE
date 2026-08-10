@@ -15,6 +15,11 @@ export interface PackingList {
   updated_by: string | null
   updated_on: string | null
 }
+
+export interface GDN {
+  gdn_no: string
+  id: number
+}
 export interface GOODS_RECEIVE_NOTE {
   id: number
   client_id?: string
@@ -29,4 +34,5 @@ export interface GOODS_RECEIVE_NOTE {
   updated_by?: string | null
   updated_on?: string | null
   packing_lists?: PackingList[] | null
+  gdns?: GDN[] | null
 }

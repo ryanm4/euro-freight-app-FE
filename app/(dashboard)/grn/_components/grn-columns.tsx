@@ -8,6 +8,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { GOODS_RECEIVE_NOTE } from "@/modules/grn/types"
 import {
   IconArrowsSort,
@@ -18,6 +23,7 @@ import {
 } from "@tabler/icons-react"
 import { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
+import Link from "next/link"
 
 interface GoodsReceiveNoteTableActions {
   onEdit: (id: string) => void
@@ -46,6 +52,96 @@ export const goodsReceiveNoteColumns = (
       cell: ({ row }) => (
         <div className="font-semibold">GRN-{row.original.id}</div>
       ),
+    },
+    {
+      id: "gdn_no",
+      header: "GDN Number",
+      cell: ({ row }) => {
+        const gdns =
+          row.original.gdns?.map((pl) => ({
+            id: pl.id,
+            label: pl.gdn_no,
+          })) || []
+        const visible = gdns.slice(0, 2)
+        const hasMore = gdns.length > 2
+
+        const renderLinks = (items: typeof gdns) =>
+          items.map((g, idx) => (
+            <span key={g.id ?? idx} className="whitespace-nowrap">
+              <Link
+                href={`/gdn/${g.id}`}
+                className="text-primary hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {g.label}
+              </Link>
+              {idx < items.length - 1 && ","}
+            </span>
+          ))
+
+        if (gdns.length === 0) return <div>-</div>
+
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap">
+                {renderLinks(visible)}
+                {hasMore && ", ..."}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <div className="flex flex-wrap gap-x-1.5 gap-y-1">
+                {renderLinks(gdns)}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        )
+      },
+    },
+    {
+      id: "packing_list_no",
+      header: "Packing List Number",
+      cell: ({ row }) => {
+        const packingLists =
+          row.original.packing_lists?.map((pl) => ({
+            id: pl.id,
+            label: pl.packing_list_no,
+          })) || []
+        const visible = packingLists.slice(0, 2)
+        const hasMore = packingLists.length > 2
+
+        const renderLinks = (items: typeof packingLists) =>
+          items.map((pl, idx) => (
+            <span key={pl.id ?? idx} className="whitespace-nowrap">
+              <Link
+                href={`/packing-list/${pl.id}`}
+                className="text-primary hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {pl.label}
+              </Link>
+              {idx < items.length - 1 && ","}
+            </span>
+          ))
+
+        if (packingLists.length === 0) return <div>-</div>
+
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap">
+                {renderLinks(visible)}
+                {hasMore && ", ..."}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <div className="flex flex-wrap gap-x-1.5 gap-y-1">
+                {renderLinks(packingLists)}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        )
+      },
     },
     {
       accessorKey: "client_id",

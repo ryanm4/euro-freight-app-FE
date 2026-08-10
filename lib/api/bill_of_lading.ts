@@ -57,6 +57,7 @@ export interface CreateBillOfLadingInput {
   actualTimeOfArrival: string
   selectedGrnIds: Set<number>
   ports: { id: number; value: string }[]
+  status: string
 }
 
 const formatDate = (val: string) =>
@@ -79,7 +80,7 @@ function buildBillOfLadingPayload(
     arrival_port: input.arrivalPort,
     inland_location: input.inlandLocation,
     mbl_mawb_no: input.mblMawbNo,
-    status: "Pending",
+    status: input.status,
     no_pieces: Number(input.noOfPieces),
     gross_weight: input.grossWeight,
     chargeable_weight: input.chargeableWeight,

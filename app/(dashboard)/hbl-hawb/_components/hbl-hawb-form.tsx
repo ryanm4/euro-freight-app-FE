@@ -56,6 +56,7 @@ export default function HBLHABWForm() {
   const [containerSealNo, setContainerSealNo] = useState("")
   const [onboardedDate, setOnboardedDate] = useState("")
   const [remarks, setRemarks] = useState("")
+  const [status, setStatus] = useState("draft")
   // const [arrivalPorts, setArrivalPorts] = useState<Port[]>([])
 
   const [selectedGrnIds, setSelectedGrnIds] = useState<Set<number>>(new Set())
@@ -76,7 +77,7 @@ export default function HBLHABWForm() {
     // isLoading,
     // error,
   } = useQuery({
-    queryKey: ["grns","COMPLETED"],
+    queryKey: ["grns", "COMPLETED"],
     queryFn: () => fetchGRNs("COMPLETED"),
   })
   // data={(data?.data ?? []) as GOODS_RECEIVE_NOTE[]}
@@ -139,6 +140,7 @@ export default function HBLHABWForm() {
         actualTimeOfArrival,
         selectedGrnIds,
         ports,
+        status,
       })
       router.push("/hbl-hawb")
     } catch (err) {
@@ -176,22 +178,6 @@ export default function HBLHABWForm() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
-                  Type
-                </Label>
-                <Select value={type} onValueChange={setType}>
-                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                    <SelectValue placeholder="Choose Type" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    <SelectItem value="FCL">FCL</SelectItem>
-                    <SelectItem value="LCL">LCL</SelectItem>
-                    <SelectItem value="AIR">Air</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               <div className="flex flex-col gap-1.5">
                 <Label
                   htmlFor="date"
@@ -261,6 +247,38 @@ export default function HBLHABWForm() {
                     />
                   </PopoverContent>
                 </Popover>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Type
+                </Label>
+                <Select value={type} onValueChange={setType}>
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Choose Type" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    <SelectItem value="FCL">FCL</SelectItem>
+                    <SelectItem value="LCL">LCL</SelectItem>
+                    <SelectItem value="AIR">Air</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Status
+                </Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Choose Status" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="saved">Saved</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

@@ -3,6 +3,13 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { fetchHBLHAWBs } from "@/lib/api/bill_of_lading"
 import { createShipment } from "@/lib/api/shipments"
 import { useQuery } from "@tanstack/react-query"
@@ -13,7 +20,7 @@ import HBLTable from "./HBLTable"
 export default function ShipmentForm() {
   const router = useRouter()
   const [vesselName, setVesselName] = useState("")
-  const [status, setStatus] = useState("Planned")
+  const [status, setStatus] = useState("planned")
   const [isSaving, setIsSaving] = useState(false)
   const [selectedHBLIds, setSelectedHBLIds] = useState<Set<number>>(new Set())
 
@@ -107,13 +114,20 @@ export default function ShipmentForm() {
                 >
                   Status
                 </Label>
-                <Input
-                  id="status"
-                  placeholder="Enter Status"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger
+                    id="status"
+                    className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 focus:ring-1 focus:ring-zinc-500"
+                  >
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent className="border-zinc-700 bg-[#0A0A0A] text-zinc-100">
+                    <SelectItem value="planned">Planned</SelectItem>
+                    <SelectItem value="departure">Departure</SelectItem>
+                    <SelectItem value="in transit">In Transit</SelectItem>
+                    <SelectItem value="arrived">Arrived</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

@@ -123,7 +123,6 @@ export default function GoodsDispatchNoteForm() {
   ])
 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
-  console.log("selectedRows", selectedRows)
 
   const { data } = useQuery({
     queryKey: ["clients"],

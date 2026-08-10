@@ -53,26 +53,35 @@ export default function GRNTable({
   selectedIds,
   onToggle,
   readOnly = false,
+  selectedType,
 }: {
   grns: GRN[]
   selectedIds?: Set<number>
   onToggle?: (id: number) => void
   readOnly?: boolean
+  selectedType?: string
 }) {
-  const headers = [
-    "GRN ID",
-    // "Packing List IDs",
-    "Client",
-    "Manufacturer",
-    // "Forwarder",
-    "Date",
-    "Qty",
-    // "Packing Lists",
-    "Status",
-  ]
+  const headers = ["GRN ID", "Client", "Manufacturer", "Date", "Qty", "Status"]
   if (!readOnly) headers.push("Actions")
 
   const columnCount = headers.length
+
+  const normalize = (val?: string | null) => (val ?? "").trim().toUpperCase()
+
+  const isGrnDisabled = (grn: GRN) => {
+    if (readOnly) return false
+    if (!selectedType) return false // no type chosen yet -> don't restrict
+
+    const target = normalize(selectedType)
+    const modes =
+      grn.packing_lists?.map((pl) => normalize(pl.shipping_mode)) ?? []
+
+    // No packing list data to check against -> treat as disabled (unknown mode)
+    if (modes.length === 0) return true
+
+    // Enabled only if at least one packing list matches the selected type
+    return !modes.includes(target)
+  }
 
   return (
     <div className="overflow-x-auto rounded-md border border-neutral-700">
@@ -90,96 +99,63 @@ export default function GRNTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {grns.map((grn, i) => (
-            <TableRow
-              key={grn.id}
-              onClick={readOnly ? undefined : () => onToggle?.(grn.id)}
-              className={`border-neutral-800 transition-colors ${
-                readOnly ? "" : "cursor-pointer"
-              } ${
-                !readOnly && selectedIds?.has(grn.id)
-                  ? "bg-zinc-800/60"
-                  : i % 2 === 0
-                    ? "bg-transparent"
-                    : "bg-neutral-800/20"
-              } ${readOnly ? "hover:bg-neutral-800/40" : "hover:bg-zinc-800/40"}`}
-            >
-              <TableCell className="font-mono text-xs text-zinc-300">
-                {grn.id}
-              </TableCell>
-              {/* <TableCell className="text-zinc-300">
-                <TooltipProvider>
-                  <div className="flex flex-wrap gap-2">
-                    {grn.packing_lists?.map((pl) => (
-                      <Tooltip key={pl.id}>
+          {grns.map((grn, i) => {
+            const disabled = isGrnDisabled(grn)
+            return (
+              <TableRow
+                key={grn.id}
+                onClick={readOnly ? undefined : () => onToggle?.(grn.id)}
+                className={`border-neutral-800 transition-colors ${
+                  readOnly ? "" : "cursor-pointer"
+                } ${
+                  !readOnly && selectedIds?.has(grn.id)
+                    ? "bg-zinc-800/60"
+                    : i % 2 === 0
+                      ? "bg-transparent"
+                      : "bg-neutral-800/20"
+                } ${readOnly ? "hover:bg-neutral-800/40" : "hover:bg-zinc-800/40"}`}
+              >
+                <TableCell className="font-mono text-xs text-zinc-300">
+                  {grn.id}
+                </TableCell>
+                <TableCell className="text-zinc-200">{grn.client_id}</TableCell>
+                <TableCell className="text-zinc-300">
+                  {grn.manufacture_id}
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-zinc-300">
+                  {format(new Date(grn.date), "dd/MMM/yy HH:mm")}
+                </TableCell>
+                <TableCell className="text-zinc-300">
+                  {grn.quantity.toLocaleString()}
+                </TableCell>
+                <TableCell className="text-zinc-400">{grn?.status}</TableCell>
+                {!readOnly && (
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <TooltipProvider>
+                      <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="cursor-pointer text-primary hover:underline">
-                            {pl.id}
+                          <span>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds?.has(grn.id) ?? false}
+                              onChange={() => onToggle?.(grn.id)}
+                              disabled={disabled}
+                              className="h-3.5 w-3.5 rounded border-neutral-600 accent-zinc-400 disabled:cursor-not-allowed disabled:opacity-40"
+                            />
                           </span>
                         </TooltipTrigger>
-
-                        <TooltipContent side="top" className="max-w-xs">
-                          <div className="space-y-1 text-sm">
-                            <p>
-                              <strong>Packing List:</strong>{" "}
-                              {pl.packing_list_no}
-                            </p>
-                            <p>
-                              <strong>GDN:</strong> {pl.gdn_id}
-                            </p>
-                            <p>
-                              <strong>Shipping Mode:</strong> {pl.shipping_mode}
-                            </p>
-                            <p>
-                              <strong>Recipient:</strong> {pl.ship_to}
-                            </p>
-                            <p>
-                              <strong>Total Cartons:</strong>{" "}
-                              {pl.total_quantity}
-                            </p>
-                            <p>
-                              <strong>Date:</strong>{" "}
-                              {format(new Date(pl.date), "PPP")}
-                            </p>
-                            <p>
-                              <strong>Status:</strong> {pl.status}
-                            </p>
-                          </div>
-                        </TooltipContent>
+                        {disabled && (
+                          <TooltipContent side="top">
+                            Shipping mode doesn&apos;t match selected type
+                          </TooltipContent>
+                        )}
                       </Tooltip>
-                    ))}
-                  </div>
-                </TooltipProvider>
-              </TableCell> */}
-              <TableCell className="text-zinc-200">{grn.client_id}</TableCell>
-              <TableCell className="text-zinc-300">
-                {grn.manufacture_id}
-              </TableCell>
-              {/* <TableCell className="text-zinc-300">
-                {grn.forwarder_id}
-              </TableCell> */}
-              <TableCell className="whitespace-nowrap text-zinc-300">
-                {format(new Date(grn.date), "dd/MMM/yy HH:mm")}
-              </TableCell>
-              <TableCell className="text-zinc-300">
-                {grn.quantity.toLocaleString()}
-              </TableCell>
-              {/* <TableCell className="text-zinc-400">
-                {grn?.packing_lists?.length}
-              </TableCell> */}
-              <TableCell className="text-zinc-400">{grn?.status}</TableCell>
-              {!readOnly && (
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="checkbox"
-                    checked={selectedIds?.has(grn.id) ?? false}
-                    onChange={() => onToggle?.(grn.id)}
-                    className="h-3.5 w-3.5 rounded border-neutral-600 accent-zinc-400"
-                  />
-                </TableCell>
-              )}
-            </TableRow>
-          ))}
+                    </TooltipProvider>
+                  </TableCell>
+                )}
+              </TableRow>
+            )
+          })}
           {grns.length === 0 && (
             <TableRow>
               <TableCell

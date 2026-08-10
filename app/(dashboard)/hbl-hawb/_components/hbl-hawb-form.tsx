@@ -349,6 +349,7 @@ export default function HBLHABWForm() {
                 grns={(grnData?.data ?? []) as GRN[]}
                 selectedIds={selectedGrnIds}
                 onToggle={toggleGrn}
+                selectedType={type}
               />
             </div>
           </div>

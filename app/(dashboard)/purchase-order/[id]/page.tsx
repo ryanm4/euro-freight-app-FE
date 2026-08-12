@@ -2,21 +2,15 @@
 
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { fetchPurchaseOrderById } from "@/lib/api/purchase-orders"
-import { IconChevronDown, IconChevronUp } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { useParams } from "next/navigation"
 import { useState } from "react"
-import { CargoItem } from "../_components/purchase-order-form"
+// import { CargoItem } from "../_components/purchase-order-form"
 
 export default function PurchaseOrderByID() {
   const { id } = useParams<{ id: string }>()
@@ -257,7 +251,7 @@ export default function PurchaseOrderByID() {
           <p className="text-sm text-zinc-500">No items found.</p>
         ) : (
           <div className="space-y-3">
-            {items.map((item: CargoItem, index: number) => {
+            {/* {items.map((item: CargoItem, index: number) => {
               const isOpen = openItemIds.has(item.id as number)
               return (
                 <Collapsible
@@ -266,7 +260,7 @@ export default function PurchaseOrderByID() {
                   onOpenChange={() => toggleItem(item.id as number)}
                 >
                   <div className="overflow-hidden rounded-lg border border-zinc-800">
-                    {/* Accordion Header */}
+                   
                     <CollapsibleTrigger asChild>
                       <button className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-zinc-800/50">
                         <span className="text-sm font-medium text-zinc-300">
@@ -282,10 +276,10 @@ export default function PurchaseOrderByID() {
                       </button>
                     </CollapsibleTrigger>
 
-                    {/* Accordion Content */}
+                    
                     <CollapsibleContent>
                       <div className="space-y-4 border-t border-zinc-800 px-4 pt-4 pb-4">
-                        {/* Row 1: SKU, Item Name, Color, Size */}
+                       
                         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                           <div className="flex flex-col gap-1.5">
                             <Label
@@ -345,7 +339,7 @@ export default function PurchaseOrderByID() {
                           </div>
                         </div>
 
-                        {/* Row 2: Country of Origin, Unit Cost, Quantity, Dispatched Qty */}
+                       
                         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                           <div className="flex flex-col gap-1.5">
                             <Label
@@ -405,7 +399,7 @@ export default function PurchaseOrderByID() {
                           </div>
                         </div>
 
-                        {/* Row 3: Cartons, Gross Weight, Net Weight, CTN Dimensions */}
+                        
                         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                           <div className="flex flex-col gap-1.5">
                             <Label
@@ -465,7 +459,7 @@ export default function PurchaseOrderByID() {
                           </div>
                         </div>
 
-                        {/* Row 4: CBM, Status */}
+                       
                         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                           <div className="flex flex-col gap-1.5">
                             <Label
@@ -487,7 +481,7 @@ export default function PurchaseOrderByID() {
                   </div>
                 </Collapsible>
               )
-            })}
+            })} */}
           </div>
         )}
       </div>

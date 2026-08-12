@@ -5,49 +5,41 @@ export async function fetchPurchaseOrders() {
 }
 
 export async function createPurchaseOrder(data: any) {
-  const payload = {
-    po_number: data.poNumber,
-    po_quantity: parseInt(data.poQuantity),
-    ex_factory_date: data.exFactoryDate,
-    shipping_mode: data.shippingMode,
-    final_destination: data.finalDestination,
-    supplier_id: parseInt(data.supplier),
-    freight_forwarder: parseInt(data.freightForwarder),
-    payment_mode: data.paymentMode,
-    instructions: data.instructions,
-    PO_url: data.poDocumentUrl ?? "",
-    status: "Open",
-    created_by: "admin",
-    items: data.cargoItems.map((item: any) => ({
-      sku: item.sku,
-      item_name: item.itemName,
-      color: item.color,
-      size: item.size,
-      country_of_origin: item.countryOfOrigin,
-      unit_cost: parseFloat(item.unitCost),
-      quantity: parseInt(item.quantity),
-      cartoons: parseInt(item.cartons),
-      gross_weight: item.grossWeight,
-      net_weight: item.netWeight,
-      ctn_demi: item.ctnDimensions,
-      cbm: item.cbm,
-      dispatched_quantity: parseInt(item.dispatchedQuantity) || 0,
-      status: item.status || "Pending",
-    })),
-  }
-
+  debugger
   const res = await fetch("/api/purchase-orders", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
   })
 
-  if (!res.ok) throw new Error("Failed to create purchase order")
+  if (!res.ok) {
+    const error = await res.text()
+    throw new Error(error || "Failed to create purchase order")
+  }
+
   return res.json()
 }
 
 export async function fetchPurchaseOrderById(id: string) {
   const res = await fetch(`/api/purchase-orders/${id}`)
   if (!res.ok) throw new Error("Failed to fetch purchase order by ID")
+  return res.json()
+}
+
+export async function parsePurchaseOrderExcel(file: File): Promise<any> {
+  const formData = new FormData()
+  formData.append("purchase_order", file)
+
+  const res = await fetch("/api/purchase-orders/upload", {
+    method: "POST",
+    body: formData,
+  })
+
+  if (!res.ok) {
+    throw new Error("Failed to parse purchase order file")
+  }
+
   return res.json()
 }

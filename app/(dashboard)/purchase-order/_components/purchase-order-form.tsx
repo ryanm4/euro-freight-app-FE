@@ -1,19 +1,8 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -22,160 +11,84 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { fetchClients } from "@/lib/api/clients"
 import { createPurchaseOrder } from "@/lib/api/purchase-orders"
-import { PAYMENT_MODE_OPTIONS } from "@/lib/constants"
-import { UserRole } from "@/lib/enums/user-role"
-import { cn } from "@/lib/utils"
-import {
-  IconCalendarFilled,
-  IconChevronDown,
-  IconChevronUp,
-  IconFileSpreadsheet,
-  IconPlus,
-  IconTrash,
-} from "@tabler/icons-react"
-import { useQuery } from "@tanstack/react-query"
-import { format, isValid, parse } from "date-fns"
+import { useUploadThing } from "@/lib/uploadthing"
 import { useRouter } from "next/navigation"
-import { useId, useMemo, useState } from "react"
+import { useState } from "react"
+import { DataTable } from "./purchase-order-table"
+import { purchaseOrderUploadColumns } from "./purchase-order-upload-columns"
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+const STATUS_OPTIONS = ["Draft", "Saved", "Completed"]
 
-export interface CargoItem {
-  id: string | number
-  sku: string
-  itemName: string
-  color: string
-  size: string
-  countryOfOrigin: string
-  unitCost: string
-  quantity: string
-  dispatchedQuantity: string
-  cartons: string
-  grossWeight: string
-  netWeight: string
-  ctnDimensions: string
-  cbm: string
-  status: string
-  open: boolean
-  item_name?: string
-  country_of_origin?: string
-  unit_cost?: string
-  dispatched_quantity?: string
-  cartoons?: string
-  gross_weight?: string
-  net_weight?: string
-  ctn_demi?: string
-}
-
-export function createCargoItem(id: string): CargoItem {
-  return {
-    id,
-    sku: "",
-    itemName: "",
-    color: "",
-    size: "",
-    countryOfOrigin: "",
-    unitCost: "",
-    quantity: "",
-    dispatchedQuantity: "",
-    cartons: "",
-    grossWeight: "",
-    netWeight: "",
-    ctnDimensions: "",
-    cbm: "",
-    status: "Pending",
-    open: true,
-  }
-}
-
-export default function PurchaseOrderForm() {
+export default function PurchaseOrderForm({
+  initialData,
+  sourceFile,
+}: {
+  initialData?: any
+  sourceFile?: any
+}) {
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
-  const initialCargoId = useId()
+  const { startUpload } = useUploadThing("purchaseOrderUploader")
 
   // PO Info
-  const [poNumber, setPoNumber] = useState("")
-  const [poQuantity, setPoQuantity] = useState("")
-  const [supplier, setSupplier] = useState("")
-  const [freightForwarder, setFreightForwarder] = useState("")
-  const [paymentMode, setPaymentMode] = useState("")
-  const [finalDestination, setFinalDestination] = useState("")
-  // const [shippingMode, setShippingMode] = useState("")
+  const [poNumber, setPoNumber] = useState(initialData?.poNumber ?? "-")
+  const [poQuantity, setPoQuantity] = useState(
+    initialData?.totals?.totalQty ?? "0"
+  )
+  const [supplier, setSupplier] = useState(initialData?.vendor?.name ?? "")
+  const [finalDestination, setFinalDestination] = useState(
+    initialData?.shipTo?.addressLines?.[0] ?? ""
+  )
+  const [status, setStatus] = useState("Draft")
 
   // Timeline
-  const [exFactoryDate, setExFactoryDate] = useState("")
-  const [instructions, setInstructions] = useState("")
-
-  // Cargo
-  const [cargoItems, setCargoItems] = useState<CargoItem[]>([
-    createCargoItem(initialCargoId),
-  ])
-
-  const [remarks, setRemarks] = useState("")
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["clients"],
-    queryFn: fetchClients,
-  })
-
-  const supplierOptions = useMemo(() => {
-    return (
-      data?.data?.filter((client: any) => client.type === UserRole.Supplier) ||
-      []
+  const getExFactoryDate = () => {
+    const exFactoryNote = initialData?.comments?.notes?.find((item: any) =>
+      item.startsWith("Ex-Factory")
     )
-  }, [data])
-
-  const freightForwarderOptions = useMemo(() => {
-    return (
-      data?.data?.filter((client: any) => client.type === UserRole.Forwarder) ||
-      []
-    )
-  }, [data])
-
-  // const [freightSplits, setFreightSplits] = useState<FreightSplit[]>([
-  //   { id: initialCargoId, method: "sea", quantity: "", dispatchDate: "" },
-  // ])
-
-  const addItem = () =>
-    setCargoItems((prev) => [...prev, createCargoItem(crypto.randomUUID())])
-
-  const deleteItem = (id: string) =>
-    setCargoItems((prev) => prev.filter((item) => item.id !== id))
-
-  const toggleItem = (id: string) =>
-    setCargoItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, open: !item.open } : item
-      )
-    )
-
-  const updateItem = (id: string, field: keyof CargoItem, value: string) =>
-    setCargoItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
-    )
+    return exFactoryNote?.split(": ")[1] || ""
+  }
+  const [exFactoryDate, setExFactoryDate] = useState(getExFactoryDate())
+  const [instructions, setInstructions] = useState(
+    initialData?.comments?.contact ?? ""
+  )
 
   const handleSave = async () => {
     try {
       setIsSaving(true)
+
+      let fileUrl = ""
+
+      // Upload original PO file
+      if (sourceFile) {
+        const uploadedFiles = await startUpload([sourceFile])
+
+        const uploadedFile = uploadedFiles?.[0]
+
+        if (!uploadedFile) {
+          throw new Error("Failed to upload original PO file")
+        }
+
+        fileUrl = uploadedFile.ufsUrl
+      }
+
       await createPurchaseOrder({
-        poNumber,
-        poQuantity,
-        supplier,
-        freightForwarder,
-        paymentMode,
-        finalDestination,
-        // shippingMode,
-        exFactoryDate,
-        instructions,
-        cargoItems,
-        // freightSplits,
-        remarks,
+        ...initialData,
+        filePath: fileUrl,
+        created_by: "Anupa",
+        packingListId: null,
+        hblNos: null,
+        dcInHouseDate: null,
+        exFactoryDate: initialData?.comments?.notes
+          .find((item: any) => item.startsWith("Ex-Factory"))
+          ?.split(": ")[1],
+        status: status,
       })
+
       router.push("/purchase-order")
     } catch (err) {
-      console.error(err)
+      console.error("Failed to save purchase order:", err)
     } finally {
       setIsSaving(false)
     }
@@ -197,7 +110,7 @@ export default function PurchaseOrderForm() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5">
         {/* Purchase Order Information */}
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
@@ -225,6 +138,7 @@ export default function PurchaseOrderForm() {
                   value={poNumber}
                   onChange={(e) => setPoNumber(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  disabled
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -232,7 +146,7 @@ export default function PurchaseOrderForm() {
                   htmlFor="po-quantity"
                   className="text-xs font-medium text-foreground"
                 >
-                  PO Quantity
+                  Total Quantity
                 </Label>
                 <Input
                   id="po-quantity"
@@ -240,6 +154,7 @@ export default function PurchaseOrderForm() {
                   value={poQuantity}
                   onChange={(e) => setPoQuantity(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  disabled
                 />
               </div>
             </div>
@@ -247,62 +162,20 @@ export default function PurchaseOrderForm() {
             {/* Row 2: Supplier + Freight Forwarder */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
-                  Supplier
-                </Label>
-                <Select value={supplier} onValueChange={setSupplier}>
-                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                    <SelectValue placeholder="Select Supplier" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    {supplierOptions.map((s: any) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
-                  Freight Forwarder
-                </Label>
-                <Select
-                  value={freightForwarder}
-                  onValueChange={setFreightForwarder}
+                <Label
+                  htmlFor="supplier-name"
+                  className="text-xs font-medium text-foreground"
                 >
-                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                    <SelectValue placeholder="Select Freight Forwarder" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    {freightForwarderOptions.map((f: any) => (
-                      <SelectItem key={f.id} value={f.id}>
-                        {f.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Row 3: Payment Mode + Shipping Mode */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
-                  Payment Mode
+                  Supplier Name
                 </Label>
-                <Select value={paymentMode} onValueChange={setPaymentMode}>
-                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                    <SelectValue placeholder="Select Payment Mode" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    {PAYMENT_MODE_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="supplier-name"
+                  placeholder="Enter Supplier Name"
+                  value={supplier}
+                  onChange={(e) => setSupplier(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  disabled
+                />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label
@@ -317,522 +190,71 @@ export default function PurchaseOrderForm() {
                   value={finalDestination}
                   onChange={(e) => setFinalDestination(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  disabled
                 />
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Timeline & Documentation */}
-        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-zinc-100">
-              Timeline &amp; Documentation
-            </h2>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Important dates, documents, and shipment instructions.
-            </p>
-          </div>
-
-          <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
                 <Label
                   htmlFor="ex-factory-date"
                   className="text-xs font-medium text-foreground"
                 >
-                  Ex Factory Date
+                  Ex-Factory Date
                 </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="ex-factory-date"
-                      variant="outline"
-                      className={cn(
-                        "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                        !exFactoryDate && "text-zinc-500"
-                      )}
-                    >
-                      {exFactoryDate
-                        ? (() => {
-                            const parseDate = (
-                              val: string
-                            ): Date | undefined => {
-                              if (!val) return undefined
-                              let d = parse(
-                                val,
-                                "yyyy-MM-dd HH:mm:ss",
-                                new Date()
-                              )
-                              if (isValid(d)) return d
-                              d = parse(val, "yyyy-MM-dd", new Date())
-                              if (isValid(d)) return d
-                              d = new Date(val)
-                              if (isValid(d)) return d
-                              return undefined
-                            }
-                            const selectedDate = parseDate(exFactoryDate)
-                            return selectedDate
-                              ? format(selectedDate, "PPP")
-                              : "Pick a date"
-                          })()
-                        : "Pick a date"}
-                      <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={(() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        return parseDate(exFactoryDate)
-                      })()}
-                      onSelect={(date) => {
-                        if (date) {
-                          setExFactoryDate(format(date, "yyyy-MM-dd"))
-                        }
-                      }}
-                      captionLayout="dropdown"
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Input
+                  id="ex-factory-date"
+                  placeholder="Enter Ex-Factory Date"
+                  value={exFactoryDate}
+                  onChange={(e) => setExFactoryDate(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  disabled
+                />
               </div>
+
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-foreground">
-                  PO Document
+                  Status
                 </Label>
-                <div className="flex items-center gap-2">
-                  <label
-                    htmlFor="po-document"
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-neutral-700 bg-[#0A0A0A] px-3 py-1.5 text-xs text-neutral-300 transition-colors hover:bg-neutral-700"
-                  >
-                    Choose File
-                  </label>
-                  <input id="po-document" type="file" className="sr-only" />
-                  <span className="truncate text-xs text-neutral-500">
-                    No file chosen
-                  </span>
-                </div>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Choose Status" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* <FreightSplitSection
-        poQuantity={poQuantity}
-        splits={freightSplits}
-        onChange={setFreightSplits}
-      /> */}
+      {initialData?.items?.length > 0 && (
+        <div className="grid grid-cols-1 gap-5">
+          <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold text-zinc-100">
+                Purchase Order Items
+              </h2>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Commercial, packaging, and measurement details for this shipment
+                item.
+              </p>
+            </div>
 
-      {/* ── Purchase Order Items ───────────────────────────────────────────────────── */}
-      <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-        <div className="mb-5 flex items-start justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-zinc-100">
-              Purchase Order Items
-            </h2>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Commercial, packaging, and measurement details for this shipment
-              item.
-            </p>
-          </div>
-          <div className="flex gap-4">
-            <>
-              <input
-                id="cargo-file-upload"
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                className="sr-only"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) {
-                    console.log(file)
-                  }
-                }}
-              />
-              <label htmlFor="cargo-file-upload">
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 rounded-md border-zinc-700 bg-zinc-800 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
-                >
-                  <span>
-                    <IconFileSpreadsheet className="h-3.5 w-3.5" />
-                    Upload File
-                  </span>
-                </Button>
-              </label>
-            </>
-            <Button
-              onClick={addItem}
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5 rounded-md border-zinc-700 bg-zinc-800 text-xs text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
-            >
-              <IconPlus className="h-3.5 w-3.5" />
-              Add Item
-            </Button>
+            <DataTable
+              columns={purchaseOrderUploadColumns}
+              data={initialData?.items}
+            />
           </div>
         </div>
-
-        <div className="space-y-3">
-          {cargoItems.map((item, index) => (
-            <Collapsible
-              key={item.id}
-              open={item.open}
-              onOpenChange={() => toggleItem(item.id as string)}
-            >
-              <div className="overflow-hidden rounded-lg border border-zinc-800">
-                {/* Accordion Header */}
-                <CollapsibleTrigger asChild>
-                  <button className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-zinc-800/50">
-                    <span className="text-sm font-medium text-zinc-300">
-                      {item.itemName
-                        ? `${item.itemName}${item.sku ? ` (${item.sku})` : ""}`
-                        : `Purchase Order Item ${index + 1}`}
-                    </span>
-                    {item.open ? (
-                      <IconChevronUp className="h-4 w-4 text-zinc-500" />
-                    ) : (
-                      <IconChevronDown className="h-4 w-4 text-zinc-500" />
-                    )}
-                  </button>
-                </CollapsibleTrigger>
-
-                {/* Accordion Content */}
-                <CollapsibleContent>
-                  <div className="space-y-4 border-t border-zinc-800 px-4 pt-4 pb-4">
-                    {/* Row 1: SKU, Item Name, Color, Size */}
-                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                      <div className="flex flex-col gap-1.5">
-                        <Label
-                          htmlFor={`sku-${item.id}`}
-                          className="text-xs font-medium text-foreground"
-                        >
-                          SKU
-                        </Label>
-                        <Input
-                          id={`sku-${item.id}`}
-                          placeholder="Enter SKU"
-                          value={item.sku}
-                          onChange={(e) =>
-                            updateItem(item.id as string, "sku", e.target.value)
-                          }
-                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label
-                          htmlFor={`item-name-${item.id}`}
-                          className="text-xs font-medium text-foreground"
-                        >
-                          Item Name
-                        </Label>
-                        <Input
-                          id={`item-name-${item.id}`}
-                          placeholder="Enter Item Name"
-                          value={item.itemName}
-                          onChange={(e) =>
-                            updateItem(
-                              item.id as string,
-                              "itemName",
-                              e.target.value
-                            )
-                          }
-                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label
-                          htmlFor={`color-${item.id}`}
-                          className="text-xs font-medium text-foreground"
-                        >
-                          Color
-                        </Label>
-                        <Input
-                          id={`color-${item.id}`}
-                          placeholder="Enter Color"
-                          value={item.color}
-                          onChange={(e) =>
-                            updateItem(
-                              item.id as string,
-                              "color",
-                              e.target.value
-                            )
-                          }
-                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label
-                          htmlFor={`size-${item.id}`}
-                          className="text-xs font-medium text-foreground"
-                        >
-                          Size
-                        </Label>
-                        <Input
-                          id={`size-${item.id}`}
-                          placeholder="Enter Size"
-                          value={item.size}
-                          onChange={(e) =>
-                            updateItem(
-                              item.id as string,
-                              "size",
-                              e.target.value
-                            )
-                          }
-                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Row 2: Country of Origin, Unit Cost, Quantity, Dispatched Qty */}
-                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                      <div className="flex flex-col gap-1.5">
-                        <Label
-                          htmlFor={`coo-${item.id}`}
-                          className="text-xs font-medium text-foreground"
-                        >
-                          Country of Origin
-                        </Label>
-                        <Input
-                          id={`coo-${item.id}`}
-                          placeholder="Enter Country of Origin"
-                          value={item.countryOfOrigin}
-                          onChange={(e) =>
-                            updateItem(
-                              item.id as string,
-                              "countryOfOrigin",
-                              e.target.value
-                            )
-                          }
-                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label
-                          htmlFor={`unit-cost-${item.id}`}
-                          className="text-xs font-medium text-foreground"
-                        >
-                          Unit Cost
-                        </Label>
-                        <Input
-                          id={`unit-cost-${item.id}`}
-                          placeholder="Enter Unit Cost"
-                          value={item.unitCost}
-                          onChange={(e) =>
-                            updateItem(
-                              item.id as string,
-                              "unitCost",
-                              e.target.value
-                            )
-                          }
-                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label
-                          htmlFor={`quantity-${item.id}`}
-                          className="text-xs font-medium text-foreground"
-                        >
-                          Quantity
-                        </Label>
-                        <Input
-                          id={`quantity-${item.id}`}
-                          placeholder="Enter Quantity"
-                          value={item.quantity}
-                          onChange={(e) =>
-                            updateItem(
-                              item.id as string,
-                              "quantity",
-                              e.target.value
-                            )
-                          }
-                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label
-                          htmlFor={`dispatched-${item.id}`}
-                          className="text-xs font-medium text-foreground"
-                        >
-                          Dispatched Quantity
-                        </Label>
-                        <Input
-                          id={`dispatched-${item.id}`}
-                          placeholder="Enter Dispatched Quantity"
-                          value={item.dispatchedQuantity}
-                          onChange={(e) =>
-                            updateItem(
-                              item.id as string,
-                              "dispatchedQuantity",
-                              e.target.value
-                            )
-                          }
-                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Row 3: Cartons, Gross Weight, Net Weight, CTN Dimensions */}
-                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                      <div className="flex flex-col gap-1.5">
-                        <Label
-                          htmlFor={`cartons-${item.id}`}
-                          className="text-xs font-medium text-foreground"
-                        >
-                          Cartons
-                        </Label>
-                        <Input
-                          id={`cartons-${item.id}`}
-                          placeholder="Enter Cartons"
-                          value={item.cartons}
-                          onChange={(e) =>
-                            updateItem(
-                              item.id as string,
-                              "cartons",
-                              e.target.value
-                            )
-                          }
-                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label
-                          htmlFor={`gross-weight-${item.id}`}
-                          className="text-xs font-medium text-foreground"
-                        >
-                          Gross Weight
-                        </Label>
-                        <Input
-                          id={`gross-weight-${item.id}`}
-                          placeholder="Enter Gross Weight"
-                          value={item.grossWeight}
-                          onChange={(e) =>
-                            updateItem(
-                              item.id as string,
-                              "grossWeight",
-                              e.target.value
-                            )
-                          }
-                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label
-                          htmlFor={`net-weight-${item.id}`}
-                          className="text-xs font-medium text-foreground"
-                        >
-                          Net Weight
-                        </Label>
-                        <Input
-                          id={`net-weight-${item.id}`}
-                          placeholder="Enter Net Weight"
-                          value={item.netWeight}
-                          onChange={(e) =>
-                            updateItem(
-                              item.id as string,
-                              "netWeight",
-                              e.target.value
-                            )
-                          }
-                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label
-                          htmlFor={`ctn-dims-${item.id}`}
-                          className="text-xs font-medium text-foreground"
-                        >
-                          CTN Dimensions
-                        </Label>
-                        <Input
-                          id={`ctn-dims-${item.id}`}
-                          placeholder="e.g. 10x10x10"
-                          value={item.ctnDimensions}
-                          onChange={(e) =>
-                            updateItem(
-                              item.id as string,
-                              "ctnDimensions",
-                              e.target.value
-                            )
-                          }
-                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Row 4: CBM, Status, Delete */}
-                    <div className="flex items-end gap-4">
-                      <div className="flex w-[calc(25%-12px)] flex-col gap-1.5">
-                        <Label
-                          htmlFor={`cbm-${item.id}`}
-                          className="text-xs font-medium text-foreground"
-                        >
-                          CBM
-                        </Label>
-                        <Input
-                          id={`cbm-${item.id}`}
-                          placeholder="Enter CBM"
-                          value={item.cbm}
-                          onChange={(e) =>
-                            updateItem(item.id as string, "cbm", e.target.value)
-                          }
-                          className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                        />
-                      </div>
-                      {/* <div className="flex w-[calc(25%-12px)] flex-col gap-1.5">
-                        <Label className="text-xs font-medium text-foreground">
-                          Status
-                        </Label>
-                        <Select
-                          value={item.status}
-                          onValueChange={(v) =>
-                            updateItem(item.id, "status", v)
-                          }
-                        >
-                          <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                            <SelectValue placeholder="Select Status" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                            {ITEM_STATUS_OPTIONS.map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div> */}
-                      <div className="mb-0 ml-auto">
-                        <Button
-                          onClick={() => deleteItem(item.id as string)}
-                          variant="destructive"
-                          size="sm"
-                          className="h-9 gap-1.5 rounded-md bg-red-500! text-xs text-white hover:bg-red-600"
-                        >
-                          <IconTrash className="h-3.5 w-3.5" />
-                          Delete Item
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </div>
-            </Collapsible>
-          ))}
-        </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-1 gap-5">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">

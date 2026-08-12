@@ -29,6 +29,35 @@ export default function PurchaseOrderPage() {
       onEdit: (id: string) => router.push(`/purchase-order/edit/${id}`),
       onDelete: (id: string) => console.log("Delete", id),
       onView: (id: string) => router.push(`/purchase-order/${id}`),
+      onDownload: async (filePath: string | null) => {
+        if (!filePath) {
+          console.error("No file path provided for download.")
+          return
+        }
+
+        try {
+          const response = await fetch(filePath)
+
+          if (!response.ok) {
+            throw new Error(`Download failed: ${response.status}`)
+          }
+
+          const blob = await response.blob()
+          const url = window.URL.createObjectURL(blob)
+
+          const link = document.createElement("a")
+          link.href = url
+          link.download = filePath.split("/").pop()?.split("?")[0] || "download"
+
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+
+          window.URL.revokeObjectURL(url)
+        } catch (error) {
+          console.error("Failed to download file:", error)
+        }
+      },
       onStatusChange: (id: string, status: string) =>
         console.log("Status change", id, status),
     }),

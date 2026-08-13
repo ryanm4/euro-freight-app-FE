@@ -442,7 +442,10 @@ export default function GDNEdit() {
           length: m.length_cm != null ? String(m.length_cm) : "",
           width: m.width_cm != null ? String(m.width_cm) : "",
           height: m.height_cm != null ? String(m.height_cm) : "",
-          total: m.total != null ? String(m.total) : String(m.quantity ?? ""),
+          total:
+            m.packages != null
+              ? String(m.packages ?? "")
+              : String(m.quantity ?? ""),
           uom: m.uom ?? "cm",
         }))
       )

@@ -141,7 +141,7 @@ export const goodsDeliverNoteColumns = (
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => (
-        <StatusBadge status={row.original.status || "N/A"} type="GDN" />
+        <StatusBadge status={row.original.status?.replaceAll("_", " ").toUpperCase() || "N/A"} type="GDN" />
       ),
     },
     {

@@ -183,7 +183,7 @@ export const hblHawbColumns = (
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => (
-        <StatusBadge status={row.original.status || "N/A"} type="HBL_HAWB" />
+        <StatusBadge status={row.original.status?.replaceAll("_", " ").toUpperCase() || "N/A"} type="HBL_HAWB" />
       ),
     },
     {

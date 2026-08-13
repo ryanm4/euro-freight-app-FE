@@ -127,7 +127,7 @@ export const packingListColumns = (
       header: "Status",
       cell: ({ row }) => {
         const status = row.original.status
-        return <StatusBadge status={status || "N/A"} type="PACKING_LIST" />
+        return <StatusBadge status={status?.replaceAll("_", " ").toUpperCase() || "N/A"} type="PACKING_LIST" />
       },
     },
     {

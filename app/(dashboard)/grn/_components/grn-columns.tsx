@@ -184,7 +184,7 @@ export const goodsReceiveNoteColumns = (
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => (
-        <StatusBadge status={row.original.status || "N/A"} type="GRN" />
+        <StatusBadge status={row.original.status?.replaceAll("_", " ").toUpperCase() || "N/A"} type="GRN" />
       ),
     },
     {

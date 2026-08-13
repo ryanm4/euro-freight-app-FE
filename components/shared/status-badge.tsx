@@ -32,6 +32,10 @@ const statusStyles: Record<string, string> = {
     "DRAFT": "border-slate-200 bg-slate-50 text-slate-800 hover:bg-slate-100",
     "SHIPPED": "border-purple-200 bg-purple-50 text-purple-800 hover:bg-purple-100",
     "CLOSED": "border-red-200 bg-red-50 text-red-800 hover:bg-red-100",
+    "GRN OPEN": "border-red-200 bg-red-50 text-red-800 hover:bg-red-100",
+    "GDN OPEN": "border-red-200 bg-red-50 text-red-800 hover:bg-red-100",
+    "SHIPMENT OPEN": "border-red-200 bg-red-50 text-red-800 hover:bg-red-100",
+    "HBL OPEN": "border-red-200 bg-red-50 text-red-800 hover:bg-red-100",
     "CONFIRMED": "border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100",
 
     // Job Ticket specific

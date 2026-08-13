@@ -24,15 +24,9 @@ interface MeasurementRow {
 
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -120,7 +114,7 @@ export default function GDNEdit() {
   const [isSaving, setIsSaving] = useState(false)
   const [hasHydrated, setHasHydrated] = useState(false)
 
-  const [date, setDate] = useState("")
+  const [date, setDate] = useState(() => format(new Date(), "yyyy-MM-dd"))
   const [gdnReference, setGdnReference] = useState("")
   const [vehicleNo, setVehicleNo] = useState("")
   const [manufacturer, setManufacturer] = useState("")
@@ -232,11 +226,12 @@ export default function GDNEdit() {
     const l = Number(row.length)
     const w = Number(row.width)
     const h = Number(row.height)
+    const packages = Number(row.total)
 
     if (row.uom === "m") {
-      return l * w * h
+      return l * w * h * packages
     }
-    return (l * w * h) / 1_000_000
+    return ((l * w * h) / 1_000_000) * packages
   }
 
   const getRowCbm = (row: MeasurementRow) => {
@@ -429,8 +424,8 @@ export default function GDNEdit() {
         ? String(gdn.forwarder_id)
         : findOptionValueByName(forwarderOptions, gdn.forwarder_name)
     )
-    setDriverContactNoOptional(gdn.driver_contact_no_optional ?? "")
-    setWharfStaffContactNoOptional(gdn.wharf_contact_no_optional ?? "")
+    setDriverContactNoOptional(gdn.driver_contact_no ?? "")
+    setWharfStaffContactNoOptional(gdn.wharf_contact_no ?? "")
     setQuantityLoaded(gdn.cartoons ? String(gdn.cartoons) : "")
     setDriverNic(gdn.driver_nic_no ?? "")
     setDriverContactNo(gdn.driver_contact_no ?? "")
@@ -569,9 +564,10 @@ export default function GDNEdit() {
           width_cm: Number(m.width),
           height_cm: Number(m.height),
           uom: m.uom,
-          total: Number(m.total),
+          total: null,
           per_carton_volume_m3: getRowVolumeM3(m),
           calculated_volume_m3: getRowTotalVolume(m),
+          packages: Number(m.total),
         })),
         remarks,
       })
@@ -648,40 +644,39 @@ export default function GDNEdit() {
                   >
                     Date
                   </Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        id="date"
-                        variant="outline"
-                        className={cn(
-                          "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                          !date && "text-zinc-500"
-                        )}
-                      >
-                        {date
-                          ? (() => {
-                              const selectedDate = parseDateValue(date)
-                              return selectedDate
-                                ? format(selectedDate, "PPP")
-                                : "Pick a date"
-                            })()
-                          : "Pick a date"}
-                        <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={parseDateValue(date)}
-                        onSelect={(selectedDate) => {
-                          if (selectedDate) {
-                            setDate(format(selectedDate, "yyyy-MM-dd"))
+                  <Button
+                    id="date"
+                    variant="outline"
+                    disabled
+                    className={cn(
+                      "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 opacity-100 disabled:cursor-not-allowed disabled:opacity-100",
+                      !date && "text-zinc-500"
+                    )}
+                  >
+                    {date
+                      ? (() => {
+                          const parseDate = (val: string): Date | undefined => {
+                            if (!val) return undefined
+                            let d = parse(
+                              val,
+                              "yyyy-MM-dd HH:mm:ss",
+                              new Date()
+                            )
+                            if (isValid(d)) return d
+                            d = parse(val, "yyyy-MM-dd", new Date())
+                            if (isValid(d)) return d
+                            d = new Date(val)
+                            if (isValid(d)) return d
+                            return undefined
                           }
-                        }}
-                        captionLayout="dropdown"
-                      />
-                    </PopoverContent>
-                  </Popover>
+                          const selectedDate = parseDate(date)
+                          return selectedDate
+                            ? format(selectedDate, "yyyy-MM-dd")
+                            : "Pick a date"
+                        })()
+                      : "Pick a date"}
+                    <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
                 </div>
 
                 <div className="flex flex-col gap-1.5">

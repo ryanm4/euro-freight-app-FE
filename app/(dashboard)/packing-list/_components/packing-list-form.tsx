@@ -256,6 +256,13 @@ export default function PackingListForm({
         ? matchedManufacturer.id
         : Number(initialData.manufacturer_id) || 0
 
+      const matchedForwarder = forwarderOptions.find(
+        (f: any) => f.name === initialData.forwarder_name
+      )
+      const forwarderId = matchedForwarder
+        ? matchedForwarder.id
+        : Number(initialData.forwarder_id) || 0
+
       const mappedFormItems = (initialData.items || []).map((item: any) => ({
         poNumber: item.poNumber || item.po_number || "",
         sku: item.sku || "",
@@ -274,6 +281,7 @@ export default function PackingListForm({
       form.reset({
         client_id: clientId,
         manufacturer_id: manufacturerId,
+        forwarder_id: forwarderId,
         date: initialData.date
           ? format(new Date(initialData.date), "yyyy-MM-dd")
           : format(new Date(), "yyyy-MM-dd"),

@@ -36,3 +36,25 @@ export async function fetchGoodsReceiveNoteById(id: string) {
   if (!res.ok) throw new Error("Failed to fetch goods receive note by ID")
   return res.json()
 }
+
+export async function updateGoodsReceiveNote(id: string, data: any) {
+  const payload = {
+    client_id: parseInt(data.client),
+    manufacture_id: parseInt(data.manufacturer),
+    forwarder_id: parseInt(data.forwarder),
+    date: data.date,
+    quantity: parseInt(data.quantity),
+    status: data.status,
+    updated_by: "admin",
+    packing_list_ids: data.selectedRows.map((r: any) => parseInt(r)),
+  }
+
+  const res = await fetch(`/api/goods_receive_notes/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+
+  if (!res.ok) throw new Error("Failed to update goods receive note")
+  return res.json()
+}

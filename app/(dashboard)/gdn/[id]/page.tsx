@@ -84,7 +84,7 @@ const createGDNObject = (gdn: any) => {
         width: m.width_cm ?? "",
         height: m.height_cm ?? "",
         uom: m.uom ?? "cm",
-        total,
+        total: m.packages ?? m.quantity ?? 0,
         cbm,
         volume: cbm * Number(total || 0),
       }

@@ -4,6 +4,8 @@ export interface Measurement {
   height_cm: number
   per_carton_volume_m3: number
   calculated_volume_m3: number
+  total: null
+  packages: Number
 }
 export interface CreateGoodsDispatchNotePayload {
   client_id: number
@@ -19,7 +21,7 @@ export interface CreateGoodsDispatchNotePayload {
   actual_gross_volume?: string
   status: string
   created_by: string
-  gdn_grn_ref: string
+  gdn_grn_ref: string | null
   vehicle_no: string
   driver_id: number
   dispatch_location: string

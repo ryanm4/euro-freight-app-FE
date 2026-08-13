@@ -23,15 +23,9 @@ interface MeasurementRow {
 }
 
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -90,7 +84,7 @@ export default function GoodsDispatchNoteForm() {
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
 
-  const [date, setDate] = useState("")
+  const [date, setDate] = useState(() => format(new Date(), "yyyy-MM-dd"))
   const [gdnReference, setGdnReference] = useState("")
   const [vehicleNo, setVehicleNo] = useState("")
   const [manufacturer, setManufacturer] = useState("")
@@ -196,14 +190,15 @@ export default function GoodsDispatchNoteForm() {
     const l = Number(row.length)
     const w = Number(row.width)
     const h = Number(row.height)
+    const packages = Number(row.total)
 
     if (row.uom === "m") {
       // Already in meters — straight multiplication gives m³
-      return l * w * h
+      return l * w * h * packages
     }
 
     // cm — convert to m³
-    return (l * w * h) / 1_000_000
+    return ((l * w * h) / 1_000_000) * packages
   }
 
   const getRowCbm = (row: MeasurementRow) => {
@@ -373,7 +368,7 @@ export default function GoodsDispatchNoteForm() {
         status: "Draft",
         // TODO: replace with the actual logged-in user (e.g. from an auth/session context)
         created_by: "admin",
-        gdn_grn_ref: gdnReference,
+        gdn_grn_ref: null,
         vehicle_no: vehicleNo,
         driver_id: Number(driver),
         dispatch_location: deliveredTo,
@@ -396,6 +391,8 @@ export default function GoodsDispatchNoteForm() {
           height_cm: Number(m.height),
           per_carton_volume_m3: getRowVolumeM3(m),
           calculated_volume_m3: getRowCalculatedVolume(m),
+          total: null,
+          packages: Number(m.total),
         })),
       })
       router.push("/gdn")
@@ -452,47 +449,17 @@ export default function GoodsDispatchNoteForm() {
                 >
                   Date
                 </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="date"
-                      variant="outline"
-                      className={cn(
-                        "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                        !date && "text-zinc-500"
-                      )}
-                    >
-                      {date
-                        ? (() => {
-                            const parseDate = (
-                              val: string
-                            ): Date | undefined => {
-                              if (!val) return undefined
-                              let d = parse(
-                                val,
-                                "yyyy-MM-dd HH:mm:ss",
-                                new Date()
-                              )
-                              if (isValid(d)) return d
-                              d = parse(val, "yyyy-MM-dd", new Date())
-                              if (isValid(d)) return d
-                              d = new Date(val)
-                              if (isValid(d)) return d
-                              return undefined
-                            }
-                            const selectedDate = parseDate(date)
-                            return selectedDate
-                              ? format(selectedDate, "PPP")
-                              : "Pick a date"
-                          })()
-                        : "Pick a date"}
-                      <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={(() => {
+                <Button
+                  id="date"
+                  variant="outline"
+                  disabled
+                  className={cn(
+                    "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 opacity-100 disabled:cursor-not-allowed disabled:opacity-100",
+                    !date && "text-zinc-500"
+                  )}
+                >
+                  {date
+                    ? (() => {
                         const parseDate = (val: string): Date | undefined => {
                           if (!val) return undefined
                           let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
@@ -503,17 +470,14 @@ export default function GoodsDispatchNoteForm() {
                           if (isValid(d)) return d
                           return undefined
                         }
-                        return parseDate(date)
-                      })()}
-                      onSelect={(selectedDate) => {
-                        if (selectedDate) {
-                          setDate(format(selectedDate, "yyyy-MM-dd"))
-                        }
-                      }}
-                      captionLayout="dropdown"
-                    />
-                  </PopoverContent>
-                </Popover>
+                        const selectedDate = parseDate(date)
+                        return selectedDate
+                          ? format(selectedDate, "yyyy-MM-dd")
+                          : "Pick a date"
+                      })()
+                    : "Pick a date"}
+                  <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                </Button>
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -529,6 +493,7 @@ export default function GoodsDispatchNoteForm() {
                   value={gdnReference}
                   onChange={(e) => setGdnReference(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  disabled
                 />
               </div>
             </div>
@@ -1117,11 +1082,11 @@ export default function GoodsDispatchNoteForm() {
                     htmlFor={`total-${row.id}`}
                     className="text-xs font-medium text-foreground"
                   >
-                    Total
+                    Number of Packages
                   </Label>
                   <Input
                     id={`total-${row.id}`}
-                    placeholder="Total Cartons"
+                    placeholder="Total Packages"
                     value={row.total}
                     onChange={(e) =>
                       updateMeasurement(row.id, "total", e.target.value)

@@ -147,12 +147,19 @@ export function DataTable<TData, TValue>({
               ))
             ) : table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => {
-                const isClosed = (row.original as any).status === "Closed"
+                const isClosed =
+                  (row.original as any).status === "Closed" ||
+                  (row.original as any).status === "SHIPMENT_OPEN" ||
+                  (row.original as any).status === "GDN_OPEN" || 
+                  (row.original as any).status === "GRN_OPEN" || 
+                  (row.original as any).status === "HBL_OPEN" 
                 return (
                   <TableRow
                     key={row.id}
                     className={`cursor-pointer ${
-                      isClosed ? "bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800" : ""
+                      isClosed
+                        ? "bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800"
+                        : ""
                     }`}
                     onClick={() => {
                       const id = (row.original as any).packing_list_id
@@ -162,13 +169,13 @@ export function DataTable<TData, TValue>({
                     }}
                   >
                     {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 )
               })

@@ -20,8 +20,8 @@ export default function HBLHAWBPage() {
     isLoading,
     // error,
   } = useQuery({
-    queryKey: ["hbl-hawbs"],
-    queryFn: fetchHBLHAWBs,
+    queryKey: ["hbl-hawbs",""],
+    queryFn: () => fetchHBLHAWBs(""),
   })
 
   const actions = {

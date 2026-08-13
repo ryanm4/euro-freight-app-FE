@@ -86,8 +86,8 @@ export default function GoodsReceiveNoteForm() {
   })
 
   const { data: packingLists } = useQuery({
-    queryKey: ["packingLists", "completed"],
-    queryFn: () => fetchPackingLists("completed"),
+    queryKey: ["packingLists", "GDN_OPEN"],
+    queryFn: () => fetchPackingLists("GDN_OPEN"),
   })
 
   const { data: recipientsList } = useQuery({

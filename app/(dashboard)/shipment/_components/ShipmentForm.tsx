@@ -25,8 +25,8 @@ export default function ShipmentForm() {
   const [selectedHBLIds, setSelectedHBLIds] = useState<Set<number>>(new Set())
 
   const { data: hblsRes } = useQuery({
-    queryKey: ["hbl-hawbs"],
-    queryFn: fetchHBLHAWBs,
+    queryKey: ["hbl-hawbs", "COMPLETED"],
+    queryFn: () => fetchHBLHAWBs("COMPLETED"),
   })
 
   const hbls = hblsRes?.data ?? []

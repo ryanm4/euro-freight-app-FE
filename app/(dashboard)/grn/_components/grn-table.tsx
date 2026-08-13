@@ -144,18 +144,33 @@ export function DataTable<TData, TValue>({
                 </TableRow>
               ))
             ) : table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                const isClosed =
+                  (row.original as any).status === "Closed" ||
+                  (row.original as any).status === "SHIPMENT_OPEN" ||
+                  (row.original as any).status === "GDN_OPEN" ||
+                  (row.original as any).status === "GRN_OPEN" ||
+                  (row.original as any).status === "HBL_OPEN"
+                return (
+                  <TableRow
+                    key={row.id}
+                    className={`cursor-pointer ${
+                      isClosed
+                        ? "bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800"
+                        : ""
+                    }`}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                )
+              })
             ) : (
               <TableRow>
                 <TableCell

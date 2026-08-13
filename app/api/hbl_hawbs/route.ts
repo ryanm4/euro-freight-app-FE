@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
 
-export async function GET() {
-  const res = await fetch(`${process.env.BACKEND_URL}/api/v1/bill_of_lading`)
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const status = searchParams.get("status")
+
+  const backendUrl = new URL(`${process.env.BACKEND_URL}/api/v1/bill_of_lading`)
+  if (status) {
+    backendUrl.searchParams.set("status", status)
+  }
+  const res = await fetch(backendUrl.toString())
+
+  if (!res.ok) {
+    return Response.json(
+      { error: "Failed to fetch HBL/HAWBs from backend" },
+      { status: res.status }
+    )
+  }
 
   const data = await res.json()
   return Response.json(data)

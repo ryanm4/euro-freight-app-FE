@@ -1,5 +1,9 @@
-export async function fetchHBLHAWBs() {
-  const res = await fetch("/api/hbl_hawbs")
+export async function fetchHBLHAWBs(status?: string) {
+  const url = status
+    ? `/api/hbl_hawbs?status=${encodeURIComponent(status)}`
+    : "/api/hbl_hawbs"
+
+  const res = await fetch(url)
   if (!res.ok) throw new Error("Failed to fetch HBL/HAWBs")
   return res.json()
 }

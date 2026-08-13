@@ -196,14 +196,15 @@ export default function GoodsDispatchNoteForm() {
     const l = Number(row.length)
     const w = Number(row.width)
     const h = Number(row.height)
+    const packages = Number(row.total)
 
     if (row.uom === "m") {
       // Already in meters — straight multiplication gives m³
-      return l * w * h
+      return l * w * h * packages
     }
 
     // cm — convert to m³
-    return (l * w * h) / 1_000_000
+    return ((l * w * h) / 1_000_000) * packages
   }
 
   const getRowCbm = (row: MeasurementRow) => {
@@ -373,7 +374,7 @@ export default function GoodsDispatchNoteForm() {
         status: "Draft",
         // TODO: replace with the actual logged-in user (e.g. from an auth/session context)
         created_by: "admin",
-        gdn_grn_ref: gdnReference,
+        gdn_grn_ref: null,
         vehicle_no: vehicleNo,
         driver_id: Number(driver),
         dispatch_location: deliveredTo,
@@ -396,6 +397,8 @@ export default function GoodsDispatchNoteForm() {
           height_cm: Number(m.height),
           per_carton_volume_m3: getRowVolumeM3(m),
           calculated_volume_m3: getRowCalculatedVolume(m),
+          total: null,
+          packages: Number(m.total),
         })),
       })
       router.push("/gdn")
@@ -529,6 +532,7 @@ export default function GoodsDispatchNoteForm() {
                   value={gdnReference}
                   onChange={(e) => setGdnReference(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  disabled
                 />
               </div>
             </div>
@@ -1117,11 +1121,11 @@ export default function GoodsDispatchNoteForm() {
                     htmlFor={`total-${row.id}`}
                     className="text-xs font-medium text-foreground"
                   >
-                    Total
+                    Number of Packages
                   </Label>
                   <Input
                     id={`total-${row.id}`}
-                    placeholder="Total Cartons"
+                    placeholder="Total Packages"
                     value={row.total}
                     onChange={(e) =>
                       updateMeasurement(row.id, "total", e.target.value)

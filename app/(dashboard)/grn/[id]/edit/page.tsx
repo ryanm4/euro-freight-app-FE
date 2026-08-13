@@ -350,7 +350,7 @@ export default function GRNEdit() {
     <div className="mx-6 mb-6 space-y-5">
       <div className="mt-3">
         <PageTitleWithBreadcrumb
-          title={`${grnRes?.data?.grn_no ?? ""}`}
+          title={`${grnRes?.data?.id ?? ""}`}
           breadcrumbs={[
             { title: "Dashboard", href: "/dashboard" },
             { title: "Goods Receive Notes", href: "/grn" },

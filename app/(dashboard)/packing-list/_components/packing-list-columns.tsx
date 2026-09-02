@@ -10,10 +10,10 @@ import {
 import { PACKING_LIST } from "@/modules/packing-list/types"
 import {
   IconArrowsSort,
+  IconCloudDownload,
   IconEye,
   IconPencil,
   IconTrash,
-  IconCloudDownload
 } from "@tabler/icons-react"
 import { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
@@ -142,6 +142,7 @@ export const packingListColumns = (
         return (
           <Link
             href={`/gdn/${gdnId}`}
+            onClick={(e) => e.stopPropagation()}
             className="text-primary underline-offset-4 hover:underline"
           >
             {gdnNo || gdnId}

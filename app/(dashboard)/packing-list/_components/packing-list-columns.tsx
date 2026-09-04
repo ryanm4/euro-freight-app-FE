@@ -16,7 +16,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react"
 import { ColumnDef } from "@tanstack/react-table"
-import { format } from "date-fns"
+import { formatInTimeZone } from "date-fns-tz"
 import Link from "next/link"
 
 interface PackingListTableActions {
@@ -77,10 +77,12 @@ export const packingListColumns = (
     },
     {
       accessorKey: "created_on",
-      header: "Date",
+      header: "Created Date",
       cell: ({ row }) => {
         const date = row.original.created_on
-        return date ? format(new Date(date), "dd/MMM/yy HH:mm a") : "N/A"
+        return date
+          ? formatInTimeZone(new Date(date), "UTC", "dd/MMM/yy hh:mm a")
+          : "N/A"
       },
     },
     {
@@ -127,7 +129,12 @@ export const packingListColumns = (
       header: "Status",
       cell: ({ row }) => {
         const status = row.original.status
-        return <StatusBadge status={status?.replaceAll("_", " ").toUpperCase() || "N/A"} type="PACKING_LIST" />
+        return (
+          <StatusBadge
+            status={status?.replaceAll("_", " ").toUpperCase() || "N/A"}
+            type="PACKING_LIST"
+          />
+        )
       },
     },
     {
@@ -174,14 +181,18 @@ export const packingListColumns = (
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 p-0"
-                  // onClick={() => actions.onDelete(id)}
-                >
-                  <IconCloudDownload className="h-4 w-4 text-zinc-400 hover:text-zinc-100" />
-                </Button>
+                <span onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 p-0"
+                    disabled
+                    // onClick={() => actions.onDelete(id)}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <IconCloudDownload className="h-4 w-4 text-zinc-400 hover:text-zinc-100" />
+                  </Button>
+                </span>
               </TooltipTrigger>
               <TooltipContent>Download Packing List</TooltipContent>
             </Tooltip>

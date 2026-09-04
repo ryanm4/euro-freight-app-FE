@@ -35,4 +35,7 @@ export interface GOODS_RECEIVE_NOTE {
   updated_on?: string | null
   packing_lists?: PackingList[] | null
   gdns?: GDN[] | null
+  custom_document_status?: string | null
+  vehicle_number?: string | null
+  remarks?: string | null
 }

@@ -55,11 +55,11 @@ import { fetchPackingLists } from "@/lib/api/packing_lists"
 import { fetchWharfStaff } from "@/lib/api/wharf_staff"
 import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
-import { IconCalendarFilled, IconPlus, IconTrash } from "@tabler/icons-react"
+import { IconCalendarFilled, IconTrash } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
 import { format, isValid, parse } from "date-fns"
 import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 const DISPATCH_LOCATION_OPTIONS = [
   { label: "Airport – Katunayaka (Air)", value: "Katunayaka Airport" },
@@ -70,7 +70,7 @@ const DISPATCH_LOCATION_OPTIONS = [
   },
 ]
 
-const TRANSPORT_MODE_OPTIONS = ["FCL container", "Loose cargo"]
+const TRANSPORT_MODE_OPTIONS = ["FCL container", "Lorry"]
 
 const CONTAINER_SIZE_OPTIONS = ["20GP", "40GP", "40HC"]
 
@@ -82,6 +82,7 @@ const UOM_OPTIONS = ["cm", "m"]
 
 export default function GoodsDispatchNoteForm() {
   const router = useRouter()
+  const lengthInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
   const [isSaving, setIsSaving] = useState(false)
 
   const [date, setDate] = useState(() => format(new Date(), "yyyy-MM-dd"))
@@ -157,12 +158,12 @@ export default function GoodsDispatchNoteForm() {
     return data?.data?.filter((c: any) => c.type === UserRole.Forwarder) || []
   }, [data])
 
-  // Per-row helpers
   const addMeasurement = () => {
+    const newId = Date.now()
     setMeasurements((prev) => [
       ...prev,
       {
-        id: Date.now(),
+        id: newId,
         length: "",
         width: "",
         height: "",
@@ -170,6 +171,24 @@ export default function GoodsDispatchNoteForm() {
         uom: "cm",
       },
     ])
+    // wait for the new row to mount, then focus its Length input
+    requestAnimationFrame(() => {
+      lengthInputRefs.current[newId]?.focus()
+    })
+  }
+
+  const handleMeasurementKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    rowId: number
+  ) => {
+    if (e.key !== "Enter") return
+    e.preventDefault()
+
+    const isLastRow = measurements[measurements.length - 1]?.id === rowId
+
+    if (isLastRow) {
+      addMeasurement()
+    }
   }
 
   const removeMeasurement = (id: number) => {
@@ -974,13 +993,13 @@ export default function GoodsDispatchNoteForm() {
                 automatically.
               </p>
             </div>
-            <button
+            {/* <button
               onClick={addMeasurement}
               className="flex items-center gap-1.5 rounded-md border border-neutral-600 bg-neutral-800 px-3 py-1.5 text-xs text-zinc-100 transition-colors hover:bg-neutral-700"
             >
               <IconPlus size={13} />
               Add Measurement
-            </button>
+            </button> */}
           </div>
 
           <div className="space-y-3">
@@ -1003,6 +1022,7 @@ export default function GoodsDispatchNoteForm() {
                     onChange={(e) =>
                       updateMeasurement(row.id, "length", e.target.value)
                     }
+                    onKeyDown={(e) => handleMeasurementKeyDown(e, row.id)}
                     className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                   />
                 </div>
@@ -1021,6 +1041,7 @@ export default function GoodsDispatchNoteForm() {
                     onChange={(e) =>
                       updateMeasurement(row.id, "width", e.target.value)
                     }
+                    onKeyDown={(e) => handleMeasurementKeyDown(e, row.id)}
                     className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                   />
                 </div>
@@ -1039,44 +1060,10 @@ export default function GoodsDispatchNoteForm() {
                     onChange={(e) =>
                       updateMeasurement(row.id, "height", e.target.value)
                     }
+                    onKeyDown={(e) => handleMeasurementKeyDown(e, row.id)}
                     className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                   />
                 </div>
-
-                {/* Per Cartoon Volume — commented out per request, replaced by CBM below
-    <div className="flex flex-1 flex-col gap-1.5">
-      <Label
-        htmlFor={`per-carton-volume-${row.id}`}
-        className="text-xs font-medium text-foreground"
-      >
-        Per Cartoon Volume (m³)
-      </Label>
-      <Input
-        disabled
-        id={`per-carton-volume-${row.id}`}
-        value={getRowVolumeM3(row).toFixed(4)}
-        className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-      />
-    </div>
-    */}
-
-                {/* Calculated Volume — commented out per request, replaced by Volume below
-    <div className="flex flex-1 flex-col gap-1.5">
-      <Label
-        htmlFor={`calculated-volume-${row.id}`}
-        className="text-xs font-medium text-foreground"
-      >
-        Calculated Volume (m³)
-      </Label>
-      <Input
-        disabled
-        id={`calculated-volume-${row.id}`}
-        value={getRowCalculatedVolume(row).toFixed(4)}
-        className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-      />
-    </div>
-    */}
-
                 <div className="flex flex-1 flex-col gap-1.5">
                   <Label
                     htmlFor={`total-${row.id}`}
@@ -1091,6 +1078,7 @@ export default function GoodsDispatchNoteForm() {
                     onChange={(e) =>
                       updateMeasurement(row.id, "total", e.target.value)
                     }
+                    onKeyDown={(e) => handleMeasurementKeyDown(e, row.id)}
                     className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                   />
                 </div>

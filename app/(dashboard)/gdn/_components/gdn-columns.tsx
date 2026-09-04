@@ -15,7 +15,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react"
 import { ColumnDef } from "@tanstack/react-table"
-import { format } from "date-fns"
+import { formatInTimeZone } from "date-fns-tz"
 import { useRouter } from "next/navigation"
 
 interface GoodsDeliverNoteTableActions {
@@ -80,6 +80,11 @@ export const goodsDeliverNoteColumns = (
       },
     },
     {
+      accessorKey: "grn_no",
+      header: "GRN No",
+      cell: ({ row }) => <div>{row.original.grn_no ?? "N/A"}</div>,
+    },
+    {
       accessorKey: "forwarder_name",
       header: "Forwarder",
       cell: ({ row }) => <div>{row.original.forwarder_name ?? "N/A"}</div>,
@@ -129,8 +134,19 @@ export const goodsDeliverNoteColumns = (
       ),
       cell: ({ row }) => {
         const date = row.original.date
-        return date ? format(new Date(date), "dd/MMM/yy HH:mm") : "N/A"
+        return (
+          <div className="px-3">
+            {date
+              ? formatInTimeZone(new Date(date), "UTC", "dd/MMM/yy")
+              : "N/A"}
+          </div>
+        )
       },
+    },
+    {
+      accessorKey: "delivered_to",
+      header: "Delivered To",
+      cell: ({ row }) => <div>{row.original.delivered_to ?? "N/A"}</div>,
     },
     {
       accessorKey: "vehicle_no",
@@ -141,7 +157,12 @@ export const goodsDeliverNoteColumns = (
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => (
-        <StatusBadge status={row.original.status?.replaceAll("_", " ").toUpperCase() || "N/A"} type="GDN" />
+        <StatusBadge
+          status={
+            row.original.status?.replaceAll("_", " ").toUpperCase() || "N/A"
+          }
+          type="GDN"
+        />
       ),
     },
     {

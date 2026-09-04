@@ -74,7 +74,7 @@ const DISPATCH_LOCATION_OPTIONS = [
   },
 ]
 
-const TRANSPORT_MODE_OPTIONS = ["FCL container", "Loose cargo"]
+const TRANSPORT_MODE_OPTIONS = ["FCL container", "Lorry"]
 
 const CONTAINER_SIZE_OPTIONS = ["20GP", "40GP", "40HC"]
 

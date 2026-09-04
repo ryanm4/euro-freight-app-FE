@@ -36,4 +36,6 @@ export interface GOODS_DELIVER_NOTE {
   updated_by?: string | null
   updated_on?: string | null
   packing_lists?: PACKING_LIST_REF[]
+  delivered_to?: string | null
+  grn_no?: string | null
 }

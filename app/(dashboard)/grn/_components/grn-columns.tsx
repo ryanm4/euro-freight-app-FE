@@ -172,6 +172,18 @@ export const goodsReceiveNoteColumns = (
       cell: ({ row }) => <div>{row.original.quantity ?? "N/A"}</div>,
     },
     {
+      accessorKey: "custom_document_status",
+      header: "Customs Document Status",
+      cell: ({ row }) => (
+        <div>{row.original.custom_document_status ?? "N/A"}</div>
+      ),
+    },
+    {
+      accessorKey: "vehicle_number",
+      header: "Vehicle Number",
+      cell: ({ row }) => <div>{row.original.vehicle_number ?? "N/A"}</div>,
+    },
+    {
       accessorKey: "shipping_mode",
       header: "Shipping Mode",
       cell: ({ row }) => {
@@ -184,8 +196,18 @@ export const goodsReceiveNoteColumns = (
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => (
-        <StatusBadge status={row.original.status?.replaceAll("_", " ").toUpperCase() || "N/A"} type="GRN" />
+        <StatusBadge
+          status={
+            row.original.status?.replaceAll("_", " ").toUpperCase() || "N/A"
+          }
+          type="GRN"
+        />
       ),
+    },
+    {
+      accessorKey: "remarks",
+      header: "Remarks",
+      cell: ({ row }) => <div>{row.original.remarks ?? "N/A"}</div>,
     },
     {
       id: "actions",

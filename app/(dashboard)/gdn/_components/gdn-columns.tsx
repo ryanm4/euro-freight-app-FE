@@ -80,6 +80,11 @@ export const goodsDeliverNoteColumns = (
       },
     },
     {
+      accessorKey: "grn_no",
+      header: "GRN No",
+      cell: ({ row }) => <div>{row.original.grn_no ?? "N/A"}</div>,
+    },
+    {
       accessorKey: "forwarder_name",
       header: "Forwarder",
       cell: ({ row }) => <div>{row.original.forwarder_name ?? "N/A"}</div>,
@@ -133,6 +138,11 @@ export const goodsDeliverNoteColumns = (
       },
     },
     {
+      accessorKey: "delivered_to",
+      header: "Delivered To",
+      cell: ({ row }) => <div>{row.original.delivered_to ?? "N/A"}</div>,
+    },
+    {
       accessorKey: "vehicle_no",
       header: "Vehicle No",
       cell: ({ row }) => <div>{row.original.vehicle_no ?? "N/A"}</div>,
@@ -141,7 +151,12 @@ export const goodsDeliverNoteColumns = (
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => (
-        <StatusBadge status={row.original.status?.replaceAll("_", " ").toUpperCase() || "N/A"} type="GDN" />
+        <StatusBadge
+          status={
+            row.original.status?.replaceAll("_", " ").toUpperCase() || "N/A"
+          }
+          type="GDN"
+        />
       ),
     },
     {

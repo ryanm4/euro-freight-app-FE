@@ -144,9 +144,9 @@ export const goodsDeliverNoteColumns = (
       },
     },
     {
-      accessorKey: "delivered_to",
+      accessorKey: "dispatch_location",
       header: "Delivered To",
-      cell: ({ row }) => <div>{row.original.delivered_to ?? "N/A"}</div>,
+      cell: ({ row }) => <div>{row.original.dispatch_location ?? "N/A"}</div>,
     },
     {
       accessorKey: "vehicle_no",

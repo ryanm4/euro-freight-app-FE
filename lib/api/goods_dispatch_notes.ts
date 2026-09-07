@@ -4,8 +4,11 @@ export interface Measurement {
   height_cm: number
   per_carton_volume_m3: number
   calculated_volume_m3: number
-  total: null
+  total: number
   packages: Number
+  uom: string
+  cbm: number
+  volume: number
 }
 export interface CreateGoodsDispatchNotePayload {
   client_id: number
@@ -47,9 +50,12 @@ export type UpdateGoodsDispatchNotePayload = Partial<
   Omit<CreateGoodsDispatchNotePayload, "created_by">
 >
 
-export async function fetchGDNs() {
-  const res = await fetch("/api/goods_dispatch_notes")
-  if (!res.ok) throw new Error("Failed to fetch goods receive notes")
+export async function fetchGDNs(status?: string) {
+  const url = status
+    ? `/api/goods_dispatch_notes?status=${encodeURIComponent(status)}`
+    : "/api/goods_dispatch_notes"
+  const res = await fetch(url)
+  if (!res.ok) throw new Error("Failed to fetch goods dispatch notes")
   return res.json()
 }
 

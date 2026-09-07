@@ -38,4 +38,10 @@ export interface GOODS_DELIVER_NOTE {
   packing_lists?: PACKING_LIST_REF[]
   delivered_to?: string | null
   grn_no?: string | null
+  total_quantity?: number | null
+  measurements?: {
+    length: number
+    width: number
+    height: number
+  }[]
 }

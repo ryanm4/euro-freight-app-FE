@@ -20,7 +20,14 @@ interface MeasurementRow {
   height: string
   total: string
   uom: string
+  cbm: string
+  volume: string
 }
+
+type MeasurementInput = Pick<
+  MeasurementRow,
+  "length" | "width" | "height" | "total" | "uom"
+>
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -112,10 +119,21 @@ export default function GoodsDispatchNoteForm() {
     useState("")
   const [quantityLoaded, setQuantityLoaded] = useState("")
 
+  const EMPTY_DRAFT = {
+    length: "",
+    width: "",
+    height: "",
+    total: "",
+    uom: "cm",
+  }
+
   // Shipment Measurements — repeatable rows
-  const [measurements, setMeasurements] = useState<MeasurementRow[]>([
-    { id: 1, length: "", width: "", height: "", total: "", uom: "cm" },
-  ])
+  const [measurements, setMeasurements] = useState<MeasurementRow[]>([])
+  console.log("measurements", measurements)
+  // The single top entry row the user is currently filling in
+  const [draft, setDraft] = useState(EMPTY_DRAFT)
+
+  const draftLengthRef = useRef<HTMLInputElement | null>(null)
 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
 
@@ -169,6 +187,8 @@ export default function GoodsDispatchNoteForm() {
         height: "",
         total: "",
         uom: "cm",
+        cbm: "",
+        volume: "",
       },
     ])
     // wait for the new row to mount, then focus its Length input
@@ -191,13 +211,9 @@ export default function GoodsDispatchNoteForm() {
     }
   }
 
-  const removeMeasurement = (id: number) => {
-    setMeasurements((prev) => prev.filter((m) => m.id !== id))
-  }
-
   const updateMeasurement = (
     id: number,
-    field: "length" | "width" | "height" | "total" | "uom",
+    field: "length" | "width" | "height" | "total" | "uom" | "cbm" | "volume",
     value: string
   ) => {
     setMeasurements((prev) =>
@@ -205,7 +221,7 @@ export default function GoodsDispatchNoteForm() {
     )
   }
 
-  const getRowVolumeM3 = (row: MeasurementRow) => {
+  const getRowVolumeM3 = (row: MeasurementInput) => {
     const l = Number(row.length)
     const w = Number(row.width)
     const h = Number(row.height)
@@ -213,28 +229,28 @@ export default function GoodsDispatchNoteForm() {
 
     if (row.uom === "m") {
       // Already in meters — straight multiplication gives m³
-      return l * w * h * packages
+      return (l * w * h * packages) / 6000
     }
 
     // cm — convert to m³
     return ((l * w * h) / 1_000_000) * packages
   }
 
-  const getRowCbm = (row: MeasurementRow) => {
+  const getRowCbm = (row: MeasurementInput) => {
     return getRowVolumeM3(row)
   }
 
-  const getRowTotalVolume = (row: MeasurementRow) => {
+  const getRowTotalVolume = (row: MeasurementInput) => {
     return getRowCbm(row) * Number(row.total)
   }
 
-  const getRowCalculatedVolume = (row: MeasurementRow) => {
+  const getRowCalculatedVolume = (row: MeasurementInput) => {
     return getRowVolumeM3(row) * Number(quantityLoaded)
   }
 
   const totalCalculatedVolume = useMemo(() => {
     return measurements.reduce((sum, row) => sum + getRowTotalVolume(row), 0)
-  }, [measurements])
+  }, [measurements, quantityLoaded])
 
   const toggleRow = (id: number) => {
     setSelectedRows((prev) => {
@@ -410,8 +426,11 @@ export default function GoodsDispatchNoteForm() {
           height_cm: Number(m.height),
           per_carton_volume_m3: getRowVolumeM3(m),
           calculated_volume_m3: getRowCalculatedVolume(m),
-          total: null,
+          total: Number(m.total),
           packages: Number(m.total),
+          uom: m.uom,
+          cbm: Number(m.cbm),
+          volume: Number(m.volume),
         })),
       })
       router.push("/gdn")
@@ -423,6 +442,58 @@ export default function GoodsDispatchNoteForm() {
     }
   }
 
+  const updateDraftField = (
+    field: "length" | "width" | "height" | "total" | "uom",
+    value: string
+  ) => {
+    setDraft((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const isDraftValid = useMemo(() => {
+    return (
+      draft.length !== "" &&
+      draft.width !== "" &&
+      draft.height !== "" &&
+      draft.total !== "" &&
+      Number(draft.length) > 0 &&
+      Number(draft.width) > 0 &&
+      Number(draft.height) > 0 &&
+      Number(draft.total) > 0
+    )
+  }, [draft])
+
+  const handleAddMeasurement = () => {
+    if (!isDraftValid) return
+
+    const cbm = getRowCbm(draft)
+    const volume = getRowTotalVolume(draft)
+
+    const newRow: MeasurementRow = {
+      id: Date.now(),
+      ...draft,
+      cbm: cbm.toFixed(4),
+      volume: volume.toFixed(4),
+    }
+
+    setMeasurements((prev) => [...prev, newRow])
+    setDraft(EMPTY_DRAFT)
+
+    // send focus back to Length for rapid entry, VB6-grid style
+    requestAnimationFrame(() => {
+      draftLengthRef.current?.focus()
+    })
+  }
+
+  const handleDraftKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return
+    e.preventDefault()
+    handleAddMeasurement()
+  }
+
+  const removeMeasurement = (id: number) => {
+    setMeasurements((prev) => prev.filter((m) => m.id !== id))
+  }
+
   useEffect(() => {
     setDriverNic(selectedDriver?.nic_no ?? "")
     setDriverContactNo(selectedDriver?.contact_no ?? "")
@@ -431,6 +502,27 @@ export default function GoodsDispatchNoteForm() {
   useEffect(() => {
     setWharfStaffContactNo(selectedWharfStaff?.contact_no ?? "")
   }, [selectedWharfStaff])
+
+  useEffect(() => {
+    setMeasurements((prev) =>
+      prev.map((row) => {
+        const cbm = getRowCbm(row)
+        const volume = getRowTotalVolume(row)
+
+        const cbmStr = isFinite(cbm) ? cbm.toFixed(4) : ""
+        const volumeStr = isFinite(volume) ? volume.toFixed(4) : ""
+
+        // avoid unnecessary re-renders / update loops
+        if (row.cbm === cbmStr && row.volume === volumeStr) return row
+
+        return { ...row, cbm: cbmStr, volume: volumeStr }
+      })
+    )
+  }, [
+    measurements
+      .map((m) => `${m.length}-${m.width}-${m.height}-${m.total}-${m.uom}`)
+      .join("|"),
+  ])
 
   return (
     <div className="mx-auto space-y-5">
@@ -989,162 +1081,222 @@ export default function GoodsDispatchNoteForm() {
                 Shipment Measurements
               </h2>
               <p className="mt-0.5 text-xs text-zinc-500">
-                Add a row per carton dimension type. Volumes are calculated
-                automatically.
+                Enter a carton dimension set, then click Add (or hit Enter) to
+                add it to the list below.
               </p>
             </div>
-            {/* <button
-              onClick={addMeasurement}
-              className="flex items-center gap-1.5 rounded-md border border-neutral-600 bg-neutral-800 px-3 py-1.5 text-xs text-zinc-100 transition-colors hover:bg-neutral-700"
-            >
-              <IconPlus size={13} />
-              Add Measurement
-            </button> */}
           </div>
 
-          <div className="space-y-3">
-            {measurements.map((row) => (
-              <div
-                key={row.id}
-                className="flex items-end gap-2 rounded-md border border-neutral-800 bg-neutral-950/40 p-3"
-              >
-                <div className="flex flex-1 flex-col gap-1.5">
-                  <Label
-                    htmlFor={`length-${row.id}`}
-                    className="text-xs font-medium text-foreground"
-                  >
-                    Cartoon Dimensions - L ({row.uom})
-                  </Label>
-                  <Input
-                    id={`length-${row.id}`}
-                    placeholder="Length"
-                    value={row.length}
-                    onChange={(e) =>
-                      updateMeasurement(row.id, "length", e.target.value)
-                    }
-                    onKeyDown={(e) => handleMeasurementKeyDown(e, row.id)}
-                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                  />
-                </div>
-
-                <div className="flex flex-1 flex-col gap-1.5">
-                  <Label
-                    htmlFor={`width-${row.id}`}
-                    className="text-xs font-medium text-foreground"
-                  >
-                    Cartoon Dimensions - W ({row.uom})
-                  </Label>
-                  <Input
-                    id={`width-${row.id}`}
-                    placeholder="Width"
-                    value={row.width}
-                    onChange={(e) =>
-                      updateMeasurement(row.id, "width", e.target.value)
-                    }
-                    onKeyDown={(e) => handleMeasurementKeyDown(e, row.id)}
-                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                  />
-                </div>
-
-                <div className="flex flex-1 flex-col gap-1.5">
-                  <Label
-                    htmlFor={`height-${row.id}`}
-                    className="text-xs font-medium text-foreground"
-                  >
-                    Cartoon Dimensions - H ({row.uom})
-                  </Label>
-                  <Input
-                    id={`height-${row.id}`}
-                    placeholder="Height"
-                    value={row.height}
-                    onChange={(e) =>
-                      updateMeasurement(row.id, "height", e.target.value)
-                    }
-                    onKeyDown={(e) => handleMeasurementKeyDown(e, row.id)}
-                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                  />
-                </div>
-                <div className="flex flex-1 flex-col gap-1.5">
-                  <Label
-                    htmlFor={`total-${row.id}`}
-                    className="text-xs font-medium text-foreground"
-                  >
-                    Number of Packages
-                  </Label>
-                  <Input
-                    id={`total-${row.id}`}
-                    placeholder="Total Packages"
-                    value={row.total}
-                    onChange={(e) =>
-                      updateMeasurement(row.id, "total", e.target.value)
-                    }
-                    onKeyDown={(e) => handleMeasurementKeyDown(e, row.id)}
-                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                  />
-                </div>
-
-                <div className="flex flex-1 flex-col gap-1.5">
-                  <Label className="text-xs font-medium text-foreground">
-                    UOM
-                  </Label>
-                  <Select
-                    value={row.uom}
-                    onValueChange={(val) =>
-                      updateMeasurement(row.id, "uom", val)
-                    }
-                  >
-                    <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                      <SelectValue placeholder="UOM" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                      {UOM_OPTIONS.map((u) => (
-                        <SelectItem key={u} value={u}>
-                          {u}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex flex-1 flex-col gap-1.5">
-                  <Label
-                    htmlFor={`cbm-${row.id}`}
-                    className="text-xs font-medium text-foreground"
-                  >
-                    CBM (m³)
-                  </Label>
-                  <Input
-                    disabled
-                    id={`cbm-${row.id}`}
-                    value={getRowCbm(row).toFixed(4)}
-                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                  />
-                </div>
-
-                <div className="flex flex-1 flex-col gap-1.5">
-                  <Label
-                    htmlFor={`volume-${row.id}`}
-                    className="text-xs font-medium text-foreground"
-                  >
-                    Volume (m³)
-                  </Label>
-                  <Input
-                    disabled
-                    id={`volume-${row.id}`}
-                    value={getRowTotalVolume(row).toFixed(4)}
-                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                  />
-                </div>
-
-                <button
-                  onClick={() => removeMeasurement(row.id)}
-                  disabled={measurements.length === 1}
-                  className="mb-0.5 flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 p-2 text-zinc-400 transition-colors hover:bg-neutral-700 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
+          <div className="space-y-4">
+            {/* Entry row */}
+            <div className="flex items-end gap-2 rounded-md border border-neutral-800 bg-neutral-950/40 p-3">
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label
+                  htmlFor="draft-length"
+                  className="text-xs font-medium text-foreground"
                 >
-                  <IconTrash size={15} />
-                </button>
+                  L ({draft.uom})
+                </Label>
+                <Input
+                  ref={draftLengthRef}
+                  id="draft-length"
+                  placeholder="Length"
+                  value={draft.length}
+                  onChange={(e) => updateDraftField("length", e.target.value)}
+                  onKeyDown={handleDraftKeyDown}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
               </div>
-            ))}
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label
+                  htmlFor="draft-width"
+                  className="text-xs font-medium text-foreground"
+                >
+                  W ({draft.uom})
+                </Label>
+                <Input
+                  id="draft-width"
+                  placeholder="Width"
+                  value={draft.width}
+                  onChange={(e) => updateDraftField("width", e.target.value)}
+                  onKeyDown={handleDraftKeyDown}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label
+                  htmlFor="draft-height"
+                  className="text-xs font-medium text-foreground"
+                >
+                  H ({draft.uom})
+                </Label>
+                <Input
+                  id="draft-height"
+                  placeholder="Height"
+                  value={draft.height}
+                  onChange={(e) => updateDraftField("height", e.target.value)}
+                  onKeyDown={handleDraftKeyDown}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label
+                  htmlFor="draft-total"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Packages
+                </Label>
+                <Input
+                  id="draft-total"
+                  placeholder="Total Packages"
+                  value={draft.total}
+                  onChange={(e) => updateDraftField("total", e.target.value)}
+                  onKeyDown={handleDraftKeyDown}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  UOM
+                </Label>
+                <Select
+                  value={draft.uom}
+                  onValueChange={(val) => updateDraftField("uom", val)}
+                >
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="UOM" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {UOM_OPTIONS.map((u) => (
+                      <SelectItem key={u} value={u}>
+                        {u}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  CBM (m³)
+                </Label>
+                <Input
+                  disabled
+                  value={isDraftValid ? getRowCbm(draft).toFixed(4) : "0.0000"}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100"
+                />
+              </div>
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Volume (m³)
+                </Label>
+                <Input
+                  disabled
+                  value={
+                    isDraftValid
+                      ? getRowTotalVolume(draft).toFixed(4)
+                      : "0.0000"
+                  }
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100"
+                />
+              </div>
+
+              <Button
+                onClick={handleAddMeasurement}
+                disabled={!isDraftValid}
+                className="mb-0.5 h-9 rounded-md"
+              >
+                Add
+              </Button>
+            </div>
+
+            {/* Committed rows table */}
+            <div className="overflow-x-auto rounded-md border border-neutral-700">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-neutral-700 hover:bg-transparent">
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      L
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      W
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      H
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Packages
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      UOM
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      CBM (m³)
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Volume (m³)
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {measurements.length ? (
+                    measurements.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        className="border-neutral-800 hover:bg-neutral-800/40"
+                      >
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.length}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.width}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.height}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.total}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.uom}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.cbm}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.volume}
+                        </TableCell>
+                        <TableCell>
+                          <button
+                            onClick={() => removeMeasurement(row.id)}
+                            className="flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 p-2 text-zinc-400 transition-colors hover:bg-neutral-700 hover:text-zinc-100"
+                          >
+                            <IconTrash size={15} />
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={8}
+                        className="h-20 text-center text-sm text-zinc-500"
+                      >
+                        No measurements added yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
 
             <div className="flex justify-end border-t border-neutral-800 pt-3">
               <div className="text-xs text-zinc-400">

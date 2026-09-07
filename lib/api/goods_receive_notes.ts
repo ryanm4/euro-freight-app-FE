@@ -8,17 +8,28 @@ export async function fetchGRNs(status?: string) {
 }
 
 export async function createGoodsReceiveNote(data: any) {
+  debugger
   const payload = {
-    client_id: parseInt(data.client),
-    manufacture_id: parseInt(data.manufacturer),
-    forwarder_id: parseInt(data.forwarder),
-    recipient_id: parseInt(data.recipient),
-    recipient_contact: data.recipientContact,
+    client_id: parseInt(data.client_id),
+    manufacture_id: parseInt(data.manufacture_id),
+    forwarder_id: parseInt(data.forwarder_id),
+    recipient_id: parseInt(data.recipient_id),
+    recipient_contact: data.recipient_contact,
     date: data.date,
     quantity: parseInt(data.quantity),
     status: data.status,
     created_by: "admin",
-    packing_list_ids: data.selectedRows.map((r: any) => parseInt(r)),
+    gdn_id: parseInt(data.gdn_id),
+    measurements: data.measurements.map((m: any) => ({
+      length_cm: m.length_cm,
+      width_cm: m.width_cm,
+      height_cm: m.height_cm,
+      packages: m.packages,
+      total: m.total,
+      uom: m.uom,
+      cbm: m.cbm,
+      volume: m.volume,
+    })),
   }
 
   const res = await fetch("/api/goods_receive_notes", {

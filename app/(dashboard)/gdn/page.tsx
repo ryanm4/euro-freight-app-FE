@@ -27,7 +27,7 @@ export default function GDNPage() {
     // error,
   } = useQuery({
     queryKey: ["gdns"],
-    queryFn: fetchGDNs,
+    queryFn: () => fetchGDNs(),
   })
 
   const actions = {

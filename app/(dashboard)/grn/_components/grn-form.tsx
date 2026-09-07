@@ -33,28 +33,27 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { fetchClients } from "@/lib/api/clients"
+import { fetchGDNs } from "@/lib/api/goods_dispatch_notes"
 import { createGoodsReceiveNote } from "@/lib/api/goods_receive_notes"
-import { fetchPackingLists } from "@/lib/api/packing_lists"
 import { fetchRecipients } from "@/lib/api/recipients"
 import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
-import { IconCalendarFilled } from "@tabler/icons-react"
+import { GOODS_DELIVER_NOTE } from "@/modules/gdn/types"
+import { IconCalendarFilled, IconTrash } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
 import { format, isValid, parse } from "date-fns"
 import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 
-interface PackingListRow {
+interface ActualMeasurementRow {
   id: number
-  packingListNo: string
-  documentDate: string
-  shipTo: string
-  shippingMode: string
-  totalCartons: number
-  totalCbm: string
-  totalNetWeightKg: string
-  totalQuantity: number
-  totalVolume: string
+  length: string
+  width: string
+  height: string
+  total: string
+  uom: string
+  cbm: string
+  volume: string
 }
 
 export default function GoodsReceiveNoteForm() {
@@ -76,6 +75,22 @@ export default function GoodsReceiveNoteForm() {
 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
 
+  const ACTUAL_UOM_OPTIONS = ["cm", "m"]
+
+  const EMPTY_ACTUAL_DRAFT = {
+    length: "",
+    width: "",
+    height: "",
+    total: "",
+    uom: "cm",
+  }
+
+  const [actualMeasurements, setActualMeasurements] = useState<
+    ActualMeasurementRow[]
+  >([])
+  const [actualDraft, setActualDraft] = useState(EMPTY_ACTUAL_DRAFT)
+  const actualDraftLengthRef = useRef<HTMLInputElement | null>(null)
+
   const {
     data,
     isLoading,
@@ -85,9 +100,9 @@ export default function GoodsReceiveNoteForm() {
     queryFn: fetchClients,
   })
 
-  const { data: packingLists } = useQuery({
-    queryKey: ["packingLists", "GDN_OPEN"],
-    queryFn: () => fetchPackingLists("GDN_OPEN"),
+  const { data: gdns } = useQuery({
+    queryKey: ["gdns", "completed"],
+    queryFn: () => fetchGDNs("completed"),
   })
 
   const { data: recipientsList } = useQuery({
@@ -114,24 +129,65 @@ export default function GoodsReceiveNoteForm() {
     return data?.data?.filter((c: any) => c.type === UserRole.Supplier) || []
   }, [data])
 
-  const rows: PackingListRow[] = useMemo(() => {
+  const rows: GOODS_DELIVER_NOTE[] = useMemo(() => {
     return (
-      packingLists?.data?.map((pl: any) => ({
-        id: pl.packing_list_id,
-        packingListNo: pl.packing_list_no ?? "",
-        documentDate: pl.document_date
-          ? format(new Date(pl.document_date), "dd/MMM/yy HH:mm")
-          : "N/A",
-        shipTo: pl.ship_to ?? "",
-        shippingMode: pl.shipping_mode ?? "",
-        totalCartons: pl.total_cartons ?? 0,
-        totalCbm: pl.total_cbm ?? "0",
-        totalNetWeightKg: pl.total_net_weight_kg ?? "0",
-        totalQuantity: pl.total_quantity ?? 0,
-        totalVolume: pl.total_volume ?? "0",
-      })) ?? []
+      gdns?.data?.map((gdn: any) => {
+        const primaryPackingList = gdn.packing_lists?.[0] ?? null
+
+        // If a GDN can have multiple packing lists, sum quantities across all of them
+        const totalQuantity =
+          gdn.packing_lists?.reduce(
+            (sum: number, pl: any) => sum + (pl.total_quantity ?? 0),
+            0
+          ) ?? null
+
+        // Derive total CBM/volume from measurements if not provided directly
+        const totalCbm =
+          gdn.measurements?.reduce(
+            (sum: number, m: any) => sum + (m.cbm ?? 0),
+            0
+          ) ?? null
+
+        const totalVolume =
+          gdn.measurements?.reduce(
+            (sum: number, m: any) => sum + (m.volume ?? 0),
+            0
+          ) ?? null
+
+        return {
+          id: gdn.id,
+          gdn_no: gdn.gdn_no ?? "N/A",
+          client_name: gdn.client_name ?? "N/A",
+          manufacture_name: gdn.manufacture_name ?? "N/A",
+          forwarder_name: gdn.forwarder_name ?? "N/A",
+          date: gdn.date ? format(new Date(gdn.date), "dd/MMM/yy") : "N/A",
+          cartoons: gdn.cartoons ?? "N/A",
+          actual_cartoons: gdn.actual_cartoons ?? "N/A",
+          gross_weight: gdn.gross_weight ?? "N/A",
+          actual_gross_weight: gdn.actual_gross_weight ?? "N/A",
+          gross_volume: gdn.gross_volume ?? "N/A",
+          actual_gross_volume: gdn.actual_gross_volume ?? "N/A",
+          vehicle_no: gdn.vehicle_no ?? "N/A",
+          driver_name: gdn.driver_name ?? null,
+          wharf_staff_name: gdn.wharf_staff_name ?? null,
+          dispatch_location: gdn.dispatch_location ?? null,
+          transport_mode: gdn.transport_mode ?? null,
+          container_no: gdn.container_no ?? null,
+          container_size: gdn.container_size ?? null,
+          primary_seal_no: gdn.primary_seal_no ?? null,
+          secondary_seal_no: gdn.secondary_seal_no ?? null,
+          custom_doc_status: gdn.custom_doc_status ?? null,
+          status: gdn.status ?? null,
+          shipping_mode: primaryPackingList?.shipping_mode ?? "N/A",
+          packing_list_no: primaryPackingList?.packing_list_no ?? "N/A",
+          total_quantity: totalQuantity ?? "N/A",
+          total_cbm: totalCbm ?? "N/A",
+          total_volume: totalVolume ?? "N/A",
+          measurements: gdn.measurements ?? [],
+        }
+      }) ?? []
     )
-  }, [packingLists])
+  }, [gdns])
 
   const selectedPackingListRows = useMemo(
     () => rows.filter((r) => selectedRows.includes(r.id)),
@@ -140,55 +196,14 @@ export default function GoodsReceiveNoteForm() {
 
   console.log("selectedPackingListRows", selectedPackingListRows)
 
-  const lockedShippingMode = useMemo(() => {
-    return selectedPackingListRows[0]?.shippingMode ?? null
-  }, [selectedPackingListRows])
-
-  const totalCartonCount = useMemo(
-    () =>
-      selectedRows.reduce((accumulator, id) => {
-        const packingList = packingLists?.data?.find(
-          (pl: any) => pl.packing_list_id === id
-        )
-        return accumulator + (packingList?.total_cartons ?? 0)
-      }, 0),
-    [selectedRows, packingLists]
-  )
-
-  const totalVolume = useMemo(
-    () =>
-      selectedRows.reduce((accumulator, id) => {
-        const packingList = packingLists?.data?.find(
-          (pl: any) => pl.packing_list_id === id
-        )
-
-        return accumulator + Number(packingList?.total_volume ?? 0)
-      }, 0),
-    [selectedRows, packingLists]
-  )
-
-  const totalGrossWeight = useMemo(
-    () =>
-      selectedRows.reduce((accumulator, id) => {
-        const packingList = packingLists?.data?.find(
-          (pl: any) => pl.packing_list_id === id
-        )
-
-        return accumulator + Number(packingList?.total_gross_weight_kg ?? 0)
-      }, 0),
-    [selectedRows, packingLists]
-  )
-
-  const quantity = useMemo(
-    () =>
-      selectedRows.reduce((accumulator, id) => {
-        const packingList = packingLists?.data?.find(
-          (pl: any) => pl.packing_list_id === id
-        )
-        return accumulator + Number(packingList?.total_quantity ?? 0)
-      }, 0),
-    [selectedRows, packingLists]
-  )
+  // const quantity = useMemo(
+  //   () =>
+  //     selectedRows.reduce((accumulator, id) => {
+  //       const gdn = gdns?.data?.find((pl: any) => pl.packing_list_id === id)
+  //       return accumulator + Number(gdn?.total_quantity ?? 0)
+  //     }, 0),
+  //   [selectedRows, gdns]
+  // )
 
   const toggleRow = (id: number) => {
     setSelectedRows((prev) =>
@@ -196,23 +211,157 @@ export default function GoodsReceiveNoteForm() {
     )
   }
 
+  const getActualRowVolumeM3 = (row: {
+    length: string
+    width: string
+    height: string
+    total: string
+    uom: string
+  }) => {
+    const l = Number(row.length)
+    const w = Number(row.width)
+    const h = Number(row.height)
+    const packages = Number(row.total)
+
+    if (row.uom === "m") {
+      return (l * w * h * packages) / 6000
+    }
+    return ((l * w * h) / 1_000_000) * packages
+  }
+
+  const getActualRowCbm = getActualRowVolumeM3
+
+  const getActualRowTotalVolume = (row: {
+    length: string
+    width: string
+    height: string
+    total: string
+    uom: string
+  }) => {
+    return getActualRowCbm(row) * Number(row.total)
+  }
+
+  const totalActualVolume = useMemo(() => {
+    return actualMeasurements.reduce(
+      (sum: number, row: any) => sum + getActualRowTotalVolume(row),
+      0
+    )
+  }, [actualMeasurements])
+
+  const updateActualDraftField = (
+    field: "length" | "width" | "height" | "total" | "uom",
+    value: string
+  ) => {
+    setActualDraft((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const isActualDraftValid = useMemo(() => {
+    return (
+      actualDraft.length !== "" &&
+      actualDraft.width !== "" &&
+      actualDraft.height !== "" &&
+      actualDraft.total !== "" &&
+      Number(actualDraft.length) > 0 &&
+      Number(actualDraft.width) > 0 &&
+      Number(actualDraft.height) > 0 &&
+      Number(actualDraft.total) > 0
+    )
+  }, [actualDraft])
+
+  const handleAddActualMeasurement = () => {
+    if (!isActualDraftValid) return
+
+    const cbm = getActualRowCbm(actualDraft)
+    const volume = getActualRowTotalVolume(actualDraft)
+
+    const newRow: ActualMeasurementRow = {
+      id: Date.now(),
+      ...actualDraft,
+      cbm: cbm.toFixed(4),
+      volume: volume.toFixed(4),
+    }
+
+    setActualMeasurements((prev: any[]) => [...prev, newRow])
+    setActualDraft(EMPTY_ACTUAL_DRAFT)
+
+    requestAnimationFrame(() => {
+      actualDraftLengthRef.current?.focus()
+    })
+  }
+
+  const handleActualDraftKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (e.key !== "Enter") return
+    e.preventDefault()
+    handleAddActualMeasurement()
+  }
+
+  const removeActualMeasurement = (id: number) => {
+    setActualMeasurements((prev: any[]) => prev.filter((m) => m.id !== id))
+  }
+
   const handleSave = async () => {
+    const selectedGdn = rows.find((row) => row.id === selectedRows[0])
+
+    if (!client) {
+      alert("Please select a Client.")
+      return
+    }
+    if (!manufacturer) {
+      alert("Please select a Manufacturer.")
+      return
+    }
+    if (!forwarder) {
+      alert("Please select a Forwarder.")
+      return
+    }
+    if (!recipient) {
+      alert("Please select a Recipient.")
+      return
+    }
+    if (!date) {
+      alert("Please select a Date.")
+      return
+    }
+    if (!selectedGdn) {
+      alert("Please select a GDN.")
+      return
+    }
+    if (!actualMeasurements.length) {
+      alert("Please add at least one actual measurement.")
+      return
+    }
+
     try {
       setIsSaving(true)
+
       await createGoodsReceiveNote({
-        client,
-        manufacturer,
-        forwarder,
-        recipient,
-        recipientContact,
+        client_id: Number(client),
+        manufacture_id: Number(manufacturer),
+        forwarder_id: Number(forwarder),
+        recipient_id: Number(recipient),
+        recipient_contact: recipientContact,
+        date: `${date} 00:00:00`,
+        quantity: Number(selectedGdn.total_quantity) || 0,
         status,
-        date,
-        quantity,
-        selectedRows,
+        created_by: "admin", // TODO: replace with actual logged-in user
+        gdn_id: selectedGdn.id,
+        measurements: actualMeasurements.map((m) => ({
+          length_cm: Number(m.length),
+          width_cm: Number(m.width),
+          height_cm: Number(m.height),
+          packages: Number(m.total),
+          total: Number(m.total),
+          uom: m.uom.toUpperCase(),
+          cbm: Number(m.cbm),
+          volume: Number(m.volume),
+        })),
       })
       router.push("/grn")
     } catch (err) {
       console.error(err)
+      alert("Failed to save goods receive note.")
     } finally {
       setIsSaving(false)
     }
@@ -444,12 +593,12 @@ export default function GoodsReceiveNoteForm() {
                   htmlFor="quantity"
                   className="text-xs font-medium text-foreground"
                 >
-                  Quantity
+                  Total Pieces
                 </Label>
                 <Input
                   id="quantity"
                   placeholder="Enter Quantity"
-                  value={quantity}
+                  value={selectedPackingListRows[0]?.total_quantity ?? 0}
                   disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
@@ -464,7 +613,7 @@ export default function GoodsReceiveNoteForm() {
                 <Input
                   id="total-carton-count"
                   placeholder="Enter Total Carton Count"
-                  value={totalCartonCount}
+                  value={selectedPackingListRows[0]?.cartoons ?? 0}
                   disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
@@ -479,7 +628,7 @@ export default function GoodsReceiveNoteForm() {
                 <Input
                   id="total-volume"
                   placeholder="Enter Total Volume"
-                  value={totalVolume}
+                  value={selectedPackingListRows[0]?.gross_volume ?? 0}
                   disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
@@ -494,7 +643,7 @@ export default function GoodsReceiveNoteForm() {
                 <Input
                   id="total-gross-weight"
                   placeholder="Enter Total Gross Weight"
-                  value={totalGrossWeight}
+                  value={selectedPackingListRows[0]?.gross_weight ?? 0}
                   disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
@@ -506,10 +655,10 @@ export default function GoodsReceiveNoteForm() {
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
             <h2 className="text-sm font-semibold text-zinc-100">
-              Available Packing Lists
+              Available GDNs
             </h2>
             <p className="mt-0.5 text-xs text-zinc-500">
-              Select from the available packing lists to associate with this
+              Select from the available GDNs to associate with this
             </p>
           </div>
 
@@ -519,31 +668,31 @@ export default function GoodsReceiveNoteForm() {
                 <TableHeader>
                   <TableRow className="border-neutral-700 hover:bg-transparent">
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Packing List No
+                      Cartons
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Date
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Ship To
+                      Vehicle No
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Shipping Mode
+                      Transport Mode
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Total Cartons
+                      Container No
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Total CBM
+                      Gross Weight
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Total Net Weight(kg)
+                      Actual Gross Weight
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Total Quantity
+                      Gross Volume
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Total Volume
+                      Actual Gross Volume
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Actions
@@ -558,37 +707,36 @@ export default function GoodsReceiveNoteForm() {
                         className="border-neutral-800 hover:bg-neutral-800/40"
                       >
                         <TableCell className="text-sm text-zinc-100">
-                          {row.packingListNo}
+                          {row.cartoons}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.documentDate}
+                          {row.date}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.shipTo}
+                          {row.vehicle_no}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.shippingMode}
+                          {row.transport_mode ?? "N/A"}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.totalCartons}
+                          {row.container_no ?? "N/A"}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.totalCbm}
+                          {row.gross_weight}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.totalNetWeightKg}
+                          {row.actual_gross_weight}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.totalQuantity}
+                          {row.gross_volume}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.totalVolume}
+                          {row.actual_gross_volume}
                         </TableCell>
                         <TableCell>
                           {(() => {
                             const isDisabled =
-                              !!lockedShippingMode &&
-                              row.shippingMode !== lockedShippingMode &&
+                              selectedRows.length === 1 &&
                               !selectedRows.includes(row.id)
 
                             const checkboxEl = (
@@ -612,11 +760,8 @@ export default function GoodsReceiveNoteForm() {
                                     </span>
                                   </TooltipTrigger>
                                   <TooltipContent className="border-neutral-700 bg-[#0A0A0A] text-xs text-zinc-100">
-                                    Shipping Mode locked to{" "}
-                                    {/* <span className="font-medium"> */}
-                                    {lockedShippingMode}
-                                    {/* </span> */}. Deselect all rows to switch
-                                    modes.
+                                    Row already selected. Deselect the current
+                                    row to select a different one.
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -628,7 +773,7 @@ export default function GoodsReceiveNoteForm() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={9}
+                        colSpan={10}
                         className="h-24 text-center text-sm text-zinc-500"
                       >
                         No results.
@@ -637,6 +782,354 @@ export default function GoodsReceiveNoteForm() {
                   )}
                 </TableBody>
               </Table>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              GDN Measurements
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Total quantities, volumes, and weights derived from the selected
+              GDN
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {selectedRows.length === 1 ? (
+              (() => {
+                const selectedGdn = rows.find(
+                  (row) => row.id === selectedRows[0]
+                )
+                const measurements = selectedGdn?.measurements ?? []
+
+                if (!measurements.length) {
+                  return (
+                    <p className="text-sm text-zinc-500">
+                      No measurements available for this GDN.
+                    </p>
+                  )
+                }
+
+                return (
+                  <div className="overflow-x-auto rounded-md border border-neutral-700">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-neutral-700 hover:bg-transparent">
+                          <TableHead className="text-xs font-medium text-zinc-400">
+                            Packages
+                          </TableHead>
+                          <TableHead className="text-xs font-medium text-zinc-400">
+                            Length (cm)
+                          </TableHead>
+                          <TableHead className="text-xs font-medium text-zinc-400">
+                            Width (cm)
+                          </TableHead>
+                          <TableHead className="text-xs font-medium text-zinc-400">
+                            Height (cm)
+                          </TableHead>
+                          <TableHead className="text-xs font-medium text-zinc-400">
+                            CBM
+                          </TableHead>
+                          <TableHead className="text-xs font-medium text-zinc-400">
+                            Volume
+                          </TableHead>
+                          <TableHead className="text-xs font-medium text-zinc-400">
+                            UOM
+                          </TableHead>
+                          <TableHead className="text-xs font-medium text-zinc-400">
+                            Total
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {measurements.map((m: any) => (
+                          <TableRow
+                            key={m.id}
+                            className="border-neutral-800 hover:bg-neutral-800/40"
+                          >
+                            <TableCell className="text-sm text-zinc-100">
+                              {m.packages ?? "N/A"}
+                            </TableCell>
+                            <TableCell className="text-sm text-zinc-300">
+                              {m.length_cm ?? "N/A"}
+                            </TableCell>
+                            <TableCell className="text-sm text-zinc-300">
+                              {m.width_cm ?? "N/A"}
+                            </TableCell>
+                            <TableCell className="text-sm text-zinc-300">
+                              {m.height_cm ?? "N/A"}
+                            </TableCell>
+                            <TableCell className="text-sm text-zinc-300">
+                              {m.cbm ?? "N/A"}
+                            </TableCell>
+                            <TableCell className="text-sm text-zinc-300">
+                              {m.volume ?? "N/A"}
+                            </TableCell>
+                            <TableCell className="text-sm text-zinc-300">
+                              {m.uom ?? "N/A"}
+                            </TableCell>
+                            <TableCell className="text-sm text-zinc-300">
+                              {m.total ?? "N/A"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
+              })()
+            ) : (
+              <p className="text-sm text-zinc-500">
+                Select a GDN row to view its measurements.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              Actual Measurements
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Enter the actual carton dimensions received, then click Add (or
+              hit Enter) to add it to the list below.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {/* Entry row */}
+            <div className="flex items-end gap-2 rounded-md border border-neutral-800 bg-neutral-950/40 p-3">
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label
+                  htmlFor="actual-draft-length"
+                  className="text-xs font-medium text-foreground"
+                >
+                  L ({actualDraft.uom})
+                </Label>
+                <Input
+                  ref={actualDraftLengthRef}
+                  id="actual-draft-length"
+                  placeholder="Length"
+                  value={actualDraft.length}
+                  onChange={(e) =>
+                    updateActualDraftField("length", e.target.value)
+                  }
+                  onKeyDown={handleActualDraftKeyDown}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label
+                  htmlFor="actual-draft-width"
+                  className="text-xs font-medium text-foreground"
+                >
+                  W ({actualDraft.uom})
+                </Label>
+                <Input
+                  id="actual-draft-width"
+                  placeholder="Width"
+                  value={actualDraft.width}
+                  onChange={(e) =>
+                    updateActualDraftField("width", e.target.value)
+                  }
+                  onKeyDown={handleActualDraftKeyDown}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label
+                  htmlFor="actual-draft-height"
+                  className="text-xs font-medium text-foreground"
+                >
+                  H ({actualDraft.uom})
+                </Label>
+                <Input
+                  id="actual-draft-height"
+                  placeholder="Height"
+                  value={actualDraft.height}
+                  onChange={(e) =>
+                    updateActualDraftField("height", e.target.value)
+                  }
+                  onKeyDown={handleActualDraftKeyDown}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label
+                  htmlFor="actual-draft-total"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Packages
+                </Label>
+                <Input
+                  id="actual-draft-total"
+                  placeholder="Total Packages"
+                  value={actualDraft.total}
+                  onChange={(e) =>
+                    updateActualDraftField("total", e.target.value)
+                  }
+                  onKeyDown={handleActualDraftKeyDown}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  UOM
+                </Label>
+                <Select
+                  value={actualDraft.uom}
+                  onValueChange={(val) => updateActualDraftField("uom", val)}
+                >
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="UOM" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {ACTUAL_UOM_OPTIONS.map((u) => (
+                      <SelectItem key={u} value={u}>
+                        {u}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  CBM (m³)
+                </Label>
+                <Input
+                  disabled
+                  value={
+                    isActualDraftValid
+                      ? getActualRowCbm(actualDraft).toFixed(4)
+                      : "0.0000"
+                  }
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100"
+                />
+              </div>
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Volume (m³)
+                </Label>
+                <Input
+                  disabled
+                  value={
+                    isActualDraftValid
+                      ? getActualRowTotalVolume(actualDraft).toFixed(4)
+                      : "0.0000"
+                  }
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100"
+                />
+              </div>
+
+              <Button
+                onClick={handleAddActualMeasurement}
+                disabled={!isActualDraftValid}
+                className="mb-0.5 h-9 rounded-md"
+              >
+                Add
+              </Button>
+            </div>
+
+            {/* Committed rows table */}
+            <div className="overflow-x-auto rounded-md border border-neutral-700">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-neutral-700 hover:bg-transparent">
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      L
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      W
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      H
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Packages
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      UOM
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      CBM (m³)
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Volume (m³)
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {actualMeasurements.length ? (
+                    actualMeasurements.map((row: any) => (
+                      <TableRow
+                        key={row.id}
+                        className="border-neutral-800 hover:bg-neutral-800/40"
+                      >
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.length}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.width}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.height}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.total}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.uom}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.cbm}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.volume}
+                        </TableCell>
+                        <TableCell>
+                          <button
+                            onClick={() => removeActualMeasurement(row.id)}
+                            className="flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 p-2 text-zinc-400 transition-colors hover:bg-neutral-700 hover:text-zinc-100"
+                          >
+                            <IconTrash size={15} />
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={8}
+                        className="h-20 text-center text-sm text-zinc-500"
+                      >
+                        No actual measurements added yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex justify-end border-t border-neutral-800 pt-3">
+              <div className="text-xs text-zinc-400">
+                Total Actual Volume:{" "}
+                <span className="font-medium text-zinc-100">
+                  {totalActualVolume.toFixed(4)} m³
+                </span>
+              </div>
             </div>
           </div>
         </div>

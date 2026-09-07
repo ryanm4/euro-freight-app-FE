@@ -567,10 +567,12 @@ export default function GDNEdit() {
           width_cm: Number(m.width),
           height_cm: Number(m.height),
           uom: m.uom,
-          total: null,
+          total: Number(m.total),
           per_carton_volume_m3: getRowVolumeM3(m),
           calculated_volume_m3: getRowTotalVolume(m),
           packages: Number(m.total),
+          cbm: getRowCbm(m),
+          volume: getRowTotalVolume(m),
         })),
         remarks,
       })

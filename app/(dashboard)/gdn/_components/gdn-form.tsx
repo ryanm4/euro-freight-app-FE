@@ -221,35 +221,51 @@ export default function GoodsDispatchNoteForm() {
     )
   }
 
-  const getRowVolumeM3 = (row: MeasurementInput) => {
+  // Normalizes L/W/H to centimeters so the same formulas below always work,
+  // regardless of whether the row's UOM is "cm" or "m".
+  const getDimsInCm = (row: MeasurementInput) => {
     const l = Number(row.length)
     const w = Number(row.width)
     const h = Number(row.height)
-    const packages = Number(row.total)
-
-    if (row.uom === "m") {
-      // Already in meters — straight multiplication gives m³
-      return (l * w * h * packages) / 6000
-    }
-
-    // cm — convert to m³
-    return ((l * w * h) / 1_000_000) * packages
+    const factor = row.uom === "m" ? 100 : 1
+    return { l: l * factor, w: w * factor, h: h * factor }
   }
 
+  // Total volume in Cubic Meters (CBM) for this row (all packages included):
+  //   (L(cm) x W(cm) x H(cm) x Number of packages) / 1,000,000
   const getRowCbm = (row: MeasurementInput) => {
-    return getRowVolumeM3(row)
+    const { l, w, h } = getDimsInCm(row)
+    const packages = Number(row.total)
+    return (l * w * h * packages) / 1_000_000
   }
 
+  // CBM for a single carton — used to scale by the actual Quantity Loaded,
+  // which may differ from the packages entered for this particular row.
+  const getRowCbmPerCarton = (row: MeasurementInput) => {
+    const packages = Number(row.total)
+    if (!packages) return 0
+    return getRowCbm(row) / packages
+  }
+
+  // "Volume" figure per the second formula supplied:
+  //   (L(cm) x W(cm) x H(cm) x Number of packages) / 6000
+  // Note: this is the volumetric-weight formula (result is in kg, not m³).
+  // It's kept separate from getRowCbm (the true m³ figure) since the two
+  // use different divisors and represent different things.
   const getRowTotalVolume = (row: MeasurementInput) => {
-    return getRowCbm(row) * Number(row.total)
+    const { l, w, h } = getDimsInCm(row)
+    const packages = Number(row.total)
+    return (l * w * h * packages) / 6000
   }
 
+  // Volume based on the actual Quantity Loaded (rather than the packages
+  // entered for the row), used for the saved "calculated_volume_m3" figure.
   const getRowCalculatedVolume = (row: MeasurementInput) => {
-    return getRowVolumeM3(row) * Number(quantityLoaded)
+    return getRowCbmPerCarton(row) * Number(quantityLoaded)
   }
 
   const totalCalculatedVolume = useMemo(() => {
-    return measurements.reduce((sum, row) => sum + getRowTotalVolume(row), 0)
+    return measurements.reduce((sum, row) => sum + getRowCbm(row), 0)
   }, [measurements, quantityLoaded])
 
   const toggleRow = (id: number) => {
@@ -424,7 +440,7 @@ export default function GoodsDispatchNoteForm() {
           length_cm: Number(m.length),
           width_cm: Number(m.width),
           height_cm: Number(m.height),
-          per_carton_volume_m3: getRowVolumeM3(m),
+          per_carton_volume_m3: getRowCbmPerCarton(m),
           calculated_volume_m3: getRowCalculatedVolume(m),
           total: Number(m.total),
           packages: Number(m.total),
@@ -1193,7 +1209,7 @@ export default function GoodsDispatchNoteForm() {
 
               <div className="flex flex-1 flex-col gap-1.5">
                 <Label className="text-xs font-medium text-foreground">
-                  Volume (m³)
+                  Volume Weight (kg)
                 </Label>
                 <Input
                   disabled
@@ -1239,7 +1255,7 @@ export default function GoodsDispatchNoteForm() {
                       CBM (m³)
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Volume (m³)
+                      Volume Weight (kg)
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Actions

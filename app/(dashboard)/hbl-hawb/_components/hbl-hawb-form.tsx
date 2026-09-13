@@ -59,6 +59,11 @@ export default function HBLHABWForm() {
   const [status, setStatus] = useState("draft")
   // const [arrivalPorts, setArrivalPorts] = useState<Port[]>([])
 
+  // HBL Information - Shipper / Consignee / Notify
+  const [shipperId, setShipperId] = useState("")
+  const [consigneeId, setConsigneeId] = useState("")
+  const [notifyId, setNotifyId] = useState("")
+
   const [selectedGrnIds, setSelectedGrnIds] = useState<Set<number>>(new Set())
 
   const [ports, setPorts] = useState<Port[]>([{ id: 1, value: "" }])
@@ -94,6 +99,46 @@ export default function HBLHABWForm() {
       []
     )
   }, [data])
+
+  const shipperOptions = useMemo(() => {
+    return (
+      data?.data?.filter((client: any) => client.type === UserRole.Forwarder) ||
+      []
+    )
+  }, [data])
+
+  const consigneeOptions = useMemo(() => {
+    return (
+      data?.data?.filter((client: any) => client.type === UserRole.Consignee) ||
+      []
+    )
+  }, [data])
+
+  const notifierOptions = useMemo(() => {
+    return (
+      data?.data?.filter((client: any) => client.type === UserRole.Notifier) ||
+      []
+    )
+  }, [data])
+
+  // Shipper / Consignee / Notify can be any party in the directory, so we
+  // expose the full list here rather than filtering by a single role.
+  const partyOptions = useMemo(() => {
+    return data?.data || []
+  }, [data])
+
+  const shipper = useMemo(
+    () => partyOptions.find((p: any) => String(p.id) === String(shipperId)),
+    [partyOptions, shipperId]
+  )
+  const consignee = useMemo(
+    () => partyOptions.find((p: any) => String(p.id) === String(consigneeId)),
+    [partyOptions, consigneeId]
+  )
+  const notifyParty = useMemo(
+    () => partyOptions.find((p: any) => String(p.id) === String(notifyId)),
+    [partyOptions, notifyId]
+  )
 
   const toggleGrn = (id: number) => {
     setSelectedGrnIds((prev) => {
@@ -141,6 +186,9 @@ export default function HBLHABWForm() {
         selectedGrnIds,
         ports,
         status,
+        shipperId,
+        consigneeId,
+        notifyId,
       })
       router.push("/hbl-hawb")
     } catch (err) {
@@ -148,6 +196,32 @@ export default function HBLHABWForm() {
     } finally {
       setIsSaving(false)
     }
+  }
+
+  // Renders the read-only details panel (Name / Address / Contact No / E-mail)
+  // for a selected party.
+  const PartyDetails = ({ party }: { party: any }) => {
+    if (!party) return null
+    return (
+      <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 rounded-md border border-neutral-700 bg-[#0A0A0A] p-3 text-xs text-zinc-300">
+        <div>
+          <span className="text-zinc-500">Name: </span>
+          {party.name || "-"}
+        </div>
+        <div>
+          <span className="text-zinc-500">Address: </span>
+          {party.address || "-"}
+        </div>
+        <div>
+          <span className="text-zinc-500">Contact No: </span>
+          {party.contactNo || party.contact_no || party.phone || "-"}
+        </div>
+        <div>
+          <span className="text-zinc-500">E-mail: </span>
+          {party.email || "-"}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -346,6 +420,80 @@ export default function HBLHABWForm() {
                   onChange={(e) => setMblMawbNo(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5">
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              HBL Information
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Shipper, consignee and notify party details for the house bill
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Shipper&apos;s Name
+                </Label>
+                <Select value={shipperId} onValueChange={setShipperId}>
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Choose Shipper" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {shipperOptions.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <PartyDetails party={shipper} />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Consignee&apos;s Name
+                </Label>
+                <Select value={consigneeId} onValueChange={setConsigneeId}>
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Choose Consignee" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {consigneeOptions.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <PartyDetails party={consignee} />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Notify&apos;s Name
+                </Label>
+                <Select value={notifyId} onValueChange={setNotifyId}>
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Choose Notify Party" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {notifierOptions.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <PartyDetails party={notifyParty} />
               </div>
             </div>
           </div>

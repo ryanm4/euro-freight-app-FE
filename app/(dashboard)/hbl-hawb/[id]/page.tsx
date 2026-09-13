@@ -1,10 +1,6 @@
 "use client"
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
-import { fetchBillOfLadingById } from "@/lib/api/bill_of_lading"
-import { useQuery } from "@tanstack/react-query"
-import { useParams } from "next/navigation"
-import GRNTable from "../_components/GRNTable"
 import { Calendar } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,15 +16,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
 import { Textarea } from "@/components/ui/textarea"
+import { fetchBillOfLadingById } from "@/lib/api/bill_of_lading"
+import { cn } from "@/lib/utils"
 import { IconCalendarFilled, IconPlus, IconTrash } from "@tabler/icons-react"
-import { format, parse, isValid } from "date-fns"
-import { useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
-import { fetchClients } from "@/lib/api/clients"
-import { fetchGRNs } from "@/lib/api/goods_receive_notes"
+import { useQuery } from "@tanstack/react-query"
+import { format, isValid, parse } from "date-fns"
+import { useParams } from "next/navigation"
 import type { GRN } from "../_components/GRNTable"
+import GRNTable from "../_components/GRNTable"
 
 export default function HBLHAWBByID() {
   const { id } = useParams<{ id: string }>()
@@ -46,6 +42,59 @@ export default function HBLHAWBByID() {
   if (isError || !res?.data) return <>Not found</>
 
   const data = res.data
+
+  // client, manufacture, shipper, consignee, and notify all come back as
+  // nested objects: { id, name, address }. Contact No / E-mail aren't part
+  // of the payload yet, so those fields fall back to "—" until the API
+  // includes them.
+  const getParty = (prefix: string) => {
+    const nested = (data as any)[prefix]
+    if (!nested || typeof nested !== "object") {
+      return {
+        id: undefined,
+        name: undefined,
+        address: undefined,
+        contactNo: undefined,
+        email: undefined,
+      }
+    }
+    return {
+      id: nested.id,
+      name: nested.name,
+      address: nested.address,
+      contactNo: nested.contact_no || nested.contactNo || nested.phone,
+      email: nested.email,
+    }
+  }
+
+  const clientParty = getParty("client")
+  const manufactureParty = getParty("manufacture")
+  const shipper = getParty("shipper")
+  const consignee = getParty("consignee")
+  const notifyParty = getParty("notify")
+
+  // Read-only details panel (Address / Contact No / E-mail) for a party.
+  const PartyDetails = ({ party }: { party: any }) => {
+    if (!party || (!party.address && !party.contactNo && !party.email)) {
+      return null
+    }
+    return (
+      <div className="mt-2 grid grid-cols-1 gap-y-2 rounded-md border border-neutral-700 bg-[#0A0A0A] p-3 text-xs text-zinc-300">
+        <div>
+          <span className="text-zinc-500">Address: </span>
+          {party.address || "—"}
+        </div>
+        <div>
+          <span className="text-zinc-500">Contact No: </span>
+          {party.contactNo || "—"}
+        </div>
+        <div>
+          <span className="text-zinc-500">E-mail: </span>
+          {party.email || "—"}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="mx-6 space-y-5">
@@ -83,7 +132,7 @@ export default function HBLHAWBByID() {
                 <Label className="text-xs font-medium text-foreground">
                   Type
                 </Label>
-                <Select value={data.type}>
+                <Select value={data.type} disabled>
                   <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
                     <SelectValue placeholder="Choose Type" />
                   </SelectTrigger>
@@ -181,7 +230,7 @@ export default function HBLHAWBByID() {
                 </Label>
 
                 <div className="flex h-9 w-full items-center rounded-md border border-zinc-700 bg-[#0A0A0A] px-3 text-sm text-zinc-100">
-                  {data.client_name || data.client_id || "—"}
+                  {clientParty.name || "—"}
                 </div>
               </div>
 
@@ -191,7 +240,7 @@ export default function HBLHAWBByID() {
                 </Label>
 
                 <div className="flex h-9 w-full items-center rounded-md border border-zinc-700 bg-[#0A0A0A] px-3 text-sm text-zinc-100">
-                  {data.manufacture_id || data.manufacture_id || "—"}
+                  {manufactureParty.name || "—"}
                 </div>
               </div>
 
@@ -206,8 +255,56 @@ export default function HBLHAWBByID() {
                   id="mbl-mawb-no"
                   placeholder="Enter MBL / MAWB No"
                   value={data.mbl_mawb_no}
+                  readOnly
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5">
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              HBL Information
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Shipper, consignee and notify party details for the house bill
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Shipper&apos;s Name
+                </Label>
+                <div className="flex h-9 w-full items-center rounded-md border border-zinc-700 bg-[#0A0A0A] px-3 text-sm text-zinc-100">
+                  {shipper.name || shipper.id || "—"}
+                </div>
+                <PartyDetails party={shipper} />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Consignee&apos;s Name
+                </Label>
+                <div className="flex h-9 w-full items-center rounded-md border border-zinc-700 bg-[#0A0A0A] px-3 text-sm text-zinc-100">
+                  {consignee.name || consignee.id || "—"}
+                </div>
+                <PartyDetails party={consignee} />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Notify&apos;s Name
+                </Label>
+                <div className="flex h-9 w-full items-center rounded-md border border-zinc-700 bg-[#0A0A0A] px-3 text-sm text-zinc-100">
+                  {notifyParty.name || notifyParty.id || "—"}
+                </div>
+                <PartyDetails party={notifyParty} />
               </div>
             </div>
           </div>
@@ -259,6 +356,7 @@ export default function HBLHAWBByID() {
                   id="vessel-name"
                   placeholder="Enter Vessel Name"
                   value={data.planned_vessel_name}
+                  readOnly
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -274,6 +372,7 @@ export default function HBLHAWBByID() {
                   id="voyage-no"
                   placeholder="Enter Voyage No"
                   value={data.voyage_no}
+                  readOnly
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -568,6 +667,7 @@ export default function HBLHAWBByID() {
                   id="arrival-port"
                   placeholder="Enter Arrival Port"
                   value={data.arrival_port}
+                  readOnly
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -583,6 +683,7 @@ export default function HBLHAWBByID() {
                   id="inland-location"
                   placeholder="Enter Inland Location"
                   value={data.inland_location}
+                  readOnly
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -598,6 +699,7 @@ export default function HBLHAWBByID() {
                   id="no-of-pieces"
                   placeholder="Enter No. of Pieces"
                   value={data.no_pieces}
+                  readOnly
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -613,6 +715,7 @@ export default function HBLHAWBByID() {
                   id="gross-weight"
                   placeholder="Enter Gross Weight"
                   value={data.gross_weight}
+                  readOnly
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -628,6 +731,7 @@ export default function HBLHAWBByID() {
                   id="chargeable-weight"
                   placeholder="Enter Chargeable Weight"
                   value={data.chargeable_weight}
+                  readOnly
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -643,6 +747,7 @@ export default function HBLHAWBByID() {
                   id="cbm"
                   placeholder="Enter CBM"
                   value={data.cbm}
+                  readOnly
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -658,6 +763,7 @@ export default function HBLHAWBByID() {
                   id="container-seal-no"
                   placeholder="Enter Container Seal No"
                   value={data.container_seal_no}
+                  readOnly
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -752,6 +858,7 @@ export default function HBLHAWBByID() {
                 <Textarea
                   placeholder="Type your message here."
                   value={data.remarks}
+                  readOnly
                   className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"
                 />
               </div>
@@ -793,6 +900,7 @@ export default function HBLHAWBByID() {
                       id={`port-${port.id}`}
                       placeholder="Enter port name"
                       value={port.port}
+                      readOnly
                       className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                     />
                   </div>

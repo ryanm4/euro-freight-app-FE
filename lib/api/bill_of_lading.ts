@@ -37,6 +37,9 @@ export interface CreateBillOfLadingPayload {
   created_by: string
   grn_ids: number[]
   ports: BillOfLadingPort[]
+  shipper_id: number
+  consignee_id: number
+  notify_id: number
 }
 
 export interface CreateBillOfLadingInput {
@@ -62,6 +65,9 @@ export interface CreateBillOfLadingInput {
   selectedGrnIds: Set<number>
   ports: { id: number; value: string }[]
   status: string
+  shipperId: string
+  consigneeId: string
+  notifyId: string
 }
 
 const formatDate = (val: string) =>
@@ -96,6 +102,9 @@ function buildBillOfLadingPayload(
     ports: input.ports
       .filter((p) => p.value.trim() !== "")
       .map((p) => ({ port: p.value, status: "Pending" })),
+    shipper_id: Number(input.shipperId),
+    consignee_id: Number(input.consigneeId),
+    notify_id: Number(input.notifyId),
   }
 }
 

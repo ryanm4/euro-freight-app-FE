@@ -31,7 +31,7 @@ export const hblHawbColumns = (
   const canModify = options?.canModify ?? true
 
   const formatDate = (date?: string | null) =>
-    date ? format(new Date(date), "dd/MMM/yy HH:mm") : "N/A"
+    date ? format(new Date(date), "dd/MMM/yy") : "N/A"
 
   return [
     {

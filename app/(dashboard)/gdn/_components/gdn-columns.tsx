@@ -82,7 +82,7 @@ export const goodsDeliverNoteColumns = (
     {
       accessorKey: "grn_no",
       header: "GRN No",
-      cell: ({ row }) => <div>{row.original.grn_no ?? "N/A"}</div>,
+      cell: ({ row }) => <div>{row.original.gdn_grn_ref ?? "N/A"}</div>,
     },
     {
       accessorKey: "forwarder_name",

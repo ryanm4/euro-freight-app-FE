@@ -29,7 +29,7 @@ export default function RoleByID() {
     <div className="mx-6 mb-6 space-y-5">
       <div className="mt-4">
         <PageTitleWithBreadcrumb
-          title={`${data?.role_name ?? ""}`}
+          title={`${roleData?.role_name ?? ""}`}
           breadcrumbs={[
             { title: "Dashboard", href: "/dashboard" },
             { title: "Roles", href: "/roles" },

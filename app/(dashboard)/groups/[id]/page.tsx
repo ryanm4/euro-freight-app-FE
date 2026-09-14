@@ -29,7 +29,7 @@ export default function GroupByID() {
     <div className="mx-6 mb-6 space-y-5">
       <div className="mt-4">
         <PageTitleWithBreadcrumb
-          title={`${data?.group_name ?? ""}`}
+          title={`${groupData?.group_name ?? ""}`}
           breadcrumbs={[
             { title: "Dashboard", href: "/dashboard" },
             { title: "Groups", href: "/groups" },

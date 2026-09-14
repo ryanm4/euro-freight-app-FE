@@ -16,7 +16,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react"
 import { ColumnDef } from "@tanstack/react-table"
-import { formatInTimeZone } from "date-fns-tz"
+import { format } from "date-fns"
 import Link from "next/link"
 
 interface PackingListTableActions {
@@ -66,7 +66,7 @@ export const packingListColumns = (
         return (
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap">
+              <div className="max-w-55 overflow-hidden text-ellipsis whitespace-nowrap">
                 {poNumbers.length > 2 ? `${visibleValue}, ...` : visibleValue}
               </div>
             </TooltipTrigger>
@@ -80,9 +80,7 @@ export const packingListColumns = (
       header: "Created Date",
       cell: ({ row }) => {
         const date = row.original.created_on
-        return date
-          ? formatInTimeZone(new Date(date), "UTC", "dd/MMM/yy hh:mm a")
-          : "N/A"
+        return date ? format(new Date(date), "dd/MMM/yy") : "N/A"
       },
     },
     {

@@ -97,6 +97,24 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  
+  const [user, setUser] = React.useState(data.user)
+
+  React.useEffect(() => {
+    const storedUser = sessionStorage.getItem("user")
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser)
+        setUser({
+          name: parsedUser.full_name || parsedUser.name || parsedUser.username || "Admin User",
+          email: parsedUser.email || "admin@example.com",
+          avatar: parsedUser.avatar || "/avatars/admin.jpg",
+        })
+      } catch (e) {
+        console.error("Failed to parse user from session storage")
+      }
+    }
+  }, [])
 
   const navMainWithActiveState = data.navMain.map((item) => ({
     ...item,
@@ -126,7 +144,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={navMainWithActiveState} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

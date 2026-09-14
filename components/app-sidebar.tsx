@@ -81,6 +81,11 @@ const data = {
       url: "/users",
       icon: <IconUserCog />,
     },
+    {
+      title: "Roles",
+      url: "/roles",
+      icon: <IconUserCog />,
+    },
   ],
 }
 

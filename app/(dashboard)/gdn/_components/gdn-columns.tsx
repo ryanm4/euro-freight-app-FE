@@ -15,7 +15,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react"
 import { ColumnDef } from "@tanstack/react-table"
-import { formatInTimeZone } from "date-fns-tz"
+import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 
 interface GoodsDeliverNoteTableActions {
@@ -136,9 +136,7 @@ export const goodsDeliverNoteColumns = (
         const date = row.original.date
         return (
           <div className="px-3">
-            {date
-              ? formatInTimeZone(new Date(date), "UTC", "dd/MMM/yy")
-              : "N/A"}
+            {date ? format(new Date(date), "dd/MMM/yy") : "N/A"}
           </div>
         )
       },

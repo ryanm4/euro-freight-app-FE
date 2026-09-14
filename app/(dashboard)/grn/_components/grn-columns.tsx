@@ -151,7 +151,7 @@ export const goodsReceiveNoteColumns = (
       header: "Received Date",
       cell: ({ row }) => {
         const date = row.original.date
-        return date ? format(new Date(date), "dd/MMM/yy HH:mm") : "N/A"
+        return date ? format(new Date(date), "dd/MMM/yy") : "N/A"
       },
     },
     {

@@ -26,6 +26,7 @@ import {
   IconTruckDelivery,
   IconUserCog,
   IconUsers,
+  IconUsersGroup,
 } from "@tabler/icons-react"
 
 // This is sample data.
@@ -85,6 +86,11 @@ const data = {
       title: "Roles",
       url: "/roles",
       icon: <IconUserCog />,
+    },
+    {
+      title: "Groups",
+      url: "/groups",
+      icon: <IconUsersGroup />,
     },
   ],
 }

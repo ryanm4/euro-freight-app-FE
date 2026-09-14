@@ -104,7 +104,7 @@ const createGDNObject = (gdn: any) => {
   return {
     gdnNo: gdn.gdn_no ?? "—",
     date: gdn.date ?? "",
-    gdnReference: gdn.gdn_grn_ref ?? "—",
+    gdnReference: gdn.gdn_grn_ref ? `GDN-${gdn.gdn_grn_ref}` : "—",
     vehicleNo: gdn.vehicle_no ?? "—",
     status: gdn.status ?? "—",
     client: gdn.client_name ?? "—",

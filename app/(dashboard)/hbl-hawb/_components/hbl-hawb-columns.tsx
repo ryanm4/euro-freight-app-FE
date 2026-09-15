@@ -69,12 +69,12 @@ export const hblHawbColumns = (
     {
       accessorKey: "client_id",
       header: "Client",
-      cell: ({ row }) => <div>{row.original.client_id ?? "N/A"}</div>,
+      cell: ({ row }) => <div>{row.original.client.name ?? "N/A"}</div>,
     },
     {
       accessorKey: "manufacture_id",
       header: "Manufacturer ID",
-      cell: ({ row }) => <div>{row.original.manufacture_id ?? "N/A"}</div>,
+      cell: ({ row }) => <div>{row.original.manufacture.name ?? "N/A"}</div>,
     },
     {
       accessorKey: "date",
@@ -183,7 +183,12 @@ export const hblHawbColumns = (
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => (
-        <StatusBadge status={row.original.status?.replaceAll("_", " ").toUpperCase() || "N/A"} type="HBL_HAWB" />
+        <StatusBadge
+          status={
+            row.original.status?.replaceAll("_", " ").toUpperCase() || "N/A"
+          }
+          type="HBL_HAWB"
+        />
       ),
     },
     {

@@ -1,7 +1,11 @@
-export async function fetchGRNs(status?: string) {
-  const url = status
-    ? `/api/goods_receive_notes?status=${encodeURIComponent(status)}`
-    : "/api/goods_receive_notes"
+export async function fetchGRNs(status?: string, mode?: string) {
+  const params = new URLSearchParams()
+  if (status) params.set("status", status)
+  if (mode) params.set("mode", mode)
+
+  const qs = params.toString()
+  const url = qs ? `/api/goods_receive_notes?${qs}` : "/api/goods_receive_notes"
+
   const res = await fetch(url)
   if (!res.ok) throw new Error("Failed to fetch goods receive notes")
   return res.json()

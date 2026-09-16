@@ -24,6 +24,7 @@ import {
   IconReceipt,
   IconShip,
   IconTruckDelivery,
+  IconUserCircle,
   IconUserCog,
   IconUsers,
   IconUsersGroup,
@@ -80,7 +81,7 @@ const data = {
     {
       title: "Users",
       url: "/users",
-      icon: <IconUserCog />,
+      icon: <IconUserCircle />,
     },
     {
       title: "Roles",

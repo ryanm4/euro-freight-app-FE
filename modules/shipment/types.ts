@@ -1,4 +1,23 @@
 export interface SHIPMENT {
+  hbl_ids: never[]
+  final_seal_no: string
+  container_size: string
+  airline_shipping_line: string
+  final_place_of_delivery: string
+  mbl_mawb_no: string
+  eta_destination: any
+  eta_discharge_port: any
+  eta_final_delivery_place: any
+  etd_origin: any
+  etd_colombo: any
+  discharge_port: any
+  container_number: any
+  destination: any
+  origin: any
+  flight_number: any
+  hbls: any
+  origin_port: string
+  voyage_number: string
   id: number
   vessel_name?: string | null
   status?: string | null

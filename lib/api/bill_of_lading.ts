@@ -1,7 +1,10 @@
-export async function fetchHBLHAWBs(status?: string) {
-  const url = status
-    ? `/api/hbl_hawbs?status=${encodeURIComponent(status)}`
-    : "/api/hbl_hawbs"
+export async function fetchHBLHAWBs(status?: string, mode?: string) {
+  const params = new URLSearchParams()
+  if (status) params.set("status", status)
+  if (mode) params.set("mode", mode)
+
+  const qs = params.toString()
+  const url = qs ? `/api/hbl_hawbs?${qs}` : "/api/hbl_hawbs"
 
   const res = await fetch(url)
   if (!res.ok) throw new Error("Failed to fetch HBL/HAWBs")

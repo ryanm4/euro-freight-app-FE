@@ -25,7 +25,7 @@ export default function ShipmentPage() {
   })
 
   const actions = {
-    onEdit: (id: string) => router.push(`/shipment/edit/${id}`),
+    onEdit: (id: string) => router.push(`/shipment/${id}/edit`),
     onDelete: (id: string) => console.log("Delete", id),
     onView: (id: string) => router.push(`/shipment/${id}`),
   }

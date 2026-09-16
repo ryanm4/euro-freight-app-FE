@@ -37,7 +37,9 @@ export default function HBLHABWForm() {
   const [isSaving, setIsSaving] = useState(false)
 
   const [type, setType] = useState("")
-  const [date, setDate] = useState("")
+  console.log("type", type)
+
+  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"))
   const [client, setClient] = useState("")
   const [manufacturer, setManufacturer] = useState("")
   const [mblMawbNo, setMblMawbNo] = useState("")
@@ -56,7 +58,7 @@ export default function HBLHABWForm() {
   const [containerSealNo, setContainerSealNo] = useState("")
   const [onboardedDate, setOnboardedDate] = useState("")
   const [remarks, setRemarks] = useState("")
-  const [status, setStatus] = useState("draft")
+  const [status, setStatus] = useState("saved")
   // const [arrivalPorts, setArrivalPorts] = useState<Port[]>([])
 
   // HBL Information - Shipper / Consignee / Notify
@@ -67,6 +69,12 @@ export default function HBLHABWForm() {
   const [selectedGrnIds, setSelectedGrnIds] = useState<Set<number>>(new Set())
 
   const [ports, setPorts] = useState<Port[]>([{ id: 1, value: "" }])
+
+  // FCL and LCL are both sea freight; AIR is the only air mode.
+  const shipmentMode = useMemo(() => {
+    if (!type) return undefined
+    return type === "AIR" ? "AIR" : "SEA"
+  }, [type])
 
   const {
     data,
@@ -82,8 +90,9 @@ export default function HBLHABWForm() {
     // isLoading,
     // error,
   } = useQuery({
-    queryKey: ["grns", "COMPLETED"],
-    queryFn: () => fetchGRNs("COMPLETED"),
+    queryKey: ["grns", "COMPLETED", shipmentMode],
+    queryFn: () => fetchGRNs("COMPLETED", shipmentMode),
+    enabled: !!shipmentMode,
   })
   // data={(data?.data ?? []) as GOODS_RECEIVE_NOTE[]}
 
@@ -162,6 +171,13 @@ export default function HBLHABWForm() {
 
   const handleSave = async () => {
     setIsSaving(true)
+
+    if (!mblMawbNo || mblMawbNo.trim() === "") {
+      alert("MBL/MAWB No is required.")
+      setIsSaving(false)
+      return
+    }
+
     try {
       await createBillOfLading({
         client,
@@ -264,8 +280,9 @@ export default function HBLHABWForm() {
                     <Button
                       id="date"
                       variant="outline"
+                      disabled
                       className={cn(
-                        "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                        "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500 disabled:opacity-100",
                         !date && "text-zinc-500"
                       )}
                     >
@@ -332,8 +349,8 @@ export default function HBLHABWForm() {
                     <SelectValue placeholder="Choose Type" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    <SelectItem value="FCL">FCL</SelectItem>
-                    <SelectItem value="LCL">LCL</SelectItem>
+                    {/* <SelectItem value="FCL">FCL</SelectItem> */}
+                    <SelectItem value="SEA">Sea</SelectItem>
                     <SelectItem value="AIR">Air</SelectItem>
                   </SelectContent>
                 </Select>
@@ -348,7 +365,7 @@ export default function HBLHABWForm() {
                     <SelectValue placeholder="Choose Status" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    <SelectItem value="draft">Draft</SelectItem>
+                    {/* <SelectItem value="draft">Draft</SelectItem> */}
                     <SelectItem value="saved">Saved</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>

@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/table"
 
 export interface HBL {
+  manufacture: any
+  client: any
   id: number
   client_id: string
   manufacture_id: string
@@ -103,10 +105,10 @@ export default function HBLTable({
                 {`HBL-${hbl.id}`}
               </TableCell>
               <TableCell className="text-sm text-zinc-300">
-                {hbl.client_id}
+                {hbl?.client?.name}
               </TableCell>
               <TableCell className="text-sm text-zinc-300">
-                {hbl.manufacture_id}
+                {hbl?.manufacture?.name}
               </TableCell>
               <TableCell className="text-sm text-zinc-300">
                 {hbl.type}

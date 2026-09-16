@@ -133,3 +133,23 @@ export async function fetchBillOfLadingById(id: string) {
   if (!res.ok) throw new Error("Failed to fetch bill of lading by ID")
   return res.json()
 }
+
+export async function updateBillOfLading(
+  id: string,
+  input: CreateBillOfLadingInput
+) {
+  const payload = buildBillOfLadingPayload(input)
+
+  const res = await fetch(`/api/hbl_hawbs/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}))
+    throw new Error(error?.message ?? "Failed to update Bill of Lading")
+  }
+
+  return res.json()
+}

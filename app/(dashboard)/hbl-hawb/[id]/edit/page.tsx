@@ -1,6 +1,7 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Popover,
@@ -8,37 +9,56 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { createBillOfLading } from "@/lib/api/bill_of_lading"
+  fetchBillOfLadingById,
+  updateBillOfLading,
+} from "@/lib/api/bill_of_lading"
 import { fetchClients } from "@/lib/api/clients"
 import { fetchGRNs } from "@/lib/api/goods_receive_notes"
 import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
-import { IconCalendarFilled, IconPlus, IconTrash } from "@tabler/icons-react"
+import { IconCalendarFilled } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
 import { format, isValid, parse } from "date-fns"
-import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
-import GRNTable, { GRN } from "./GRNTable"
+import { useParams, useRouter } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
 
 interface Port {
   id: number
   value: string
 }
 
-export default function HBLHABWForm() {
+// Shared parser for the various date-ish string formats coming back from
+// the API (yyyy-MM-dd HH:mm:ss, yyyy-MM-dd, or full ISO).
+const parseDate = (val: string): Date | undefined => {
+  if (!val) return undefined
+  let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
+  if (isValid(d)) return d
+  d = parse(val, "yyyy-MM-dd", new Date())
+  if (isValid(d)) return d
+  d = new Date(val)
+  if (isValid(d)) return d
+  return undefined
+}
+
+const toDateInputValue = (val?: string | null) =>
+  val ? String(val).slice(0, 10) : ""
+
+export default function HBLHABWEdit() {
+  const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
 
-  const [type, setType] = useState("")
-  console.log("type", type)
+  const {
+    data: res,
+    isLoading: isLoadingHbl,
+    isError,
+  } = useQuery({
+    queryKey: ["hbl-hawb", id],
+    queryFn: () => fetchBillOfLadingById(id),
+    enabled: !!id,
+  })
 
+  const [type, setType] = useState("")
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"))
   const [client, setClient] = useState("")
   const [manufacturer, setManufacturer] = useState("")
@@ -59,16 +79,63 @@ export default function HBLHABWForm() {
   const [onboardedDate, setOnboardedDate] = useState("")
   const [remarks, setRemarks] = useState("")
   const [status, setStatus] = useState("saved")
-  // const [arrivalPorts, setArrivalPorts] = useState<Port[]>([])
 
-  // HBL Information - Shipper / Consignee / Notify
   const [shipperId, setShipperId] = useState("")
   const [consigneeId, setConsigneeId] = useState("")
   const [notifyId, setNotifyId] = useState("")
 
   const [selectedGrnIds, setSelectedGrnIds] = useState<Set<number>>(new Set())
-
   const [ports, setPorts] = useState<Port[]>([{ id: 1, value: "" }])
+
+  // Populate the form once the HBL/HAWB record loads
+  useEffect(() => {
+    if (!res?.data) return
+    const hbl = res.data
+
+    setType(hbl.type ?? "")
+    setDate(
+      hbl.date ? toDateInputValue(hbl.date) : format(new Date(), "yyyy-MM-dd")
+    )
+    setClient(hbl.client_id != null ? String(hbl.client_id) : "")
+    setManufacturer(
+      hbl.manufacture_id != null ? String(hbl.manufacture_id) : ""
+    )
+    setMblMawbNo(hbl.mbl_mawb_no ?? "")
+    setVesselName(hbl.planned_vessel_name ?? "")
+    setVoyageNo(hbl.voyage_no ?? "")
+    setEstimatedTimeOfDelivery(toDateInputValue(hbl.etd))
+    setEstimatedTimeOfArrival(toDateInputValue(hbl.eta))
+    setActualTimeOfDelivery(toDateInputValue(hbl.actual_etd))
+    setActualTimeOfArrival(toDateInputValue(hbl.actual_eta))
+    setArrivalPort(hbl.arrival_port ?? "")
+    setInlandLocation(hbl.inland_location ?? "")
+    setNoOfPieces(hbl.no_pieces != null ? String(hbl.no_pieces) : "")
+    setGrossWeight(hbl.gross_weight ?? "")
+    setChargeableWeight(hbl.chargeable_weight ?? "")
+    setCbm(hbl.cbm ?? "")
+    setContainerSealNo(hbl.container_seal_no ?? "")
+    setOnboardedDate(toDateInputValue(hbl.onboard_date))
+    setRemarks(hbl.remarks ?? "")
+    setStatus(hbl.status ?? "saved")
+
+    setShipperId(hbl.shipper_id != null ? String(hbl.shipper_id) : "")
+    setConsigneeId(hbl.consignee_id != null ? String(hbl.consignee_id) : "")
+    setNotifyId(hbl.notify_id != null ? String(hbl.notify_id) : "")
+
+    const grnIds = (hbl.grns ?? []).map((g: any) => g.id)
+    setSelectedGrnIds(new Set(grnIds))
+
+    // The sample payload doesn't show a stored ports list, so fall back to
+    // arrival_port as the first entry if no dedicated ports array exists.
+    if (Array.isArray(hbl.ports) && hbl.ports.length > 0) {
+      setPorts(
+        hbl.ports.map((p: any, idx: number) => ({
+          id: p.id ?? idx + 1,
+          value: p.value ?? "",
+        }))
+      )
+    }
+  }, [res?.data])
 
   // FCL and LCL are both sea freight; AIR is the only air mode.
   const shipmentMode = useMemo(() => {
@@ -76,65 +143,38 @@ export default function HBLHABWForm() {
     return type === "AIR" ? "AIR" : "SEA"
   }, [type])
 
-  const {
-    data,
-    isLoading,
-    // error,
-  } = useQuery({
+  const { data } = useQuery({
     queryKey: ["clients"],
     queryFn: fetchClients,
   })
 
-  const {
-    data: grnData,
-    // isLoading,
-    // error,
-  } = useQuery({
+  const { data: grnData } = useQuery({
     queryKey: ["grns", "COMPLETED", shipmentMode],
     queryFn: () => fetchGRNs("COMPLETED", shipmentMode),
     enabled: !!shipmentMode,
   })
-  // data={(data?.data ?? []) as GOODS_RECEIVE_NOTE[]}
 
   const clientOptions = useMemo(() => {
-    return (
-      data?.data?.filter((client: any) => client.type === UserRole.Client) || []
-    )
+    return data?.data?.filter((c: any) => c.type === UserRole.Client) || []
   }, [data])
 
   const manufacturerOptions = useMemo(() => {
-    return (
-      data?.data?.filter((client: any) => client.type === UserRole.Supplier) ||
-      []
-    )
+    return data?.data?.filter((c: any) => c.type === UserRole.Supplier) || []
   }, [data])
 
   const shipperOptions = useMemo(() => {
-    return (
-      data?.data?.filter((client: any) => client.type === UserRole.Forwarder) ||
-      []
-    )
+    return data?.data?.filter((c: any) => c.type === UserRole.Forwarder) || []
   }, [data])
 
   const consigneeOptions = useMemo(() => {
-    return (
-      data?.data?.filter((client: any) => client.type === UserRole.Consignee) ||
-      []
-    )
+    return data?.data?.filter((c: any) => c.type === UserRole.Consignee) || []
   }, [data])
 
   const notifierOptions = useMemo(() => {
-    return (
-      data?.data?.filter((client: any) => client.type === UserRole.Notifier) ||
-      []
-    )
+    return data?.data?.filter((c: any) => c.type === UserRole.Notifier) || []
   }, [data])
 
-  // Shipper / Consignee / Notify can be any party in the directory, so we
-  // expose the full list here rather than filtering by a single role.
-  const partyOptions = useMemo(() => {
-    return data?.data || []
-  }, [data])
+  const partyOptions = useMemo(() => data?.data || [], [data])
 
   const shipper = useMemo(
     () => partyOptions.find((p: any) => String(p.id) === String(shipperId)),
@@ -170,16 +210,14 @@ export default function HBLHABWForm() {
   }
 
   const handleSave = async () => {
-    setIsSaving(true)
-
     if (!mblMawbNo || mblMawbNo.trim() === "") {
       alert("MBL/MAWB No is required.")
-      setIsSaving(false)
       return
     }
 
+    setIsSaving(true)
     try {
-      await createBillOfLading({
+      await updateBillOfLading(id, {
         client,
         manufacturer,
         date,
@@ -214,8 +252,6 @@ export default function HBLHABWForm() {
     }
   }
 
-  // Renders the read-only details panel (Name / Address / Contact No / E-mail)
-  // for a selected party.
   const PartyDetails = ({ party }: { party: any }) => {
     if (!party) return null
     return (
@@ -240,6 +276,60 @@ export default function HBLHABWForm() {
     )
   }
 
+  if (isLoadingHbl) {
+    return <div>Loading…</div>
+  }
+
+  if (isError || !res?.data) {
+    return <>Not found</>
+  }
+
+  const dateField = (
+    label: string,
+    id: string,
+    value: string,
+    onChange: (v: string) => void,
+    disabled = false
+  ) => (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={id} className="text-xs font-medium text-foreground">
+        {label}
+      </Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            id={id}
+            variant="outline"
+            disabled={disabled}
+            className={cn(
+              "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+              disabled && "disabled:opacity-100",
+              !value && "text-zinc-500"
+            )}
+          >
+            {value
+              ? (() => {
+                  const d = parseDate(value)
+                  return d ? format(d, "PPP") : "Pick a date"
+                })()
+              : "Pick a date"}
+            <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={parseDate(value)}
+            onSelect={(selectedDate) => {
+              if (selectedDate) onChange(format(selectedDate, "yyyy-MM-dd"))
+            }}
+            captionLayout="dropdown"
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
+
   return (
     <div className="mx-auto space-y-5">
       <div className="flex justify-end gap-3">
@@ -255,7 +345,8 @@ export default function HBLHABWForm() {
           {isSaving ? "Saving…" : "Save"}
         </Button>
       </div>
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+
+      {/* <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
             <h2 className="text-sm font-semibold text-zinc-100">
@@ -268,77 +359,7 @@ export default function HBLHABWForm() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="date"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Date
-                </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="date"
-                      variant="outline"
-                      disabled
-                      className={cn(
-                        "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500 disabled:opacity-100",
-                        !date && "text-zinc-500"
-                      )}
-                    >
-                      {date
-                        ? (() => {
-                            const parseDate = (
-                              val: string
-                            ): Date | undefined => {
-                              if (!val) return undefined
-                              let d = parse(
-                                val,
-                                "yyyy-MM-dd HH:mm:ss",
-                                new Date()
-                              )
-                              if (isValid(d)) return d
-                              d = parse(val, "yyyy-MM-dd", new Date())
-                              if (isValid(d)) return d
-                              d = new Date(val)
-                              if (isValid(d)) return d
-                              return undefined
-                            }
-                            const selectedDate = parseDate(date)
-                            return selectedDate
-                              ? format(selectedDate, "PPP")
-                              : "Pick a date"
-                          })()
-                        : "Pick a date"}
-                      <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={(() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        return parseDate(date)
-                      })()}
-                      onSelect={(selectedDate) => {
-                        if (selectedDate) {
-                          setDate(format(selectedDate, "yyyy-MM-dd"))
-                        }
-                      }}
-                      captionLayout="dropdown"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              {dateField("Date", "date", date, setDate, true)}
 
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-foreground">
@@ -349,7 +370,6 @@ export default function HBLHABWForm() {
                     <SelectValue placeholder="Choose Type" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    {/* <SelectItem value="FCL">FCL</SelectItem> */}
                     <SelectItem value="SEA">Sea</SelectItem>
                     <SelectItem value="AIR">Air</SelectItem>
                   </SelectContent>
@@ -365,7 +385,6 @@ export default function HBLHABWForm() {
                     <SelectValue placeholder="Choose Status" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    {/* <SelectItem value="draft">Draft</SelectItem> */}
                     <SelectItem value="saved">Saved</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
@@ -397,7 +416,7 @@ export default function HBLHABWForm() {
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
                     {clientOptions.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id}>
+                      <SelectItem key={c.id} value={String(c.id)}>
                         {c.name}
                       </SelectItem>
                     ))}
@@ -415,7 +434,7 @@ export default function HBLHABWForm() {
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
                     {manufacturerOptions.map((m: any) => (
-                      <SelectItem key={m.id} value={m.id}>
+                      <SelectItem key={m.id} value={String(m.id)}>
                         {m.name}
                       </SelectItem>
                     ))}
@@ -466,7 +485,7 @@ export default function HBLHABWForm() {
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
                     {shipperOptions.map((p: any) => (
-                      <SelectItem key={p.id} value={p.id}>
+                      <SelectItem key={p.id} value={String(p.id)}>
                         {p.name}
                       </SelectItem>
                     ))}
@@ -485,7 +504,7 @@ export default function HBLHABWForm() {
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
                     {consigneeOptions.map((p: any) => (
-                      <SelectItem key={p.id} value={p.id}>
+                      <SelectItem key={p.id} value={String(p.id)}>
                         {p.name}
                       </SelectItem>
                     ))}
@@ -504,7 +523,7 @@ export default function HBLHABWForm() {
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
                     {notifierOptions.map((p: any) => (
-                      <SelectItem key={p.id} value={p.id}>
+                      <SelectItem key={p.id} value={String(p.id)}>
                         {p.name}
                       </SelectItem>
                     ))}
@@ -584,301 +603,33 @@ export default function HBLHABWForm() {
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="estimated-time-of-delivery"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Estimated Time of Delivery
-                </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="estimated-time-of-delivery"
-                      variant="outline"
-                      className={cn(
-                        "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                        !estimatedTimeOfDelivery && "text-zinc-500"
-                      )}
-                    >
-                      {estimatedTimeOfDelivery
-                        ? (() => {
-                            const parseDate = (
-                              val: string
-                            ): Date | undefined => {
-                              if (!val) return undefined
-                              let d = parse(
-                                val,
-                                "yyyy-MM-dd HH:mm:ss",
-                                new Date()
-                              )
-                              if (isValid(d)) return d
-                              d = parse(val, "yyyy-MM-dd", new Date())
-                              if (isValid(d)) return d
-                              d = new Date(val)
-                              if (isValid(d)) return d
-                              return undefined
-                            }
-                            const selectedDate = parseDate(
-                              estimatedTimeOfDelivery
-                            )
-                            return selectedDate
-                              ? format(selectedDate, "PPP")
-                              : "Pick a date"
-                          })()
-                        : "Pick a date"}
-                      <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={(() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        return parseDate(estimatedTimeOfDelivery)
-                      })()}
-                      onSelect={(selectedDate) => {
-                        if (selectedDate) {
-                          setEstimatedTimeOfDelivery(
-                            format(selectedDate, "yyyy-MM-dd")
-                          )
-                        }
-                      }}
-                      captionLayout="dropdown"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              {dateField(
+                "Estimated Time of Delivery",
+                "estimated-time-of-delivery",
+                estimatedTimeOfDelivery,
+                setEstimatedTimeOfDelivery
+              )}
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="estimated-time-of-arrival"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Estimated Time of Arrival
-                </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="estimated-time-of-arrival"
-                      variant="outline"
-                      className={cn(
-                        "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                        !estimatedTimeOfArrival && "text-zinc-500"
-                      )}
-                    >
-                      {estimatedTimeOfArrival
-                        ? (() => {
-                            const parseDate = (
-                              val: string
-                            ): Date | undefined => {
-                              if (!val) return undefined
-                              let d = parse(
-                                val,
-                                "yyyy-MM-dd HH:mm:ss",
-                                new Date()
-                              )
-                              if (isValid(d)) return d
-                              d = parse(val, "yyyy-MM-dd", new Date())
-                              if (isValid(d)) return d
-                              d = new Date(val)
-                              if (isValid(d)) return d
-                              return undefined
-                            }
-                            const selectedDate = parseDate(
-                              estimatedTimeOfArrival
-                            )
-                            return selectedDate
-                              ? format(selectedDate, "PPP")
-                              : "Pick a date"
-                          })()
-                        : "Pick a date"}
-                      <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={(() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        return parseDate(estimatedTimeOfArrival)
-                      })()}
-                      onSelect={(selectedDate) => {
-                        if (selectedDate) {
-                          setEstimatedTimeOfArrival(
-                            format(selectedDate, "yyyy-MM-dd")
-                          )
-                        }
-                      }}
-                      captionLayout="dropdown"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              {dateField(
+                "Estimated Time of Arrival",
+                "estimated-time-of-arrival",
+                estimatedTimeOfArrival,
+                setEstimatedTimeOfArrival
+              )}
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="actual-time-of-delivery"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Actual Time of Delivery
-                </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="actual-time-of-delivery"
-                      variant="outline"
-                      className={cn(
-                        "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                        !actualTimeOfDelivery && "text-zinc-500"
-                      )}
-                    >
-                      {actualTimeOfDelivery
-                        ? (() => {
-                            const parseDate = (
-                              val: string
-                            ): Date | undefined => {
-                              if (!val) return undefined
-                              let d = parse(
-                                val,
-                                "yyyy-MM-dd HH:mm:ss",
-                                new Date()
-                              )
-                              if (isValid(d)) return d
-                              d = parse(val, "yyyy-MM-dd", new Date())
-                              if (isValid(d)) return d
-                              d = new Date(val)
-                              if (isValid(d)) return d
-                              return undefined
-                            }
-                            const selectedDate = parseDate(actualTimeOfDelivery)
-                            return selectedDate
-                              ? format(selectedDate, "PPP")
-                              : "Pick a date"
-                          })()
-                        : "Pick a date"}
-                      <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={(() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        return parseDate(actualTimeOfDelivery)
-                      })()}
-                      onSelect={(selectedDate) => {
-                        if (selectedDate) {
-                          setActualTimeOfDelivery(
-                            format(selectedDate, "yyyy-MM-dd")
-                          )
-                        }
-                      }}
-                      captionLayout="dropdown"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              {dateField(
+                "Actual Time of Delivery",
+                "actual-time-of-delivery",
+                actualTimeOfDelivery,
+                setActualTimeOfDelivery
+              )}
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="actual-time-of-arrival"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Actual Time of Arrival
-                </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="actual-time-of-arrival"
-                      variant="outline"
-                      className={cn(
-                        "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                        !actualTimeOfArrival && "text-zinc-500"
-                      )}
-                    >
-                      {actualTimeOfArrival
-                        ? (() => {
-                            const parseDate = (
-                              val: string
-                            ): Date | undefined => {
-                              if (!val) return undefined
-                              let d = parse(
-                                val,
-                                "yyyy-MM-dd HH:mm:ss",
-                                new Date()
-                              )
-                              if (isValid(d)) return d
-                              d = parse(val, "yyyy-MM-dd", new Date())
-                              if (isValid(d)) return d
-                              d = new Date(val)
-                              if (isValid(d)) return d
-                              return undefined
-                            }
-                            const selectedDate = parseDate(actualTimeOfArrival)
-                            return selectedDate
-                              ? format(selectedDate, "PPP")
-                              : "Pick a date"
-                          })()
-                        : "Pick a date"}
-                      <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={(() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        return parseDate(actualTimeOfArrival)
-                      })()}
-                      onSelect={(selectedDate) => {
-                        if (selectedDate) {
-                          setActualTimeOfArrival(
-                            format(selectedDate, "yyyy-MM-dd")
-                          )
-                        }
-                      }}
-                      captionLayout="dropdown"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              {dateField(
+                "Actual Time of Arrival",
+                "actual-time-of-arrival",
+                actualTimeOfArrival,
+                setActualTimeOfArrival
+              )}
             </div>
           </div>
         </div>
@@ -1007,76 +758,12 @@ export default function HBLHABWForm() {
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="onboarded-date"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Onboarded date
-                </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="onboarded-date"
-                      variant="outline"
-                      className={cn(
-                        "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                        !onboardedDate && "text-zinc-500"
-                      )}
-                    >
-                      {onboardedDate
-                        ? (() => {
-                            const parseDate = (
-                              val: string
-                            ): Date | undefined => {
-                              if (!val) return undefined
-                              let d = parse(
-                                val,
-                                "yyyy-MM-dd HH:mm:ss",
-                                new Date()
-                              )
-                              if (isValid(d)) return d
-                              d = parse(val, "yyyy-MM-dd", new Date())
-                              if (isValid(d)) return d
-                              d = new Date(val)
-                              if (isValid(d)) return d
-                              return undefined
-                            }
-                            const selectedDate = parseDate(onboardedDate)
-                            return selectedDate
-                              ? format(selectedDate, "PPP")
-                              : "Pick a date"
-                          })()
-                        : "Pick a date"}
-                      <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={(() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        return parseDate(onboardedDate)
-                      })()}
-                      onSelect={(selectedDate) => {
-                        if (selectedDate) {
-                          setOnboardedDate(format(selectedDate, "yyyy-MM-dd"))
-                        }
-                      }}
-                      captionLayout="dropdown"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              {dateField(
+                "Onboarded date",
+                "onboarded-date",
+                onboardedDate,
+                setOnboardedDate
+              )}
             </div>
           </div>
         </div>
@@ -1160,7 +847,7 @@ export default function HBLHABWForm() {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   )
 }

@@ -1,7 +1,10 @@
-export async function fetchHBLHAWBs(status?: string) {
-  const url = status
-    ? `/api/hbl_hawbs?status=${encodeURIComponent(status)}`
-    : "/api/hbl_hawbs"
+export async function fetchHBLHAWBs(status?: string, mode?: string) {
+  const params = new URLSearchParams()
+  if (status) params.set("status", status)
+  if (mode) params.set("mode", mode)
+
+  const qs = params.toString()
+  const url = qs ? `/api/hbl_hawbs?${qs}` : "/api/hbl_hawbs"
 
   const res = await fetch(url)
   if (!res.ok) throw new Error("Failed to fetch HBL/HAWBs")
@@ -128,5 +131,25 @@ export async function createBillOfLading(input: CreateBillOfLadingInput) {
 export async function fetchBillOfLadingById(id: string) {
   const res = await fetch(`/api/hbl_hawbs/${id}`)
   if (!res.ok) throw new Error("Failed to fetch bill of lading by ID")
+  return res.json()
+}
+
+export async function updateBillOfLading(
+  id: string,
+  input: CreateBillOfLadingInput
+) {
+  const payload = buildBillOfLadingPayload(input)
+
+  const res = await fetch(`/api/hbl_hawbs/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}))
+    throw new Error(error?.message ?? "Failed to update Bill of Lading")
+  }
+
   return res.json()
 }

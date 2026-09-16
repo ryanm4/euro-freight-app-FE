@@ -24,3 +24,35 @@ export async function GET(
     return Response.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const body = await request.json()
+
+    const res = await fetch(
+      `${process.env.BACKEND_URL}/api/v1/bill_of_lading/${id}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }
+    )
+
+    if (!res.ok) {
+      return Response.json(
+        { error: "Failed to update bill of lading" },
+        { status: res.status }
+      )
+    }
+
+    const data = await res.json()
+    return Response.json(data)
+  } catch (error) {
+    console.error("PUT bill_of_lading/[id] error:", error)
+    return Response.json({ error: "Internal server error" }, { status: 500 })
+  }
+}

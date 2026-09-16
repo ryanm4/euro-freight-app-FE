@@ -41,11 +41,15 @@ export const hblHawbColumns = (
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          ID <IconArrowsSort className="ml-2 h-4 w-4" />
+          HBL/HAWB ID <IconArrowsSort className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="font-semibold">#{row.original.id}</div>
+        <div className="font-semibold">
+          {row.original.type === "LCL" || row.original.type === "FCL"
+            ? `HBL/${row.original.id}`
+            : `HAWB/${row.original.id}`}
+        </div>
       ),
     },
     {

@@ -15,6 +15,7 @@ import {
 import { format } from "date-fns"
 
 export interface PackingList {
+  total_cartons: number
   id: number
   packing_list_no: string
   client_id: number
@@ -32,6 +33,7 @@ export interface PackingList {
   updated_on: string | null
 }
 export interface GRN {
+  gdns: any
   id: number
   client_id: string
   manufacture_id: string
@@ -61,7 +63,19 @@ export default function GRNTable({
   readOnly?: boolean
   selectedType?: string
 }) {
-  const headers = ["GRN ID", "Client", "Manufacturer", "Date", "Qty", "Status"]
+  console.log("grns", grns)
+
+  const headers = [
+    "GRN No",
+    "Client",
+    "Manufacturer",
+    "Total Cartoon Count",
+    "Total Gross Weight",
+    "Total Volume",
+    "GRN Date ",
+    "Shipping Mode",
+    "Status",
+  ]
   if (!readOnly) headers.push("Actions")
 
   const columnCount = headers.length
@@ -73,14 +87,31 @@ export default function GRNTable({
     if (!selectedType) return false // no type chosen yet -> don't restrict
 
     const target = normalize(selectedType)
+    debugger
     const modes =
-      grn.packing_lists?.map((pl) => normalize(pl.shipping_mode)) ?? []
+      grn.packing_lists?.map((pl) =>
+        normalize(
+          pl.shipping_mode === "LCL" || pl.shipping_mode === "FCL"
+            ? "SEA"
+            : pl.shipping_mode
+        )
+      ) ?? []
 
     // No packing list data to check against -> treat as disabled (unknown mode)
     if (modes.length === 0) return true
 
     // Enabled only if at least one packing list matches the selected type
     return !modes.includes(target)
+  }
+
+  const totalCartons = (grn: GRN) =>
+    grn.packing_lists?.reduce((sum, pl) => sum + pl.total_cartons, 0) ?? 0
+
+  const shippingMode = (grn: GRN) => {
+    const modes = grn.packing_lists?.map((pl) => pl.shipping_mode) ?? []
+    return modes.length > 0
+      ? modes.map((m) => (m === "FCL" || m === "LCL" ? "Sea" : m)).join(", ")
+      : "N/A"
   }
 
   return (
@@ -122,11 +153,20 @@ export default function GRNTable({
                 <TableCell className="text-zinc-300">
                   {grn.manufacture_id}
                 </TableCell>
-                <TableCell className="whitespace-nowrap text-zinc-300">
-                  {format(new Date(grn.date), "dd/MMM/yy HH:mm")}
+                <TableCell className="text-zinc-300">
+                  {totalCartons(grn).toLocaleString()}
                 </TableCell>
                 <TableCell className="text-zinc-300">
-                  {grn.quantity.toLocaleString()}
+                  {grn?.gdns[0].weight.toLocaleString()} kg
+                </TableCell>
+                <TableCell className="text-zinc-300">
+                  {grn?.gdns[0].volume.toLocaleString()}
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-zinc-300">
+                  {format(new Date(grn.date), "dd/MMM/yy")}
+                </TableCell>
+                <TableCell className="text-zinc-300">
+                  {shippingMode(grn)}
                 </TableCell>
                 <TableCell className="text-zinc-400">{grn?.status}</TableCell>
                 {!readOnly && (

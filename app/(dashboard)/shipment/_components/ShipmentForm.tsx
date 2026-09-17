@@ -66,7 +66,7 @@ export default function ShipmentForm() {
   }
 
   const handleHblRowClick = (hbl: any) => {
-    console.log("Navigate to HBL view:", hbl.id)
+    // console.log("Navigate to HBL view:", hbl.id)
   }
 
   const handleModeChange = (v: string) => {

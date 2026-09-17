@@ -71,8 +71,7 @@ export default function GoodsReceiveNoteForm() {
   // const [packingList, setPackingList] = useState("")
   const [remarks, setRemarks] = useState("")
 
-  console.log("recipient", recipient)
-
+ 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
 
   const ACTUAL_UOM_OPTIONS = ["cm", "m"]
@@ -110,7 +109,7 @@ export default function GoodsReceiveNoteForm() {
     queryFn: fetchRecipients,
   })
 
-  console.log("recipientsList", recipientsList)
+ 
 
   const clientOptions = useMemo(() => {
     return (
@@ -194,7 +193,6 @@ export default function GoodsReceiveNoteForm() {
     [rows, selectedRows]
   )
 
-  console.log("selectedPackingListRows", selectedPackingListRows)
 
   // const quantity = useMemo(
   //   () =>

@@ -530,7 +530,6 @@ export default function PackingListForm({
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit, (errors) => {
-            console.error("Packing list form validation errors:", errors)
             const fieldNames = Object.keys(errors).join(", ")
             toast.error(`Please fix the following fields: ${fieldNames}`)
           })}

@@ -129,7 +129,6 @@ export default function GoodsDispatchNoteForm() {
 
   // Shipment Measurements — repeatable rows
   const [measurements, setMeasurements] = useState<MeasurementRow[]>([])
-  console.log("measurements", measurements)
   // The single top entry row the user is currently filling in
   const [draft, setDraft] = useState(EMPTY_DRAFT)
 

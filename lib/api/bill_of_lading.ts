@@ -43,6 +43,7 @@ export interface CreateBillOfLadingPayload {
   shipper_id: number
   consignee_id: number
   notify_id: number
+  total_freight_cost: string | number
 }
 
 export interface CreateBillOfLadingInput {
@@ -71,6 +72,7 @@ export interface CreateBillOfLadingInput {
   shipperId: string
   consigneeId: string
   notifyId: string
+  total_freight_cost: string
 }
 
 const formatDate = (val: string) =>
@@ -108,6 +110,7 @@ function buildBillOfLadingPayload(
     shipper_id: Number(input.shipperId),
     consignee_id: Number(input.consigneeId),
     notify_id: Number(input.notifyId),
+    total_freight_cost: Number(input.total_freight_cost) || 0,
   }
 }
 

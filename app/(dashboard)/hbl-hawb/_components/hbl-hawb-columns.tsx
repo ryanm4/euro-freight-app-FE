@@ -114,6 +114,11 @@ export const hblHawbColumns = (
       },
     },
     {
+      accessorKey: "total_freight_cost",
+      header: "Total Freight Cost",
+      cell: ({ row }) => <div>{`$ ${row.original.total_freight_cost ?? "N/A"}`}</div>,
+    },
+    {
       accessorKey: "planned_vessel_name",
       header: "Vessel Name",
       cell: ({ row }) => <div>{row.original.planned_vessel_name ?? "N/A"}</div>,

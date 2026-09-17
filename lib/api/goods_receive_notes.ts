@@ -12,7 +12,7 @@ export async function fetchGRNs(status?: string, mode?: string) {
 }
 
 export async function createGoodsReceiveNote(data: any) {
-  debugger
+  
   const payload = {
     client_id: parseInt(data.client_id),
     manufacture_id: parseInt(data.manufacture_id),

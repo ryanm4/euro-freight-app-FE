@@ -5,7 +5,6 @@ export async function fetchPurchaseOrders() {
 }
 
 export async function createPurchaseOrder(data: any) {
-  debugger
   const res = await fetch("/api/purchase-orders", {
     method: "POST",
     headers: {

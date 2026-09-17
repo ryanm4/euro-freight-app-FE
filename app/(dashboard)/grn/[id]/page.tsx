@@ -100,7 +100,7 @@ export default function GrnByID() {
       <div className="mt-3">
         <PageTitleWithBreadcrumb
           // title={`GRN-${id}`}
-          title={`GRN`}
+          title={`Create New GRN`}
           breadcrumbs={[
             { title: "Dashboard", href: "/dashboard" },
             { title: "GRN", href: "/grn" },

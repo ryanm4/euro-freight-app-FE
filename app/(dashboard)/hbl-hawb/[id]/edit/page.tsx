@@ -2,12 +2,14 @@
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Textarea } from "@/components/ui/textarea"
 import {
   fetchBillOfLadingById,
   updateBillOfLading,
@@ -16,11 +18,20 @@ import { fetchClients } from "@/lib/api/clients"
 import { fetchGRNs } from "@/lib/api/goods_receive_notes"
 import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
-import { IconCalendarFilled } from "@tabler/icons-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { IconCalendarFilled, IconPlus, IconTrash } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
 import { format, isValid, parse } from "date-fns"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
+import GRNTable, { GRN } from "../../_components/GRNTable"
+import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 
 interface Port {
   id: number
@@ -59,6 +70,7 @@ export default function HBLHABWEdit() {
   })
 
   const [type, setType] = useState("")
+  const [hblId, setHblId] = useState("")
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"))
   const [client, setClient] = useState("")
   const [manufacturer, setManufacturer] = useState("")
@@ -79,10 +91,15 @@ export default function HBLHABWEdit() {
   const [onboardedDate, setOnboardedDate] = useState("")
   const [remarks, setRemarks] = useState("")
   const [status, setStatus] = useState("saved")
+  const [total_freight_cost, setTotalFreightCost] = useState("")
 
   const [shipperId, setShipperId] = useState("")
   const [consigneeId, setConsigneeId] = useState("")
   const [notifyId, setNotifyId] = useState("")
+
+  const [grnTableData, setGrnTableData] = useState<GRN[]>([])
+  const [shipmentData, setShipmentData] = useState<any>(null)
+  const [packingList, setPackingList] = useState<any[]>([])
 
   const [selectedGrnIds, setSelectedGrnIds] = useState<Set<number>>(new Set())
   const [ports, setPorts] = useState<Port[]>([{ id: 1, value: "" }])
@@ -91,14 +108,14 @@ export default function HBLHABWEdit() {
   useEffect(() => {
     if (!res?.data) return
     const hbl = res.data
-
+    setHblId(hbl.id ?? "")
     setType(hbl.type ?? "")
     setDate(
       hbl.date ? toDateInputValue(hbl.date) : format(new Date(), "yyyy-MM-dd")
     )
-    setClient(hbl.client_id != null ? String(hbl.client_id) : "")
+    setClient(hbl.client?.id != null ? String(hbl.client.id) : "")
     setManufacturer(
-      hbl.manufacture_id != null ? String(hbl.manufacture_id) : ""
+      hbl.manufacture?.id != null ? String(hbl.manufacture.id) : ""
     )
     setMblMawbNo(hbl.mbl_mawb_no ?? "")
     setVesselName(hbl.planned_vessel_name ?? "")
@@ -117,10 +134,14 @@ export default function HBLHABWEdit() {
     setOnboardedDate(toDateInputValue(hbl.onboard_date))
     setRemarks(hbl.remarks ?? "")
     setStatus(hbl.status ?? "saved")
+    setTotalFreightCost(hbl.total_freight_cost ?? "")
+    setGrnTableData(hbl.grns ?? [])
+    setShipmentData(hbl.shipment ?? null)
+    setPackingList(hbl.grns ?? [])
 
-    setShipperId(hbl.shipper_id != null ? String(hbl.shipper_id) : "")
-    setConsigneeId(hbl.consignee_id != null ? String(hbl.consignee_id) : "")
-    setNotifyId(hbl.notify_id != null ? String(hbl.notify_id) : "")
+    setShipperId(hbl.shipper?.id != null ? String(hbl.shipper.id) : "")
+    setConsigneeId(hbl.consignee?.id != null ? String(hbl.consignee.id) : "")
+    setNotifyId(hbl.notify?.id != null ? String(hbl.notify.id) : "")
 
     const grnIds = (hbl.grns ?? []).map((g: any) => g.id)
     setSelectedGrnIds(new Set(grnIds))
@@ -243,6 +264,7 @@ export default function HBLHABWEdit() {
         shipperId,
         consigneeId,
         notifyId,
+        total_freight_cost,
       })
       router.push("/hbl-hawb")
     } catch (err) {
@@ -283,6 +305,37 @@ export default function HBLHABWEdit() {
   if (isError || !res?.data) {
     return <>Not found</>
   }
+
+  const totals = (packingList ?? []).reduce(
+    (
+      acc: {
+        total_quantity: number
+        total_cartons: number
+        weight_kg: number
+        total_volume: number
+        total_cbm: number
+      },
+      grn: any
+    ) => {
+      const packingLists = grn.packing_lists ?? []
+
+      packingLists.forEach((item: any) => {
+        acc.total_quantity += Number(item.total_quantity) || 0
+        acc.total_cartons += Number(item.total_cartons) || 0
+        acc.weight_kg += Number(item.weight_kg) || 0
+        acc.total_volume += Number(item.total_volume) || 0
+        acc.total_cbm += Number(item.total_cbm) || 0
+      })
+      return acc
+    },
+    {
+      total_quantity: 0,
+      total_cartons: 0,
+      weight_kg: 0,
+      total_volume: 0,
+      total_cbm: 0,
+    }
+  )
 
   const dateField = (
     label: string,
@@ -331,7 +384,17 @@ export default function HBLHABWEdit() {
   )
 
   return (
-    <div className="mx-auto space-y-5">
+    <div className="mx-6 space-y-5">
+      <div className="mt-3">
+        <PageTitleWithBreadcrumb
+          // title={`HBL/HAWB-${id}`}
+          title={`HBL-${hblId ?? ""}`}
+          breadcrumbs={[
+            { title: "Dashboard", href: "/dashboard" },
+            { title: "HBL / HAWB", href: "/hbl-hawb" },
+          ]}
+        />
+      </div>
       <div className="flex justify-end gap-3">
         <Button
           variant="outline"
@@ -346,7 +409,7 @@ export default function HBLHABWEdit() {
         </Button>
       </div>
 
-      {/* <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
             <h2 className="text-sm font-semibold text-zinc-100">
@@ -359,7 +422,7 @@ export default function HBLHABWEdit() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
-              {dateField("Date", "date", date, setDate, true)}
+              {dateField("Date", "date", date, setDate, false)}
 
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-foreground">
@@ -380,11 +443,12 @@ export default function HBLHABWEdit() {
                 <Label className="text-xs font-medium text-foreground">
                   Status
                 </Label>
-                <Select value={status} onValueChange={setStatus}>
+                <Select value={status} onValueChange={setStatus} disabled>
                   <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
                     <SelectValue placeholder="Choose Status" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    <SelectItem value="SHIPMENT_OPEN">SHIPMENT OPEN</SelectItem>
                     <SelectItem value="saved">Saved</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
@@ -548,7 +612,7 @@ export default function HBLHABWEdit() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
               <GRNTable
-                grns={(grnData?.data ?? []) as GRN[]}
+                grns={(grnTableData ?? []) as GRN[]}
                 selectedIds={selectedGrnIds}
                 onToggle={toggleGrn}
                 selectedType={type}
@@ -570,67 +634,545 @@ export default function HBLHABWEdit() {
           </div>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="vessel-name"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Planned Vessel Name
-                </Label>
-                <Input
-                  id="vessel-name"
-                  placeholder="Enter Vessel Name"
-                  value={vesselName}
-                  onChange={(e) => setVesselName(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
+            {type === "AIR" ? (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="vessel-name"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Flight Number
+                  </Label>
+                  <Input
+                    id="flight-number"
+                    placeholder="Enter Flight Number"
+                    value={shipmentData?.flight_number}
+                    disabled={true}
+                    // onChange={(e) => setVesselName(e.target.value)}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="voyage-no"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Voyage No
-                </Label>
-                <Input
-                  id="voyage-no"
-                  placeholder="Enter Voyage No"
-                  value={voyageNo}
-                  onChange={(e) => setVoyageNo(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="vessel-name"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Origin
+                  </Label>
+                  <Input
+                    id="flight-number"
+                    placeholder="Enter Flight Number"
+                    value={shipmentData?.origin}
+                    disabled={true}
+                    // onChange={(e) => setVesselName(e.target.value)}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
 
-              {dateField(
-                "Estimated Time of Delivery",
-                "estimated-time-of-delivery",
-                estimatedTimeOfDelivery,
-                setEstimatedTimeOfDelivery
-              )}
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="vessel-name"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Destination
+                  </Label>
+                  <Input
+                    id="flight-number"
+                    placeholder="Enter Flight Number"
+                    value={shipmentData?.destination}
+                    disabled={true}
+                    // onChange={(e) => setVesselName(e.target.value)}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
 
-              {dateField(
-                "Estimated Time of Arrival",
-                "estimated-time-of-arrival",
-                estimatedTimeOfArrival,
-                setEstimatedTimeOfArrival
-              )}
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="estimated-time-of-delivery"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    ETD - Origin
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild disabled={true}>
+                      <Button
+                        id="estimated-time-of-delivery"
+                        variant="outline"
+                        className={cn(
+                          "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                          !shipmentData?.etd_origin && "text-zinc-500"
+                        )}
+                      >
+                        {shipmentData?.etd_origin
+                          ? (() => {
+                              const parseDate = (
+                                val: string
+                              ): Date | undefined => {
+                                if (!val) return undefined
+                                let d = parse(
+                                  val,
+                                  "yyyy-MM-dd HH:mm:ss",
+                                  new Date()
+                                )
+                                if (isValid(d)) return d
+                                d = parse(val, "yyyy-MM-dd", new Date())
+                                if (isValid(d)) return d
+                                d = new Date(val)
+                                if (isValid(d)) return d
+                                return undefined
+                              }
+                              const selectedDate = parseDate(
+                                shipmentData?.etd_origin
+                              )
+                              return selectedDate
+                                ? format(selectedDate, "PPP")
+                                : "Pick a date"
+                            })()
+                          : "Pick a date"}
+                        <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={(() => {
+                          const parseDate = (val: string): Date | undefined => {
+                            if (!val) return undefined
+                            let d = parse(
+                              val,
+                              "yyyy-MM-dd HH:mm:ss",
+                              new Date()
+                            )
+                            if (isValid(d)) return d
+                            d = parse(val, "yyyy-MM-dd", new Date())
+                            if (isValid(d)) return d
+                            d = new Date(val)
+                            if (isValid(d)) return d
+                            return undefined
+                          }
+                          return parseDate(shipmentData?.etd_origin)
+                        })()}
+                        // onSelect={(selectedDate) => {
+                        //   if (selectedDate) {
+                        //     data.shipment.etd_origin(
+                        //       format(selectedDate, "yyyy-MM-dd")
+                        //     )
+                        //   }
+                        // }}
+                        captionLayout="dropdown"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
-              {dateField(
-                "Actual Time of Delivery",
-                "actual-time-of-delivery",
-                actualTimeOfDelivery,
-                setActualTimeOfDelivery
-              )}
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="estimated-time-of-delivery"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    ETA - Destination
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild disabled={true}>
+                      <Button
+                        id="estimated-time-of-delivery"
+                        variant="outline"
+                        className={cn(
+                          "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                          !shipmentData?.eta_destination && "text-zinc-500"
+                        )}
+                      >
+                        {shipmentData?.eta_destination
+                          ? (() => {
+                              const parseDate = (
+                                val: string
+                              ): Date | undefined => {
+                                if (!val) return undefined
+                                let d = parse(
+                                  val,
+                                  "yyyy-MM-dd HH:mm:ss",
+                                  new Date()
+                                )
+                                if (isValid(d)) return d
+                                d = parse(val, "yyyy-MM-dd", new Date())
+                                if (isValid(d)) return d
+                                d = new Date(val)
+                                if (isValid(d)) return d
+                                return undefined
+                              }
+                              const selectedDate = parseDate(
+                                shipmentData?.eta_destination
+                              )
+                              return selectedDate
+                                ? format(selectedDate, "PPP")
+                                : "Pick a date"
+                            })()
+                          : "Pick a date"}
+                        <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={(() => {
+                          const parseDate = (val: string): Date | undefined => {
+                            if (!val) return undefined
+                            let d = parse(
+                              val,
+                              "yyyy-MM-dd HH:mm:ss",
+                              new Date()
+                            )
+                            if (isValid(d)) return d
+                            d = parse(val, "yyyy-MM-dd", new Date())
+                            if (isValid(d)) return d
+                            d = new Date(val)
+                            if (isValid(d)) return d
+                            return undefined
+                          }
+                          return parseDate(shipmentData?.eta_destination)
+                        })()}
+                        // onSelect={(selectedDate) => {
+                        //   if (selectedDate) {
+                        //     setEstimatedTimeOfDelivery(
+                        //       format(selectedDate, "yyyy-MM-dd")
+                        //     )
+                        //   }
+                        // }}
+                        captionLayout="dropdown"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="vessel-name"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Vessel Name
+                  </Label>
+                  <Input
+                    id="vessel-name"
+                    placeholder="Enter Vessel Name"
+                    value={shipmentData?.vessel_name}
+                    disabled={true}
+                    // onChange={(e) => setVesselName(e.target.value)}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
 
-              {dateField(
-                "Actual Time of Arrival",
-                "actual-time-of-arrival",
-                actualTimeOfArrival,
-                setActualTimeOfArrival
-              )}
-            </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="voyage-no"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Voyage No
+                  </Label>
+                  <Input
+                    id="voyage-no"
+                    placeholder="Enter Voyage No"
+                    value={shipmentData?.voyage_number}
+                    disabled={true}
+                    // onChange={(e) => setVoyageNo(e.target.value)}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="origin-port"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Origin Port
+                  </Label>
+                  <Input
+                    id="origin-port"
+                    placeholder="Enter Origin Port"
+                    value={shipmentData?.origin_port}
+                    disabled={true}
+                    // onChange={(e) => setVoyageNo(e.target.value)}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="discharge  -port"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Discharge Port
+                  </Label>
+                  <Input
+                    id="discharge-port"
+                    placeholder="Enter Discharge Port"
+                    value={shipmentData?.discharge_port}
+                    disabled={true}
+                    // onChange={(e) => setVoyageNo(e.target.value)}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="final-place-of-delivery"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Final Place of Delivery
+                  </Label>
+                  <Input
+                    id="final-place-of-delivery"
+                    placeholder="Enter Final Place of Delivery"
+                    value={shipmentData?.final_place_of_delivery}
+                    disabled={true}
+                    // onChange={(e) => setVoyageNo(e.target.value)}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="estimated-time-of-delivery"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    ETD - Colombo
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild disabled={true}>
+                      <Button
+                        id="estimated-time-of-delivery"
+                        variant="outline"
+                        className={cn(
+                          "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                          !shipmentData?.etd_colombo && "text-zinc-500"
+                        )}
+                      >
+                        {shipmentData?.etd_colombo
+                          ? (() => {
+                              const parseDate = (
+                                val: string
+                              ): Date | undefined => {
+                                if (!val) return undefined
+                                let d = parse(
+                                  val,
+                                  "yyyy-MM-dd HH:mm:ss",
+                                  new Date()
+                                )
+                                if (isValid(d)) return d
+                                d = parse(val, "yyyy-MM-dd", new Date())
+                                if (isValid(d)) return d
+                                d = new Date(val)
+                                if (isValid(d)) return d
+                                return undefined
+                              }
+                              const selectedDate = parseDate(
+                                shipmentData?.etd_colombo
+                              )
+                              return selectedDate
+                                ? format(selectedDate, "PPP")
+                                : "Pick a date"
+                            })()
+                          : "Pick a date"}
+                        <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={(() => {
+                          const parseDate = (val: string): Date | undefined => {
+                            if (!val) return undefined
+                            let d = parse(
+                              val,
+                              "yyyy-MM-dd HH:mm:ss",
+                              new Date()
+                            )
+                            if (isValid(d)) return d
+                            d = parse(val, "yyyy-MM-dd", new Date())
+                            if (isValid(d)) return d
+                            d = new Date(val)
+                            if (isValid(d)) return d
+                            return undefined
+                          }
+                          return parseDate(shipmentData?.etd_colombo)
+                        })()}
+                        // onSelect={(selectedDate) => {
+                        //   if (selectedDate) {
+                        //     setEstimatedTimeOfDelivery(
+                        //       format(selectedDate, "yyyy-MM-dd")
+                        //     )
+                        //   }
+                        // }}
+                        captionLayout="dropdown"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="estimated-time-of-arrival"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    ETA -Discharge Port
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild disabled={true}>
+                      <Button
+                        id="estimated-time-of-arrival"
+                        variant="outline"
+                        className={cn(
+                          "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                          !shipmentData?.discharge_port && "text-zinc-500"
+                        )}
+                      >
+                        {shipmentData?.discharge_port
+                          ? (() => {
+                              const parseDate = (
+                                val: string
+                              ): Date | undefined => {
+                                if (!val) return undefined
+                                let d = parse(
+                                  val,
+                                  "yyyy-MM-dd HH:mm:ss",
+                                  new Date()
+                                )
+                                if (isValid(d)) return d
+                                d = parse(val, "yyyy-MM-dd", new Date())
+                                if (isValid(d)) return d
+                                d = new Date(val)
+                                if (isValid(d)) return d
+                                return undefined
+                              }
+                              const selectedDate = parseDate(
+                                shipmentData?.discharge_port
+                              )
+                              return selectedDate
+                                ? format(selectedDate, "PPP")
+                                : "Pick a date"
+                            })()
+                          : "Pick a date"}
+                        <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={(() => {
+                          const parseDate = (val: string): Date | undefined => {
+                            if (!val) return undefined
+                            let d = parse(
+                              val,
+                              "yyyy-MM-dd HH:mm:ss",
+                              new Date()
+                            )
+                            if (isValid(d)) return d
+                            d = parse(val, "yyyy-MM-dd", new Date())
+                            if (isValid(d)) return d
+                            d = new Date(val)
+                            if (isValid(d)) return d
+                            return undefined
+                          }
+                          return parseDate(shipmentData?.discharge_port)
+                        })()}
+                        // onSelect={(selectedDate) => {
+                        //   if (selectedDate) {
+                        //     setEstimatedTimeOfArrival(
+                        //       format(selectedDate, "yyyy-MM-dd")
+                        //     )
+                        //   }
+                        // }}
+                        captionLayout="dropdown"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="actual-time-of-delivery"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    ETA Final Delivery Place
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild disabled={true}>
+                      <Button
+                        id="actual-time-of-delivery"
+                        variant="outline"
+                        className={cn(
+                          "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                          !shipmentData?.eta_final_delivery_place &&
+                            "text-zinc-500"
+                        )}
+                      >
+                        {shipmentData?.eta_final_delivery_place
+                          ? (() => {
+                              const parseDate = (
+                                val: string
+                              ): Date | undefined => {
+                                if (!val) return undefined
+                                let d = parse(
+                                  val,
+                                  "yyyy-MM-dd HH:mm:ss",
+                                  new Date()
+                                )
+                                if (isValid(d)) return d
+                                d = parse(val, "yyyy-MM-dd", new Date())
+                                if (isValid(d)) return d
+                                d = new Date(val)
+                                if (isValid(d)) return d
+                                return undefined
+                              }
+                              const selectedDate = parseDate(
+                                shipmentData?.eta_final_delivery_place
+                              )
+                              return selectedDate
+                                ? format(selectedDate, "PPP")
+                                : "Pick a date"
+                            })()
+                          : "Pick a date"}
+                        <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={(() => {
+                          const parseDate = (val: string): Date | undefined => {
+                            if (!val) return undefined
+                            let d = parse(
+                              val,
+                              "yyyy-MM-dd HH:mm:ss",
+                              new Date()
+                            )
+                            if (isValid(d)) return d
+                            d = parse(val, "yyyy-MM-dd", new Date())
+                            if (isValid(d)) return d
+                            d = new Date(val)
+                            if (isValid(d)) return d
+                            return undefined
+                          }
+                          return parseDate(
+                            shipmentData?.eta_final_delivery_place
+                          )
+                        })()}
+                        // onSelect={(selectedDate) => {
+                        //   if (selectedDate) {
+                        //     setActualTimeOfDelivery(
+                        //       format(selectedDate, "yyyy-MM-dd")
+                        //     )
+                        //   }
+                        // }}
+                        captionLayout="dropdown"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -645,125 +1187,100 @@ export default function HBLHABWEdit() {
           </div>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="arrival-port"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Arrival Port
-                </Label>
-                <Input
-                  id="arrival-port"
-                  placeholder="Enter Arrival Port"
-                  value={arrivalPort}
-                  onChange={(e) => setArrivalPort(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <Label
+                htmlFor="no-of-pieces"
+                className="text-xs font-medium text-foreground"
+              >
+                Total Freight Cost ($)
+              </Label>
+              <Input
+                id="total-freight-cost"
+                placeholder="Enter Total Freight Cost"
+                value={total_freight_cost}
+                onChange={(e) => setTotalFreightCost(e.target.value)}
+                type="number"
+                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label
+                htmlFor="no-of-pieces"
+                className="text-xs font-medium text-foreground"
+              >
+                Total Carton Count
+              </Label>
+              <Input
+                id="no-of-pieces"
+                placeholder="Enter No. of Pieces"
+                value={totals.total_cartons}
+                readOnly
+                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+              />
+            </div>
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="inland-location"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Inland Location
-                </Label>
-                <Input
-                  id="inland-location"
-                  placeholder="Enter Inland Location"
-                  value={inlandLocation}
-                  onChange={(e) => setInlandLocation(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <Label
+                htmlFor="no-of-pieces"
+                className="text-xs font-medium text-foreground"
+              >
+                Total Pieces Count
+              </Label>
+              <Input
+                id="no-of-pieces"
+                placeholder="Enter No. of Pieces"
+                value={totals.total_quantity}
+                readOnly
+                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+              />
+            </div>
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="no-of-pieces"
-                  className="text-xs font-medium text-foreground"
-                >
-                  No. of Pieces
-                </Label>
-                <Input
-                  id="no-of-pieces"
-                  placeholder="Enter No. of Pieces"
-                  value={noOfPieces}
-                  onChange={(e) => setNoOfPieces(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <Label
+                htmlFor="gross-weight"
+                className="text-xs font-medium text-foreground"
+              >
+                Total Gross Weight
+              </Label>
+              <Input
+                id="gross-weight"
+                placeholder="Enter Gross Weight"
+                value={totals.weight_kg}
+                readOnly
+                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+              />
+            </div>
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="gross-weight"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Gross Weight
-                </Label>
-                <Input
-                  id="gross-weight"
-                  placeholder="Enter Gross Weight"
-                  value={grossWeight}
-                  onChange={(e) => setGrossWeight(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <Label
+                htmlFor="chargeable-weight"
+                className="text-xs font-medium text-foreground"
+              >
+                Total Volume
+              </Label>
+              <Input
+                id="chargeable-weight"
+                placeholder="Enter Chargeable Weight"
+                value={totals.total_volume}
+                readOnly
+                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+              />
+            </div>
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="chargeable-weight"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Chargeable Weight
-                </Label>
-                <Input
-                  id="chargeable-weight"
-                  placeholder="Enter Chargeable Weight"
-                  value={chargeableWeight}
-                  onChange={(e) => setChargeableWeight(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="cbm"
-                  className="text-xs font-medium text-foreground"
-                >
-                  CBM
-                </Label>
-                <Input
-                  id="cbm"
-                  placeholder="Enter CBM"
-                  value={cbm}
-                  onChange={(e) => setCbm(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="container-seal-no"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Container Seal No
-                </Label>
-                <Input
-                  id="container-seal-no"
-                  placeholder="Enter Container Seal No"
-                  value={containerSealNo}
-                  onChange={(e) => setContainerSealNo(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-
-              {dateField(
-                "Onboarded date",
-                "onboarded-date",
-                onboardedDate,
-                setOnboardedDate
-              )}
+            <div className="flex flex-col gap-1.5">
+              <Label
+                htmlFor="cbm"
+                className="text-xs font-medium text-foreground"
+              >
+                Total Volume Weight
+              </Label>
+              <Input
+                id="cbm"
+                placeholder="Enter CBM"
+                value={totals.total_cbm}
+                readOnly
+                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+              />
             </div>
           </div>
         </div>
@@ -847,7 +1364,7 @@ export default function HBLHABWEdit() {
             </div>
           </div>
         </div>
-      </div> */}
+      </div>
     </div>
   )
 }

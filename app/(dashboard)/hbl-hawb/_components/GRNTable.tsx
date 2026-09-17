@@ -62,8 +62,7 @@ export default function GRNTable({
   onToggle?: (id: number) => void
   readOnly?: boolean
   selectedType?: string
-}) {
-  console.log("grns", grns)
+}) {  
 
   const headers = [
     "GRN No",
@@ -87,7 +86,7 @@ export default function GRNTable({
     if (!selectedType) return false // no type chosen yet -> don't restrict
 
     const target = normalize(selectedType)
-    debugger
+    
     const modes =
       grn.packing_lists?.map((pl) =>
         normalize(
@@ -147,7 +146,7 @@ export default function GRNTable({
                 } ${readOnly ? "hover:bg-neutral-800/40" : "hover:bg-zinc-800/40"}`}
               >
                 <TableCell className="font-mono text-xs text-zinc-300">
-                  {grn.id}
+                  {`GRN-${grn.id}`}
                 </TableCell>
                 <TableCell className="text-zinc-200">{grn.client_id}</TableCell>
                 <TableCell className="text-zinc-300">

@@ -23,6 +23,7 @@ export interface HBL_HAWB {
   cbm?: string | null
   container_seal_no?: string | null
   onboard_date?: string | null
+  total_freight_cost?: string | null
   created_by?: string | null
   created_on?: string | null
   updated_by?: string | null

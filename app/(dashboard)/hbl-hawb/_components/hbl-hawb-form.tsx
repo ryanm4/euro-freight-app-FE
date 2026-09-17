@@ -59,6 +59,7 @@ export default function HBLHABWForm() {
   const [onboardedDate, setOnboardedDate] = useState("")
   const [remarks, setRemarks] = useState("")
   const [status, setStatus] = useState("saved")
+  const [total_freight_cost, setTotalFreightCost] = useState("")
   // const [arrivalPorts, setArrivalPorts] = useState<Port[]>([])
 
   // HBL Information - Shipper / Consignee / Notify
@@ -172,11 +173,11 @@ export default function HBLHABWForm() {
   const handleSave = async () => {
     setIsSaving(true)
 
-    if (!mblMawbNo || mblMawbNo.trim() === "") {
-      alert("MBL/MAWB No is required.")
-      setIsSaving(false)
-      return
-    }
+    // if (!mblMawbNo || mblMawbNo.trim() === "") {
+    //   alert("MBL/MAWB No is required.")
+    //   setIsSaving(false)
+    //   return
+    // }
 
     try {
       await createBillOfLading({
@@ -205,6 +206,7 @@ export default function HBLHABWForm() {
         shipperId,
         consigneeId,
         notifyId,
+        total_freight_cost
       })
       router.push("/hbl-hawb")
     } catch (err) {
@@ -434,7 +436,9 @@ export default function HBLHABWForm() {
                   id="mbl-mawb-no"
                   placeholder="Enter MBL / MAWB No"
                   value={mblMawbNo}
-                  onChange={(e) => setMblMawbNo(e.target.value)}
+                  // readOnly={true}
+                  disabled={true}
+                  // onChange={(e) => setMblMawbNo(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -552,57 +556,109 @@ export default function HBLHABWForm() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="vessel-name"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Planned Vessel Name
-                </Label>
-                <Input
-                  id="vessel-name"
-                  placeholder="Enter Vessel Name"
-                  value={vesselName}
-                  onChange={(e) => setVesselName(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="voyage-no"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Voyage No
-                </Label>
-                <Input
-                  id="voyage-no"
-                  placeholder="Enter Voyage No"
-                  value={voyageNo}
-                  onChange={(e) => setVoyageNo(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="estimated-time-of-delivery"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Estimated Time of Delivery
-                </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="estimated-time-of-delivery"
-                      variant="outline"
-                      className={cn(
-                        "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                        !estimatedTimeOfDelivery && "text-zinc-500"
-                      )}
+              {type === "AIR" ? (
+                <>
+                  <div className="flex flex-col gap-1.5">
+                    <Label
+                      htmlFor="vessel-name"
+                      className="text-xs font-medium text-foreground"
                     >
-                      {estimatedTimeOfDelivery
-                        ? (() => {
+                      Flight Number
+                    </Label>
+                    <Input
+                      id="flight-number"
+                      placeholder="Enter Flight Number"
+                      value={vesselName}
+                      disabled={true}
+                      onChange={(e) => setVesselName(e.target.value)}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label
+                      htmlFor="vessel-name"
+                      className="text-xs font-medium text-foreground"
+                    >
+                      Origin
+                    </Label>
+                    <Input
+                      id="flight-number"
+                      placeholder="Enter Flight Number"
+                      value={vesselName}
+                      disabled={true}
+                      onChange={(e) => setVesselName(e.target.value)}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label
+                      htmlFor="vessel-name"
+                      className="text-xs font-medium text-foreground"
+                    >
+                      Destination
+                    </Label>
+                    <Input
+                      id="flight-number"
+                      placeholder="Enter Flight Number"
+                      value={vesselName}
+                      disabled={true}
+                      onChange={(e) => setVesselName(e.target.value)}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label
+                      htmlFor="estimated-time-of-delivery"
+                      className="text-xs font-medium text-foreground"
+                    >
+                      ETD - Origin
+                    </Label>
+                    <Popover>
+                      <PopoverTrigger asChild disabled={true}>
+                        <Button
+                          id="estimated-time-of-delivery"
+                          variant="outline"
+                          className={cn(
+                            "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                            !estimatedTimeOfDelivery && "text-zinc-500"
+                          )}
+                        >
+                          {estimatedTimeOfDelivery
+                            ? (() => {
+                                const parseDate = (
+                                  val: string
+                                ): Date | undefined => {
+                                  if (!val) return undefined
+                                  let d = parse(
+                                    val,
+                                    "yyyy-MM-dd HH:mm:ss",
+                                    new Date()
+                                  )
+                                  if (isValid(d)) return d
+                                  d = parse(val, "yyyy-MM-dd", new Date())
+                                  if (isValid(d)) return d
+                                  d = new Date(val)
+                                  if (isValid(d)) return d
+                                  return undefined
+                                }
+                                const selectedDate = parseDate(
+                                  estimatedTimeOfDelivery
+                                )
+                                return selectedDate
+                                  ? format(selectedDate, "PPP")
+                                  : "Pick a date"
+                              })()
+                            : "Pick a date"}
+                          <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={(() => {
                             const parseDate = (
                               val: string
                             ): Date | undefined => {
@@ -619,65 +675,71 @@ export default function HBLHABWForm() {
                               if (isValid(d)) return d
                               return undefined
                             }
-                            const selectedDate = parseDate(
-                              estimatedTimeOfDelivery
-                            )
-                            return selectedDate
-                              ? format(selectedDate, "PPP")
-                              : "Pick a date"
-                          })()
-                        : "Pick a date"}
-                      <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={(() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        return parseDate(estimatedTimeOfDelivery)
-                      })()}
-                      onSelect={(selectedDate) => {
-                        if (selectedDate) {
-                          setEstimatedTimeOfDelivery(
-                            format(selectedDate, "yyyy-MM-dd")
-                          )
-                        }
-                      }}
-                      captionLayout="dropdown"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+                            return parseDate(estimatedTimeOfDelivery)
+                          })()}
+                          onSelect={(selectedDate) => {
+                            if (selectedDate) {
+                              setEstimatedTimeOfDelivery(
+                                format(selectedDate, "yyyy-MM-dd")
+                              )
+                            }
+                          }}
+                          captionLayout="dropdown"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="estimated-time-of-arrival"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Estimated Time of Arrival
-                </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="estimated-time-of-arrival"
-                      variant="outline"
-                      className={cn(
-                        "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                        !estimatedTimeOfArrival && "text-zinc-500"
-                      )}
+                  <div className="flex flex-col gap-1.5">
+                    <Label
+                      htmlFor="estimated-time-of-delivery"
+                      className="text-xs font-medium text-foreground"
                     >
-                      {estimatedTimeOfArrival
-                        ? (() => {
+                      ETA - Destination
+                    </Label>
+                    <Popover>
+                      <PopoverTrigger asChild disabled={true}>
+                        <Button
+                          id="estimated-time-of-delivery"
+                          variant="outline"
+                          className={cn(
+                            "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                            !data?.shipment?.eta_destination && "text-zinc-500"
+                          )}
+                        >
+                          {estimatedTimeOfDelivery
+                            ? (() => {
+                                const parseDate = (
+                                  val: string
+                                ): Date | undefined => {
+                                  if (!val) return undefined
+                                  let d = parse(
+                                    val,
+                                    "yyyy-MM-dd HH:mm:ss",
+                                    new Date()
+                                  )
+                                  if (isValid(d)) return d
+                                  d = parse(val, "yyyy-MM-dd", new Date())
+                                  if (isValid(d)) return d
+                                  d = new Date(val)
+                                  if (isValid(d)) return d
+                                  return undefined
+                                }
+                                const selectedDate = parseDate(
+                                  estimatedTimeOfDelivery
+                                )
+                                return selectedDate
+                                  ? format(selectedDate, "PPP")
+                                  : "Pick a date"
+                              })()
+                            : "Pick a date"}
+                          <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={(() => {
                             const parseDate = (
                               val: string
                             ): Date | undefined => {
@@ -694,65 +756,158 @@ export default function HBLHABWForm() {
                               if (isValid(d)) return d
                               return undefined
                             }
-                            const selectedDate = parseDate(
-                              estimatedTimeOfArrival
-                            )
-                            return selectedDate
-                              ? format(selectedDate, "PPP")
-                              : "Pick a date"
-                          })()
-                        : "Pick a date"}
-                      <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={(() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        return parseDate(estimatedTimeOfArrival)
-                      })()}
-                      onSelect={(selectedDate) => {
-                        if (selectedDate) {
-                          setEstimatedTimeOfArrival(
-                            format(selectedDate, "yyyy-MM-dd")
-                          )
-                        }
-                      }}
-                      captionLayout="dropdown"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="actual-time-of-delivery"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Actual Time of Delivery
-                </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="actual-time-of-delivery"
-                      variant="outline"
-                      className={cn(
-                        "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                        !actualTimeOfDelivery && "text-zinc-500"
-                      )}
+                            return parseDate(estimatedTimeOfDelivery)
+                          })()}
+                          onSelect={(selectedDate) => {
+                            if (selectedDate) {
+                              setEstimatedTimeOfDelivery(
+                                format(selectedDate, "yyyy-MM-dd")
+                              )
+                            }
+                          }}
+                          captionLayout="dropdown"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-1.5">
+                    <Label
+                      htmlFor="vessel-name"
+                      className="text-xs font-medium text-foreground"
                     >
-                      {actualTimeOfDelivery
-                        ? (() => {
+                      Vessel Name
+                    </Label>
+                    <Input
+                      id="vessel-name"
+                      placeholder="Enter Vessel Name"
+                      value={vesselName}
+                      disabled={true}
+                      onChange={(e) => setVesselName(e.target.value)}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label
+                      htmlFor="voyage-no"
+                      className="text-xs font-medium text-foreground"
+                    >
+                      Voyage No
+                    </Label>
+                    <Input
+                      id="voyage-no"
+                      placeholder="Enter Voyage No"
+                      value={voyageNo}
+                      disabled={true}
+                      onChange={(e) => setVoyageNo(e.target.value)}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label
+                      htmlFor="origin-port"
+                      className="text-xs font-medium text-foreground"
+                    >
+                      Origin Port
+                    </Label>
+                    <Input
+                      id="origin-port"
+                      placeholder="Enter Origin Port"
+                      value={""}
+                      disabled={true}
+                      onChange={(e) => setVoyageNo(e.target.value)}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label
+                      htmlFor="discharge  -port"
+                      className="text-xs font-medium text-foreground"
+                    >
+                      Discharge Port
+                    </Label>
+                    <Input
+                      id="discharge-port"
+                      placeholder="Enter Discharge Port"
+                      value={""}
+                      disabled={true}
+                      onChange={(e) => setVoyageNo(e.target.value)}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label
+                      htmlFor="final-place-of-delivery"
+                      className="text-xs font-medium text-foreground"
+                    >
+                      Final Place of Delivery
+                    </Label>
+                    <Input
+                      id="final-place-of-delivery"
+                      placeholder="Enter Final Place of Delivery"
+                      value={""}
+                      disabled={true}
+                      onChange={(e) => setVoyageNo(e.target.value)}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label
+                      htmlFor="estimated-time-of-delivery"
+                      className="text-xs font-medium text-foreground"
+                    >
+                      ETD - Colombo
+                    </Label>
+                    <Popover>
+                      <PopoverTrigger asChild disabled={true}>
+                        <Button
+                          id="estimated-time-of-delivery"
+                          variant="outline"
+                          className={cn(
+                            "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                            !estimatedTimeOfDelivery && "text-zinc-500"
+                          )}
+                        >
+                          {estimatedTimeOfDelivery
+                            ? (() => {
+                                const parseDate = (
+                                  val: string
+                                ): Date | undefined => {
+                                  if (!val) return undefined
+                                  let d = parse(
+                                    val,
+                                    "yyyy-MM-dd HH:mm:ss",
+                                    new Date()
+                                  )
+                                  if (isValid(d)) return d
+                                  d = parse(val, "yyyy-MM-dd", new Date())
+                                  if (isValid(d)) return d
+                                  d = new Date(val)
+                                  if (isValid(d)) return d
+                                  return undefined
+                                }
+                                const selectedDate = parseDate(
+                                  estimatedTimeOfDelivery
+                                )
+                                return selectedDate
+                                  ? format(selectedDate, "PPP")
+                                  : "Pick a date"
+                              })()
+                            : "Pick a date"}
+                          <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={(() => {
                             const parseDate = (
                               val: string
                             ): Date | undefined => {
@@ -769,45 +924,185 @@ export default function HBLHABWForm() {
                               if (isValid(d)) return d
                               return undefined
                             }
-                            const selectedDate = parseDate(actualTimeOfDelivery)
-                            return selectedDate
-                              ? format(selectedDate, "PPP")
-                              : "Pick a date"
-                          })()
-                        : "Pick a date"}
-                      <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={(() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        return parseDate(actualTimeOfDelivery)
-                      })()}
-                      onSelect={(selectedDate) => {
-                        if (selectedDate) {
-                          setActualTimeOfDelivery(
-                            format(selectedDate, "yyyy-MM-dd")
-                          )
-                        }
-                      }}
-                      captionLayout="dropdown"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+                            return parseDate(estimatedTimeOfDelivery)
+                          })()}
+                          onSelect={(selectedDate) => {
+                            if (selectedDate) {
+                              setEstimatedTimeOfDelivery(
+                                format(selectedDate, "yyyy-MM-dd")
+                              )
+                            }
+                          }}
+                          captionLayout="dropdown"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
 
-              <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-col gap-1.5">
+                    <Label
+                      htmlFor="estimated-time-of-arrival"
+                      className="text-xs font-medium text-foreground"
+                    >
+                      ETA -Discharge Port
+                    </Label>
+                    <Popover>
+                      <PopoverTrigger asChild disabled={true}>
+                        <Button
+                          id="estimated-time-of-arrival"
+                          variant="outline"
+                          className={cn(
+                            "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                            !estimatedTimeOfArrival && "text-zinc-500"
+                          )}
+                        >
+                          {estimatedTimeOfArrival
+                            ? (() => {
+                                const parseDate = (
+                                  val: string
+                                ): Date | undefined => {
+                                  if (!val) return undefined
+                                  let d = parse(
+                                    val,
+                                    "yyyy-MM-dd HH:mm:ss",
+                                    new Date()
+                                  )
+                                  if (isValid(d)) return d
+                                  d = parse(val, "yyyy-MM-dd", new Date())
+                                  if (isValid(d)) return d
+                                  d = new Date(val)
+                                  if (isValid(d)) return d
+                                  return undefined
+                                }
+                                const selectedDate = parseDate(
+                                  estimatedTimeOfArrival
+                                )
+                                return selectedDate
+                                  ? format(selectedDate, "PPP")
+                                  : "Pick a date"
+                              })()
+                            : "Pick a date"}
+                          <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={(() => {
+                            const parseDate = (
+                              val: string
+                            ): Date | undefined => {
+                              if (!val) return undefined
+                              let d = parse(
+                                val,
+                                "yyyy-MM-dd HH:mm:ss",
+                                new Date()
+                              )
+                              if (isValid(d)) return d
+                              d = parse(val, "yyyy-MM-dd", new Date())
+                              if (isValid(d)) return d
+                              d = new Date(val)
+                              if (isValid(d)) return d
+                              return undefined
+                            }
+                            return parseDate(estimatedTimeOfArrival)
+                          })()}
+                          onSelect={(selectedDate) => {
+                            if (selectedDate) {
+                              setEstimatedTimeOfArrival(
+                                format(selectedDate, "yyyy-MM-dd")
+                              )
+                            }
+                          }}
+                          captionLayout="dropdown"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label
+                      htmlFor="actual-time-of-delivery"
+                      className="text-xs font-medium text-foreground"
+                    >
+                      ETA Final Delivery Place
+                    </Label>
+                    <Popover>
+                      <PopoverTrigger asChild disabled={true}>
+                        <Button
+                          id="actual-time-of-delivery"
+                          variant="outline"
+                          className={cn(
+                            "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                            !actualTimeOfDelivery && "text-zinc-500"
+                          )}
+                        >
+                          {actualTimeOfDelivery
+                            ? (() => {
+                                const parseDate = (
+                                  val: string
+                                ): Date | undefined => {
+                                  if (!val) return undefined
+                                  let d = parse(
+                                    val,
+                                    "yyyy-MM-dd HH:mm:ss",
+                                    new Date()
+                                  )
+                                  if (isValid(d)) return d
+                                  d = parse(val, "yyyy-MM-dd", new Date())
+                                  if (isValid(d)) return d
+                                  d = new Date(val)
+                                  if (isValid(d)) return d
+                                  return undefined
+                                }
+                                const selectedDate =
+                                  parseDate(actualTimeOfDelivery)
+                                return selectedDate
+                                  ? format(selectedDate, "PPP")
+                                  : "Pick a date"
+                              })()
+                            : "Pick a date"}
+                          <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={(() => {
+                            const parseDate = (
+                              val: string
+                            ): Date | undefined => {
+                              if (!val) return undefined
+                              let d = parse(
+                                val,
+                                "yyyy-MM-dd HH:mm:ss",
+                                new Date()
+                              )
+                              if (isValid(d)) return d
+                              d = parse(val, "yyyy-MM-dd", new Date())
+                              if (isValid(d)) return d
+                              d = new Date(val)
+                              if (isValid(d)) return d
+                              return undefined
+                            }
+                            return parseDate(actualTimeOfDelivery)
+                          })()}
+                          onSelect={(selectedDate) => {
+                            if (selectedDate) {
+                              setActualTimeOfDelivery(
+                                format(selectedDate, "yyyy-MM-dd")
+                              )
+                            }
+                          }}
+                          captionLayout="dropdown"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </>
+              )}
+
+              {/* <div className="flex flex-col gap-1.5">
                 <Label
                   htmlFor="actual-time-of-arrival"
                   className="text-xs font-medium text-foreground"
@@ -878,7 +1173,7 @@ export default function HBLHABWForm() {
                     />
                   </PopoverContent>
                 </Popover>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
@@ -895,7 +1190,7 @@ export default function HBLHABWForm() {
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
+              {/* <div className="flex flex-col gap-1.5">
                 <Label
                   htmlFor="arrival-port"
                   className="text-xs font-medium text-foreground"
@@ -909,9 +1204,9 @@ export default function HBLHABWForm() {
                   onChange={(e) => setArrivalPort(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
-              </div>
+              </div> */}
 
-              <div className="flex flex-col gap-1.5">
+              {/* <div className="flex flex-col gap-1.5">
                 <Label
                   htmlFor="inland-location"
                   className="text-xs font-medium text-foreground"
@@ -925,6 +1220,23 @@ export default function HBLHABWForm() {
                   onChange={(e) => setInlandLocation(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
+              </div> */}
+
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="no-of-pieces"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Total Freight Cost ($)
+                </Label>
+                <Input
+                  id="total-freight-cost"
+                  placeholder="Enter Total Freight Cost"
+                  value={total_freight_cost}
+                  onChange={(e) => setTotalFreightCost(e.target.value)}
+                  type="number"
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -932,13 +1244,31 @@ export default function HBLHABWForm() {
                   htmlFor="no-of-pieces"
                   className="text-xs font-medium text-foreground"
                 >
-                  No. of Pieces
+                  Total Carton Count
+                </Label>
+                <Input
+                  id="no-of-pieces"
+                  placeholder="Enter No. of Pieces"
+                  value={noOfPieces}
+                  readOnly
+                  disabled={true}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="no-of-pieces"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Total Pieces Count
                 </Label>
                 <Input
                   id="no-of-pieces"
                   placeholder="Enter No. of Pieces"
                   value={noOfPieces}
                   onChange={(e) => setNoOfPieces(e.target.value)}
+                  disabled={true}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -948,13 +1278,14 @@ export default function HBLHABWForm() {
                   htmlFor="gross-weight"
                   className="text-xs font-medium text-foreground"
                 >
-                  Gross Weight
+                  Total Gross Weight
                 </Label>
                 <Input
                   id="gross-weight"
                   placeholder="Enter Gross Weight"
                   value={grossWeight}
                   onChange={(e) => setGrossWeight(e.target.value)}
+                  disabled={true}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -964,13 +1295,14 @@ export default function HBLHABWForm() {
                   htmlFor="chargeable-weight"
                   className="text-xs font-medium text-foreground"
                 >
-                  Chargeable Weight
+                  Total Volume
                 </Label>
                 <Input
                   id="chargeable-weight"
                   placeholder="Enter Chargeable Weight"
                   value={chargeableWeight}
                   onChange={(e) => setChargeableWeight(e.target.value)}
+                  disabled={true}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -980,18 +1312,19 @@ export default function HBLHABWForm() {
                   htmlFor="cbm"
                   className="text-xs font-medium text-foreground"
                 >
-                  CBM
+                  Total Volume Weight
                 </Label>
                 <Input
                   id="cbm"
                   placeholder="Enter CBM"
                   value={cbm}
                   onChange={(e) => setCbm(e.target.value)}
+                  disabled={true}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5">
+              {/* <div className="flex flex-col gap-1.5">
                 <Label
                   htmlFor="container-seal-no"
                   className="text-xs font-medium text-foreground"
@@ -1005,9 +1338,9 @@ export default function HBLHABWForm() {
                   onChange={(e) => setContainerSealNo(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
-              </div>
+              </div> */}
 
-              <div className="flex flex-col gap-1.5">
+              {/* <div className="flex flex-col gap-1.5">
                 <Label
                   htmlFor="onboarded-date"
                   className="text-xs font-medium text-foreground"
@@ -1076,7 +1409,7 @@ export default function HBLHABWForm() {
                     />
                   </PopoverContent>
                 </Popover>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

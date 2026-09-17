@@ -45,7 +45,7 @@ import { format, isValid, parse } from "date-fns"
 import { useRouter } from "next/navigation"
 import { useMemo, useRef, useState } from "react"
 
-interface ActualMeasurementRow {
+interface MeasurementRow {
   id: number
   length: string
   width: string
@@ -56,9 +56,17 @@ interface ActualMeasurementRow {
   volume: string
 }
 
+type MeasurementInput = Pick<
+  MeasurementRow,
+  "length" | "width" | "height" | "total" | "uom"
+>
+
+const UOM_OPTIONS = ["cm", "m"]
+
 export default function GoodsReceiveNoteForm() {
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
+  const draftLengthRef = useRef<HTMLInputElement | null>(null)
 
   const [date, setDate] = useState("")
   const [client, setClient] = useState("")
@@ -71,12 +79,9 @@ export default function GoodsReceiveNoteForm() {
   // const [packingList, setPackingList] = useState("")
   const [remarks, setRemarks] = useState("")
 
- 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
 
-  const ACTUAL_UOM_OPTIONS = ["cm", "m"]
-
-  const EMPTY_ACTUAL_DRAFT = {
+  const EMPTY_DRAFT = {
     length: "",
     width: "",
     height: "",
@@ -84,10 +89,8 @@ export default function GoodsReceiveNoteForm() {
     uom: "cm",
   }
 
-  const [actualMeasurements, setActualMeasurements] = useState<
-    ActualMeasurementRow[]
-  >([])
-  const [actualDraft, setActualDraft] = useState(EMPTY_ACTUAL_DRAFT)
+  const [measurements, setMeasurements] = useState<MeasurementRow[]>([])
+  const [draft, setDraft] = useState(EMPTY_DRAFT)
   const actualDraftLengthRef = useRef<HTMLInputElement | null>(null)
 
   const {
@@ -108,8 +111,6 @@ export default function GoodsReceiveNoteForm() {
     queryKey: ["recipientsList"],
     queryFn: fetchRecipients,
   })
-
- 
 
   const clientOptions = useMemo(() => {
     return (
@@ -193,7 +194,6 @@ export default function GoodsReceiveNoteForm() {
     [rows, selectedRows]
   )
 
-
   // const quantity = useMemo(
   //   () =>
   //     selectedRows.reduce((accumulator, id) => {
@@ -203,100 +203,112 @@ export default function GoodsReceiveNoteForm() {
   //   [selectedRows, gdns]
   // )
 
+  // Normalizes L/W/H to centimeters so the same formulas below always work,
+  // regardless of whether the row's UOM is "cm" or "m".
+  const getDimsInCm = (row: MeasurementInput) => {
+    const l = Number(row.length)
+    const w = Number(row.width)
+    const h = Number(row.height)
+    const factor = row.uom === "m" ? 100 : 1
+    return { l: l * factor, w: w * factor, h: h * factor }
+  }
+
+  // Total volume in Cubic Meters (CBM) for this row (all packages included):
+  //   (L(cm) x W(cm) x H(cm) x Number of packages) / 1,000,000
+  const getRowCbm = (row: MeasurementInput) => {
+    const { l, w, h } = getDimsInCm(row)
+    const packages = Number(row.total)
+    return (l * w * h * packages) / 1_000_000
+  }
+
+  // CBM for a single carton — used to scale by the actual Quantity Loaded,
+  // which may differ from the packages entered for this particular row.
+  const getRowCbmPerCarton = (row: MeasurementInput) => {
+    const packages = Number(row.total)
+    if (!packages) return 0
+    return getRowCbm(row) / packages
+  }
+
+  // "Volume" figure per the second formula supplied:
+  //   (L(cm) x W(cm) x H(cm) x Number of packages) / 6000
+  // Note: this is the volumetric-weight formula (result is in kg, not m³).
+  // It's kept separate from getRowCbm (the true m³ figure) since the two
+  // use different divisors and represent different things.
+  const getRowTotalVolume = (row: MeasurementInput) => {
+    const { l, w, h } = getDimsInCm(row)
+    const packages = Number(row.total)
+    return (l * w * h * packages) / 6000
+  }
+
+  // Volume based on the actual Quantity Loaded (rather than the packages
+  // entered for the row), used for the saved "calculated_volume_m3" figure.
+  const getRowCalculatedVolume = (row: MeasurementInput) => {
+    return (
+      getRowCbmPerCarton(row) *
+      Number(selectedPackingListRows[0]?.cartoons || 0)
+    )
+  }
+
+  const totalCalculatedVolume = useMemo(() => {
+    return measurements.reduce((sum, row) => sum + getRowCbm(row), 0)
+  }, [measurements])
+
+  const removeMeasurement = (id: number) => {
+    setMeasurements((prev) => prev.filter((m) => m.id !== id))
+  }
+
   const toggleRow = (id: number) => {
     setSelectedRows((prev) =>
       prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
     )
   }
 
-  const getActualRowVolumeM3 = (row: {
-    length: string
-    width: string
-    height: string
-    total: string
-    uom: string
-  }) => {
-    const l = Number(row.length)
-    const w = Number(row.width)
-    const h = Number(row.height)
-    const packages = Number(row.total)
-
-    if (row.uom === "m") {
-      return (l * w * h * packages) / 6000
-    }
-    return ((l * w * h) / 1_000_000) * packages
-  }
-
-  const getActualRowCbm = getActualRowVolumeM3
-
-  const getActualRowTotalVolume = (row: {
-    length: string
-    width: string
-    height: string
-    total: string
-    uom: string
-  }) => {
-    return getActualRowCbm(row) * Number(row.total)
-  }
-
-  const totalActualVolume = useMemo(() => {
-    return actualMeasurements.reduce(
-      (sum: number, row: any) => sum + getActualRowTotalVolume(row),
-      0
-    )
-  }, [actualMeasurements])
-
-  const updateActualDraftField = (
+  const updateDraftField = (
     field: "length" | "width" | "height" | "total" | "uom",
     value: string
   ) => {
-    setActualDraft((prev) => ({ ...prev, [field]: value }))
+    setDraft((prev) => ({ ...prev, [field]: value }))
   }
 
-  const isActualDraftValid = useMemo(() => {
+  const isDraftValid = useMemo(() => {
     return (
-      actualDraft.length !== "" &&
-      actualDraft.width !== "" &&
-      actualDraft.height !== "" &&
-      actualDraft.total !== "" &&
-      Number(actualDraft.length) > 0 &&
-      Number(actualDraft.width) > 0 &&
-      Number(actualDraft.height) > 0 &&
-      Number(actualDraft.total) > 0
+      draft.length !== "" &&
+      draft.width !== "" &&
+      draft.height !== "" &&
+      draft.total !== "" &&
+      Number(draft.length) > 0 &&
+      Number(draft.width) > 0 &&
+      Number(draft.height) > 0 &&
+      Number(draft.total) > 0
     )
-  }, [actualDraft])
+  }, [draft])
 
-  const handleAddActualMeasurement = () => {
-    if (!isActualDraftValid) return
+  const handleAddMeasurement = () => {
+    if (!isDraftValid) return
 
-    const cbm = getActualRowCbm(actualDraft)
-    const volume = getActualRowTotalVolume(actualDraft)
+    const cbm = getRowCbm(draft)
+    const volume = getRowTotalVolume(draft)
 
-    const newRow: ActualMeasurementRow = {
+    const newRow: MeasurementRow = {
       id: Date.now(),
-      ...actualDraft,
+      ...draft,
       cbm: cbm.toFixed(4),
       volume: volume.toFixed(4),
     }
 
-    setActualMeasurements((prev: any[]) => [...prev, newRow])
-    setActualDraft(EMPTY_ACTUAL_DRAFT)
+    setMeasurements((prev) => [...prev, newRow])
+    setDraft(EMPTY_DRAFT)
 
+    // send focus back to Length for rapid entry, VB6-grid style
     requestAnimationFrame(() => {
-      actualDraftLengthRef.current?.focus()
+      draftLengthRef.current?.focus()
     })
   }
 
-  const handleActualDraftKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>
-  ) => {
+  const handleDraftKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "Enter") return
     e.preventDefault()
-    handleAddActualMeasurement()
-  }
-
-  const removeActualMeasurement = (id: number) => {
-    setActualMeasurements((prev: any[]) => prev.filter((m) => m.id !== id))
+    handleAddMeasurement()
   }
 
   const handleSave = async () => {
@@ -326,8 +338,8 @@ export default function GoodsReceiveNoteForm() {
       alert("Please select a GDN.")
       return
     }
-    if (!actualMeasurements.length) {
-      alert("Please add at least one actual measurement.")
+    if (!measurements.length) {
+      alert("Please add at least one measurement.")
       return
     }
 
@@ -345,13 +357,15 @@ export default function GoodsReceiveNoteForm() {
         status,
         created_by: "admin", // TODO: replace with actual logged-in user
         gdn_id: selectedGdn.id,
-        measurements: actualMeasurements.map((m) => ({
+        measurements: measurements.map((m) => ({
           length_cm: Number(m.length),
           width_cm: Number(m.width),
           height_cm: Number(m.height),
-          packages: Number(m.total),
+          per_carton_volume_m3: getRowCbmPerCarton(m),
+          calculated_volume_m3: getRowCalculatedVolume(m),
           total: Number(m.total),
-          uom: m.uom.toUpperCase(),
+          packages: Number(m.total),
+          uom: m.uom,
           cbm: Number(m.cbm),
           volume: Number(m.volume),
         })),
@@ -817,9 +831,6 @@ export default function GoodsReceiveNoteForm() {
                       <TableHeader>
                         <TableRow className="border-neutral-700 hover:bg-transparent">
                           <TableHead className="text-xs font-medium text-zinc-400">
-                            Packages
-                          </TableHead>
-                          <TableHead className="text-xs font-medium text-zinc-400">
                             Length (cm)
                           </TableHead>
                           <TableHead className="text-xs font-medium text-zinc-400">
@@ -827,6 +838,9 @@ export default function GoodsReceiveNoteForm() {
                           </TableHead>
                           <TableHead className="text-xs font-medium text-zinc-400">
                             Height (cm)
+                          </TableHead>
+                          <TableHead className="text-xs font-medium text-zinc-400">
+                            Packages
                           </TableHead>
                           <TableHead className="text-xs font-medium text-zinc-400">
                             CBM
@@ -837,9 +851,6 @@ export default function GoodsReceiveNoteForm() {
                           <TableHead className="text-xs font-medium text-zinc-400">
                             UOM
                           </TableHead>
-                          <TableHead className="text-xs font-medium text-zinc-400">
-                            Total
-                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -848,9 +859,6 @@ export default function GoodsReceiveNoteForm() {
                             key={m.id}
                             className="border-neutral-800 hover:bg-neutral-800/40"
                           >
-                            <TableCell className="text-sm text-zinc-100">
-                              {m.packages ?? "N/A"}
-                            </TableCell>
                             <TableCell className="text-sm text-zinc-300">
                               {m.length_cm ?? "N/A"}
                             </TableCell>
@@ -860,6 +868,9 @@ export default function GoodsReceiveNoteForm() {
                             <TableCell className="text-sm text-zinc-300">
                               {m.height_cm ?? "N/A"}
                             </TableCell>
+                            <TableCell className="text-sm text-zinc-100">
+                              {m.packages ?? "N/A"}
+                            </TableCell>
                             <TableCell className="text-sm text-zinc-300">
                               {m.cbm ?? "N/A"}
                             </TableCell>
@@ -868,9 +879,6 @@ export default function GoodsReceiveNoteForm() {
                             </TableCell>
                             <TableCell className="text-sm text-zinc-300">
                               {m.uom ?? "N/A"}
-                            </TableCell>
-                            <TableCell className="text-sm text-zinc-300">
-                              {m.total ?? "N/A"}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -903,77 +911,69 @@ export default function GoodsReceiveNoteForm() {
             <div className="flex items-end gap-2 rounded-md border border-neutral-800 bg-neutral-950/40 p-3">
               <div className="flex flex-1 flex-col gap-1.5">
                 <Label
-                  htmlFor="actual-draft-length"
+                  htmlFor="draft-length"
                   className="text-xs font-medium text-foreground"
                 >
-                  L ({actualDraft.uom})
+                  L ({draft.uom})
                 </Label>
                 <Input
-                  ref={actualDraftLengthRef}
-                  id="actual-draft-length"
+                  ref={draftLengthRef}
+                  id="draft-length"
                   placeholder="Length"
-                  value={actualDraft.length}
-                  onChange={(e) =>
-                    updateActualDraftField("length", e.target.value)
-                  }
-                  onKeyDown={handleActualDraftKeyDown}
+                  value={draft.length}
+                  onChange={(e) => updateDraftField("length", e.target.value)}
+                  onKeyDown={handleDraftKeyDown}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
 
               <div className="flex flex-1 flex-col gap-1.5">
                 <Label
-                  htmlFor="actual-draft-width"
+                  htmlFor="draft-width"
                   className="text-xs font-medium text-foreground"
                 >
-                  W ({actualDraft.uom})
+                  W ({draft.uom})
                 </Label>
                 <Input
-                  id="actual-draft-width"
+                  id="draft-width"
                   placeholder="Width"
-                  value={actualDraft.width}
-                  onChange={(e) =>
-                    updateActualDraftField("width", e.target.value)
-                  }
-                  onKeyDown={handleActualDraftKeyDown}
+                  value={draft.width}
+                  onChange={(e) => updateDraftField("width", e.target.value)}
+                  onKeyDown={handleDraftKeyDown}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
 
               <div className="flex flex-1 flex-col gap-1.5">
                 <Label
-                  htmlFor="actual-draft-height"
+                  htmlFor="draft-height"
                   className="text-xs font-medium text-foreground"
                 >
-                  H ({actualDraft.uom})
+                  H ({draft.uom})
                 </Label>
                 <Input
-                  id="actual-draft-height"
+                  id="draft-height"
                   placeholder="Height"
-                  value={actualDraft.height}
-                  onChange={(e) =>
-                    updateActualDraftField("height", e.target.value)
-                  }
-                  onKeyDown={handleActualDraftKeyDown}
+                  value={draft.height}
+                  onChange={(e) => updateDraftField("height", e.target.value)}
+                  onKeyDown={handleDraftKeyDown}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
 
               <div className="flex flex-1 flex-col gap-1.5">
                 <Label
-                  htmlFor="actual-draft-total"
+                  htmlFor="draft-total"
                   className="text-xs font-medium text-foreground"
                 >
                   Packages
                 </Label>
                 <Input
-                  id="actual-draft-total"
+                  id="draft-total"
                   placeholder="Total Packages"
-                  value={actualDraft.total}
-                  onChange={(e) =>
-                    updateActualDraftField("total", e.target.value)
-                  }
-                  onKeyDown={handleActualDraftKeyDown}
+                  value={draft.total}
+                  onChange={(e) => updateDraftField("total", e.target.value)}
+                  onKeyDown={handleDraftKeyDown}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -983,14 +983,14 @@ export default function GoodsReceiveNoteForm() {
                   UOM
                 </Label>
                 <Select
-                  value={actualDraft.uom}
-                  onValueChange={(val) => updateActualDraftField("uom", val)}
+                  value={draft.uom}
+                  onValueChange={(val) => updateDraftField("uom", val)}
                 >
                   <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
                     <SelectValue placeholder="UOM" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    {ACTUAL_UOM_OPTIONS.map((u) => (
+                    {UOM_OPTIONS.map((u) => (
                       <SelectItem key={u} value={u}>
                         {u}
                       </SelectItem>
@@ -1005,24 +1005,20 @@ export default function GoodsReceiveNoteForm() {
                 </Label>
                 <Input
                   disabled
-                  value={
-                    isActualDraftValid
-                      ? getActualRowCbm(actualDraft).toFixed(4)
-                      : "0.0000"
-                  }
+                  value={isDraftValid ? getRowCbm(draft).toFixed(4) : "0.0000"}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100"
                 />
               </div>
 
               <div className="flex flex-1 flex-col gap-1.5">
                 <Label className="text-xs font-medium text-foreground">
-                  Volume (m³)
+                  Volume Weight (kg)
                 </Label>
                 <Input
                   disabled
                   value={
-                    isActualDraftValid
-                      ? getActualRowTotalVolume(actualDraft).toFixed(4)
+                    isDraftValid
+                      ? getRowTotalVolume(draft).toFixed(4)
                       : "0.0000"
                   }
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100"
@@ -1030,8 +1026,8 @@ export default function GoodsReceiveNoteForm() {
               </div>
 
               <Button
-                onClick={handleAddActualMeasurement}
-                disabled={!isActualDraftValid}
+                onClick={handleAddMeasurement}
+                disabled={!isDraftValid}
                 className="mb-0.5 h-9 rounded-md"
               >
                 Add
@@ -1062,7 +1058,7 @@ export default function GoodsReceiveNoteForm() {
                       CBM (m³)
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Volume (m³)
+                      Volume Weight (kg)
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Actions
@@ -1070,8 +1066,8 @@ export default function GoodsReceiveNoteForm() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {actualMeasurements.length ? (
-                    actualMeasurements.map((row: any) => (
+                  {measurements.length ? (
+                    measurements.map((row) => (
                       <TableRow
                         key={row.id}
                         className="border-neutral-800 hover:bg-neutral-800/40"
@@ -1095,11 +1091,11 @@ export default function GoodsReceiveNoteForm() {
                           {row.cbm}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.volume}
+                          {Number(row.volume).toFixed(3)}
                         </TableCell>
                         <TableCell>
                           <button
-                            onClick={() => removeActualMeasurement(row.id)}
+                            onClick={() => removeMeasurement(row.id)}
                             className="flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 p-2 text-zinc-400 transition-colors hover:bg-neutral-700 hover:text-zinc-100"
                           >
                             <IconTrash size={15} />
@@ -1113,7 +1109,7 @@ export default function GoodsReceiveNoteForm() {
                         colSpan={8}
                         className="h-20 text-center text-sm text-zinc-500"
                       >
-                        No actual measurements added yet.
+                        No measurements added yet.
                       </TableCell>
                     </TableRow>
                   )}
@@ -1123,13 +1119,14 @@ export default function GoodsReceiveNoteForm() {
 
             <div className="flex justify-end border-t border-neutral-800 pt-3">
               <div className="text-xs text-zinc-400">
-                Total Actual Volume:{" "}
+                Total Calculated Volume:{" "}
                 <span className="font-medium text-zinc-100">
-                  {totalActualVolume.toFixed(4)} m³
+                  {totalCalculatedVolume.toFixed(4)} m³
                 </span>
               </div>
             </div>
           </div>
+          {/* end */}
         </div>
       </div>
 

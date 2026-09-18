@@ -1,6 +1,7 @@
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const status = searchParams.get("status")
+  const shipping_mode = searchParams.get("mode")
 
   const backendUrl = new URL(
     `${process.env.BACKEND_URL}/api/v1/goods_receive_notes`
@@ -8,7 +9,9 @@ export async function GET(request: Request) {
   if (status) {
     backendUrl.searchParams.set("status", status)
   }
-
+  if (shipping_mode) {
+    backendUrl.searchParams.set("shipping_mode", shipping_mode)
+  }
   const res = await fetch(backendUrl.toString())
 
   if (!res.ok) {

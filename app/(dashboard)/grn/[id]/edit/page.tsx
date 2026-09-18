@@ -549,6 +549,7 @@ export default function GRNEdit() {
                       <SelectItem value="draft">Draft</SelectItem>
                       <SelectItem value="saved">Saved</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="HBL_OPEN" disabled>HBL_OPEN</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

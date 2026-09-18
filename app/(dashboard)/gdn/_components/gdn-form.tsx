@@ -1110,7 +1110,7 @@ export default function GoodsDispatchNoteForm() {
                   htmlFor="draft-length"
                   className="text-xs font-medium text-foreground"
                 >
-                  L ({draft.uom})
+                  Length ({draft.uom})
                 </Label>
                 <Input
                   ref={draftLengthRef}
@@ -1128,7 +1128,7 @@ export default function GoodsDispatchNoteForm() {
                   htmlFor="draft-width"
                   className="text-xs font-medium text-foreground"
                 >
-                  W ({draft.uom})
+                  Width ({draft.uom})
                 </Label>
                 <Input
                   id="draft-width"
@@ -1145,7 +1145,7 @@ export default function GoodsDispatchNoteForm() {
                   htmlFor="draft-height"
                   className="text-xs font-medium text-foreground"
                 >
-                  H ({draft.uom})
+                  Height ({draft.uom})
                 </Label>
                 <Input
                   id="draft-height"
@@ -1236,13 +1236,13 @@ export default function GoodsDispatchNoteForm() {
                 <TableHeader>
                   <TableRow className="border-neutral-700 hover:bg-transparent">
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      L
+                      Length
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      W
+                      Width
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      H
+                      Height
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Packages

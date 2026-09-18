@@ -231,10 +231,10 @@ export default function HBLHABWEdit() {
   }
 
   const handleSave = async () => {
-    if (!mblMawbNo || mblMawbNo.trim() === "") {
-      alert("MBL/MAWB No is required.")
-      return
-    }
+    // if (!mblMawbNo || mblMawbNo.trim() === "") {
+    //   alert("MBL/MAWB No is required.")
+    //   return
+    // }
 
     setIsSaving(true)
     try {
@@ -443,12 +443,12 @@ export default function HBLHABWEdit() {
                 <Label className="text-xs font-medium text-foreground">
                   Status
                 </Label>
-                <Select value={status} onValueChange={setStatus} disabled>
+                <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
                     <SelectValue placeholder="Choose Status" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    <SelectItem value="SHIPMENT_OPEN">SHIPMENT OPEN</SelectItem>
+                    <SelectItem value="SHIPMENT_OPEN" disabled>SHIPMENT OPEN</SelectItem>
                     <SelectItem value="saved">Saved</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>

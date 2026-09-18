@@ -694,8 +694,9 @@ export default function GDNEdit() {
                   <Input
                     id="gdn-reference"
                     placeholder="Enter GDN/GRN Reference"
-                    value={gdnReference}
+                    value={`GRN-${gdnReference}`}
                     onChange={(e) => setGdnReference(e.target.value)}
+                    readOnly
                     className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                   />
                 </div>
@@ -716,6 +717,7 @@ export default function GDNEdit() {
                           {s}
                         </SelectItem>
                       ))}
+                      <SelectItem value="GRN_OPEN" disabled>GRN OPEN</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

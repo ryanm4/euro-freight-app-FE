@@ -683,15 +683,15 @@ export default function GoodsReceiveNoteForm() {
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Gross Weight
                     </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
+                    {/* <TableHead className="text-xs font-medium text-zinc-400">
                       Actual Gross Weight
-                    </TableHead>
+                    </TableHead> */}
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Gross Volume
                     </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
+                    {/* <TableHead className="text-xs font-medium text-zinc-400">
                       Actual Gross Volume
-                    </TableHead>
+                    </TableHead> */}
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Actions
                     </TableHead>
@@ -722,15 +722,15 @@ export default function GoodsReceiveNoteForm() {
                         <TableCell className="text-sm text-zinc-300">
                           {row.gross_weight}
                         </TableCell>
-                        <TableCell className="text-sm text-zinc-300">
+                        {/* <TableCell className="text-sm text-zinc-300">
                           {row.actual_gross_weight}
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell className="text-sm text-zinc-300">
                           {row.gross_volume}
                         </TableCell>
-                        <TableCell className="text-sm text-zinc-300">
+                        {/* <TableCell className="text-sm text-zinc-300">
                           {row.actual_gross_volume}
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell>
                           {(() => {
                             const isDisabled =
@@ -906,7 +906,7 @@ export default function GoodsReceiveNoteForm() {
                   htmlFor="actual-draft-length"
                   className="text-xs font-medium text-foreground"
                 >
-                  L ({actualDraft.uom})
+                  Length ({actualDraft.uom})
                 </Label>
                 <Input
                   ref={actualDraftLengthRef}
@@ -926,7 +926,7 @@ export default function GoodsReceiveNoteForm() {
                   htmlFor="actual-draft-width"
                   className="text-xs font-medium text-foreground"
                 >
-                  W ({actualDraft.uom})
+                  Width ({actualDraft.uom})
                 </Label>
                 <Input
                   id="actual-draft-width"
@@ -945,7 +945,7 @@ export default function GoodsReceiveNoteForm() {
                   htmlFor="actual-draft-height"
                   className="text-xs font-medium text-foreground"
                 >
-                  H ({actualDraft.uom})
+                  Height ({actualDraft.uom})
                 </Label>
                 <Input
                   id="actual-draft-height"
@@ -1044,13 +1044,13 @@ export default function GoodsReceiveNoteForm() {
                 <TableHeader>
                   <TableRow className="border-neutral-700 hover:bg-transparent">
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      L
+                      Length
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      W
+                      Width
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      H
+                      Height
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Packages

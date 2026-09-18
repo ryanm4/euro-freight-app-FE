@@ -104,11 +104,11 @@ export const hblHawbColumns = (
             className="text-primary underline-offset-4 hover:underline"
             onClick={(e) => {
               e.stopPropagation() // prevents any row-level click handler from also firing
-              router.push(`/grn/${ref}`)
+              router.push(`/shipment/${ref}`)
             }}
             disabled={row.original.shipment_id === null} // Disable button if shipment_id is null
           >
-            {ref}
+           {row.original.type==="SEA"? `Ocean Shipment-${ref}` : `Air Cargo-${ref}`}
           </button>
         )
       },
@@ -161,7 +161,7 @@ export const hblHawbColumns = (
     {
       accessorKey: "no_pieces",
       header: "Pieces",
-      cell: ({ row }) => <div>{row.original.no_pieces ?? "N/A"}</div>,
+      cell: ({ row }) => <div>{row.original.grns[0].quantity ?? "N/A"}</div>,
     },
     {
       accessorKey: "gross_weight",

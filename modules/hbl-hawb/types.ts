@@ -28,4 +28,15 @@ export interface HBL_HAWB {
   created_on?: string | null
   updated_by?: string | null
   updated_on?: string | null
+  grns: [GRN]
+}
+
+export interface GRN {
+  id: number
+  gdn_id?: number | null
+  client_id?: string | null
+  date?: string | null
+  manufacture_id?: string | null
+  quantity?: number | null
+  status?: string | null
 }

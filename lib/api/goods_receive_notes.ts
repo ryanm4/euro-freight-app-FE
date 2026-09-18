@@ -62,6 +62,18 @@ export async function updateGoodsReceiveNote(id: string, data: any) {
     status: data.status,
     updated_by: "admin",
     packing_list_ids: data.selectedRows.map((r: any) => parseInt(r)),
+    recipient_id: parseInt(data.recipient),
+    recipient_contact: data.recipient_contact,
+    measurements: data.measurements.map((m: any) => ({
+      length_cm: m.length_cm,
+      width_cm: m.width_cm,
+      height_cm: m.height_cm,
+      packages: m.packages,
+      total: m.total,
+      uom: m.uom,
+      cbm: m.cbm,
+      volume: m.volume,
+    })),
   }
 
   const res = await fetch(`/api/goods_receive_notes/${id}`, {

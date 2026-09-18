@@ -105,7 +105,7 @@ export default function GoodsDispatchNoteForm() {
   const [primarySealNo, setPrimarySealNo] = useState("")
   const [secondarySealNo, setSecondarySealNo] = useState("")
   const [customDocStatus, setCustomDocStatus] = useState("")
-  const [status, setStatus] = useState("")
+  const [status, setStatus] = useState("Draft")
   const [grossWeight, setGrossWeight] = useState("")
   const [remarks, setRemarks] = useState("")
   const [client, setClient] = useState("")
@@ -415,7 +415,7 @@ export default function GoodsDispatchNoteForm() {
         cartoons: quantityLoaded,
         gross_weight: grossWeight,
         gross_volume: totalCalculatedVolume,
-        status: "Draft",
+        status: status,
         // TODO: replace with the actual logged-in user (e.g. from an auth/session context)
         created_by: "admin",
         gdn_grn_ref: null,

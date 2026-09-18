@@ -42,11 +42,11 @@ import { fetchPackingLists } from "@/lib/api/packing_lists"
 import { fetchRecipients } from "@/lib/api/recipients"
 import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
-import { IconCalendarFilled } from "@tabler/icons-react"
+import { IconCalendarFilled, IconTrash } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
 import { format, isValid, parse } from "date-fns"
 import { useParams, useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 interface PackingListRow {
   id: number
@@ -59,6 +59,29 @@ interface PackingListRow {
   totalNetWeightKg: string
   totalQuantity: number
   totalVolume: string
+}
+
+interface ActualMeasurementRow {
+  id: number
+  length: string
+  width: string
+  height: string
+  total: string
+  uom: string
+  cbm: string
+  volume: string
+}
+
+interface GdnMeasurementRow {
+  id: number
+  packages: number
+  length_cm: string
+  width_cm: string
+  height_cm: string
+  cbm: string
+  volume: string
+  uom: string
+  total: string
 }
 
 const parseDateValue = (val: string): Date | undefined => {
@@ -102,6 +125,24 @@ export default function GRNEdit() {
 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
 
+  // --- Actual Measurements state (added) ---
+  const ACTUAL_UOM_OPTIONS = ["cm", "m"]
+
+  const EMPTY_ACTUAL_DRAFT = {
+    length: "",
+    width: "",
+    height: "",
+    total: "",
+    uom: "cm",
+  }
+
+  const [actualMeasurements, setActualMeasurements] = useState<
+    ActualMeasurementRow[]
+  >([])
+  const [actualDraft, setActualDraft] =
+    useState<typeof EMPTY_ACTUAL_DRAFT>(EMPTY_ACTUAL_DRAFT)
+  const actualDraftLengthRef = useRef<HTMLInputElement | null>(null)
+
   const { data: grnRes, isLoading: isGrnLoading } = useQuery({
     queryKey: ["grn", id],
     queryFn: () => fetchGoodsReceiveNoteById(id),
@@ -139,6 +180,15 @@ export default function GRNEdit() {
     () => recipientsList?.data ?? [],
     [recipientsList]
   )
+
+  // --- Linked GDN + its measurements (added) ---
+  const linkedGdn = useMemo(() => {
+    return grnRes?.data?.gdns?.[0] ?? null
+  }, [grnRes])
+
+  const gdnMeasurements: GdnMeasurementRow[] = useMemo(() => {
+    return linkedGdn?.measurements ?? []
+  }, [linkedGdn])
 
   const toggleRow = (rowId: number) => {
     setSelectedRows((prev) => {
@@ -257,6 +307,97 @@ export default function GRNEdit() {
     [selectedPackingListRows]
   )
 
+  // --- Actual Measurements helpers (added, same math as Create form) ---
+  const getActualRowVolumeM3 = (row: {
+    length: string
+    width: string
+    height: string
+    total: string
+    uom: string
+  }) => {
+    const l = Number(row.length)
+    const w = Number(row.width)
+    const h = Number(row.height)
+    const packages = Number(row.total)
+
+    if (row.uom === "m") {
+      return (l * w * h * packages) / 6000
+    }
+    return ((l * w * h) / 1_000_000) * packages
+  }
+
+  const getActualRowCbm = getActualRowVolumeM3
+
+  const getActualRowTotalVolume = (row: {
+    length: string
+    width: string
+    height: string
+    total: string
+    uom: string
+  }) => {
+    return getActualRowCbm(row) * Number(row.total)
+  }
+
+  const totalActualVolume = useMemo(() => {
+    return actualMeasurements.reduce(
+      (sum: number, row: any) => sum + getActualRowTotalVolume(row),
+      0
+    )
+  }, [actualMeasurements])
+
+  const updateActualDraftField = (
+    field: "length" | "width" | "height" | "total" | "uom",
+    value: string
+  ) => {
+    setActualDraft((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const isActualDraftValid = useMemo(() => {
+    return (
+      actualDraft.length !== "" &&
+      actualDraft.width !== "" &&
+      actualDraft.height !== "" &&
+      actualDraft.total !== "" &&
+      Number(actualDraft.length) > 0 &&
+      Number(actualDraft.width) > 0 &&
+      Number(actualDraft.height) > 0 &&
+      Number(actualDraft.total) > 0
+    )
+  }, [actualDraft])
+
+  const handleAddActualMeasurement = () => {
+    if (!isActualDraftValid) return
+
+    const cbm = getActualRowCbm(actualDraft)
+    const volume = getActualRowTotalVolume(actualDraft)
+
+    const newRow: ActualMeasurementRow = {
+      id: Date.now(),
+      ...actualDraft,
+      cbm: cbm.toFixed(4),
+      volume: volume.toFixed(4),
+    }
+
+    setActualMeasurements((prev: any[]) => [...prev, newRow])
+    setActualDraft(EMPTY_ACTUAL_DRAFT)
+
+    requestAnimationFrame(() => {
+      actualDraftLengthRef.current?.focus()
+    })
+  }
+
+  const handleActualDraftKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (e.key !== "Enter") return
+    e.preventDefault()
+    handleAddActualMeasurement()
+  }
+
+  const removeActualMeasurement = (rowId: number) => {
+    setActualMeasurements((prev: any[]) => prev.filter((m) => m.id !== rowId))
+  }
+
   // Hydrate all form state from the fetched GRN, once, when it arrives.
   useEffect(() => {
     if (hasHydrated || !grnRes?.data) return
@@ -289,6 +430,20 @@ export default function GRNEdit() {
     setRemarks(grn.comments ?? "")
     setSelectedRows(grn.packing_lists?.map((pl: any) => pl.id) ?? [])
 
+    // Hydrate actual measurements from grn.measurements (added)
+    setActualMeasurements(
+      grn.measurements?.map((m: any) => ({
+        id: m.id ?? Date.now() + Math.random(),
+        length: String(m.length_cm ?? ""),
+        width: String(m.width_cm ?? ""),
+        height: String(m.height_cm ?? ""),
+        total: String(m.total ?? m.packages ?? ""),
+        uom: (m.uom ?? "cm").toLowerCase(),
+        cbm: String(m.cbm ?? "0"),
+        volume: String(m.volume ?? "0"),
+      })) ?? []
+    )
+
     setHasHydrated(true)
   }, [
     grnRes,
@@ -320,6 +475,10 @@ export default function GRNEdit() {
       alert("Please select at least one Packing List.")
       return
     }
+    if (!actualMeasurements.length) {
+      alert("Please add at least one actual measurement.")
+      return
+    }
 
     try {
       setIsSaving(true)
@@ -334,6 +493,16 @@ export default function GRNEdit() {
         quantity,
         selectedRows,
         remarks,
+        measurements: actualMeasurements.map((m) => ({
+          length_cm: Number(m.length),
+          width_cm: Number(m.width),
+          height_cm: Number(m.height),
+          packages: Number(m.total),
+          total: Number(m.total),
+          uom: m.uom.toUpperCase(),
+          cbm: Number(m.cbm),
+          volume: Number(m.volume),
+        })),
       })
       router.push("/grn")
     } catch (err) {
@@ -549,7 +718,9 @@ export default function GRNEdit() {
                       <SelectItem value="draft">Draft</SelectItem>
                       <SelectItem value="saved">Saved</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="HBL_OPEN" disabled>HBL_OPEN</SelectItem>
+                      <SelectItem value="HBL_OPEN" disabled>
+                        HBL_OPEN
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -752,6 +923,337 @@ export default function GRNEdit() {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+            </div>
+          </div>
+
+          {/* GDN Measurements (added) */}
+          <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold text-zinc-100">
+                GDN Measurements
+              </h2>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Total quantities, volumes, and weights derived from the
+                associated GDN
+              </p>
+            </div>
+
+            {gdnMeasurements.length ? (
+              <div className="overflow-x-auto rounded-md border border-neutral-700">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-neutral-700 hover:bg-transparent">
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Packages
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Length (cm)
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Width (cm)
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Height (cm)
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        CBM
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Volume
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        UOM
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Total
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {gdnMeasurements.map((m) => (
+                      <TableRow
+                        key={m.id}
+                        className="border-neutral-800 hover:bg-neutral-800/40"
+                      >
+                        <TableCell className="text-sm text-zinc-100">
+                          {m.packages ?? "N/A"}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {m.length_cm ?? "N/A"}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {m.width_cm ?? "N/A"}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {m.height_cm ?? "N/A"}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {m.cbm ?? "N/A"}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {m.volume ?? "N/A"}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {m.uom ?? "N/A"}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {m.total ?? "N/A"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-500">
+                No measurements available for this GDN.
+              </p>
+            )}
+          </div>
+
+          {/* Actual Measurements (added) */}
+          <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold text-zinc-100">
+                Actual Measurements
+              </h2>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Enter the actual carton dimensions received, then click Add (or
+                hit Enter) to add it to the list below.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Entry row */}
+              <div className="flex items-end gap-2 rounded-md border border-neutral-800 bg-neutral-950/40 p-3">
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label
+                    htmlFor="actual-draft-length"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Length ({actualDraft.uom})
+                  </Label>
+                  <Input
+                    ref={actualDraftLengthRef}
+                    id="actual-draft-length"
+                    placeholder="Length"
+                    value={actualDraft.length}
+                    onChange={(e) =>
+                      updateActualDraftField("length", e.target.value)
+                    }
+                    onKeyDown={handleActualDraftKeyDown}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label
+                    htmlFor="actual-draft-width"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Width ({actualDraft.uom})
+                  </Label>
+                  <Input
+                    id="actual-draft-width"
+                    placeholder="Width"
+                    value={actualDraft.width}
+                    onChange={(e) =>
+                      updateActualDraftField("width", e.target.value)
+                    }
+                    onKeyDown={handleActualDraftKeyDown}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label
+                    htmlFor="actual-draft-height"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Height ({actualDraft.uom})
+                  </Label>
+                  <Input
+                    id="actual-draft-height"
+                    placeholder="Height"
+                    value={actualDraft.height}
+                    onChange={(e) =>
+                      updateActualDraftField("height", e.target.value)
+                    }
+                    onKeyDown={handleActualDraftKeyDown}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label
+                    htmlFor="actual-draft-total"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Packages
+                  </Label>
+                  <Input
+                    id="actual-draft-total"
+                    placeholder="Total Packages"
+                    value={actualDraft.total}
+                    onChange={(e) =>
+                      updateActualDraftField("total", e.target.value)
+                    }
+                    onKeyDown={handleActualDraftKeyDown}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-foreground">
+                    UOM
+                  </Label>
+                  <Select
+                    value={actualDraft.uom}
+                    onValueChange={(val) => updateActualDraftField("uom", val)}
+                  >
+                    <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                      <SelectValue placeholder="UOM" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                      {ACTUAL_UOM_OPTIONS.map((u) => (
+                        <SelectItem key={u} value={u}>
+                          {u}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-foreground">
+                    CBM (m³)
+                  </Label>
+                  <Input
+                    disabled
+                    value={
+                      isActualDraftValid
+                        ? getActualRowCbm(actualDraft).toFixed(4)
+                        : "0.0000"
+                    }
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100"
+                  />
+                </div>
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-foreground">
+                    Volume (m³)
+                  </Label>
+                  <Input
+                    disabled
+                    value={
+                      isActualDraftValid
+                        ? getActualRowTotalVolume(actualDraft).toFixed(4)
+                        : "0.0000"
+                    }
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100"
+                  />
+                </div>
+
+                <Button
+                  onClick={handleAddActualMeasurement}
+                  disabled={!isActualDraftValid}
+                  className="mb-0.5 h-9 rounded-md"
+                >
+                  Add
+                </Button>
+              </div>
+
+              {/* Committed rows table */}
+              <div className="overflow-x-auto rounded-md border border-neutral-700">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-neutral-700 hover:bg-transparent">
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Length
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Width
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Height
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Packages
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        UOM
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        CBM (m³)
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Volume (m³)
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Actions
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {actualMeasurements.length ? (
+                      actualMeasurements.map((row: any) => (
+                        <TableRow
+                          key={row.id}
+                          className="border-neutral-800 hover:bg-neutral-800/40"
+                        >
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.length}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.width}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.height}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.total}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.uom}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.cbm}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.volume}
+                          </TableCell>
+                          <TableCell>
+                            <button
+                              onClick={() => removeActualMeasurement(row.id)}
+                              className="flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 p-2 text-zinc-400 transition-colors hover:bg-neutral-700 hover:text-zinc-100"
+                            >
+                              <IconTrash size={15} />
+                            </button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="h-20 text-center text-sm text-zinc-500"
+                        >
+                          No actual measurements added yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="flex justify-end border-t border-neutral-800 pt-3">
+                <div className="text-xs text-zinc-400">
+                  Total Actual Volume:{" "}
+                  <span className="font-medium text-zinc-100">
+                    {totalActualVolume.toFixed(4)} m³
+                  </span>
+                </div>
               </div>
             </div>
           </div>

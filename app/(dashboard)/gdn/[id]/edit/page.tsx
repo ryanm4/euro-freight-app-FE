@@ -20,6 +20,7 @@ interface MeasurementRow {
   height: string
   total: string
   uom: string
+  volume: number
 }
 
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
@@ -143,7 +144,15 @@ export default function GDNEdit() {
 
   // Shipment Measurements — repeatable rows, matching the create form
   const [measurements, setMeasurements] = useState<MeasurementRow[]>([
-    { id: 1, length: "", width: "", height: "", total: "", uom: "cm" },
+    {
+      id: 1,
+      length: "",
+      width: "",
+      height: "",
+      total: "",
+      uom: "cm",
+      volume: 0,
+    },
   ])
 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
@@ -204,6 +213,7 @@ export default function GDNEdit() {
         height: "",
         total: "",
         uom: "cm",
+        volume: 0,
       },
     ])
   }
@@ -239,7 +249,7 @@ export default function GDNEdit() {
   }
 
   const getRowTotalVolume = (row: MeasurementRow) => {
-    return getRowCbm(row) * Number(row.total)
+    return row.volume
   }
 
   const totalCalculatedVolume = useMemo(() => {
@@ -447,6 +457,7 @@ export default function GDNEdit() {
               ? String(m.packages ?? "")
               : String(m.quantity ?? ""),
           uom: m.uom ?? "cm",
+          volume: m.volume,
         }))
       )
     } else if (gdn.length_cm || gdn.width_cm || gdn.height_cm) {
@@ -458,6 +469,7 @@ export default function GDNEdit() {
           height: gdn.height_cm ? String(gdn.height_cm) : "",
           total: gdn.cartoons ? String(gdn.cartoons) : "",
           uom: "cm",
+          volume: 0,
         },
       ])
     }
@@ -717,7 +729,9 @@ export default function GDNEdit() {
                           {s}
                         </SelectItem>
                       ))}
-                      <SelectItem value="GRN_OPEN" disabled>GRN OPEN</SelectItem>
+                      <SelectItem value="GRN_OPEN" disabled>
+                        GRN OPEN
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1378,9 +1392,9 @@ export default function GDNEdit() {
                       <TableHead className="text-xs font-medium text-zinc-400">
                         Total CBM
                       </TableHead>
-                      <TableHead className="text-xs font-medium text-zinc-400">
+                      {/* <TableHead className="text-xs font-medium text-zinc-400">
                         Total Net Weight(kg)
-                      </TableHead>
+                      </TableHead> */}
                       <TableHead className="text-xs font-medium text-zinc-400">
                         Total Quantity
                       </TableHead>
@@ -1417,9 +1431,9 @@ export default function GDNEdit() {
                           <TableCell className="text-sm text-zinc-300">
                             {row.totalCbm}
                           </TableCell>
-                          <TableCell className="text-sm text-zinc-300">
+                          {/* <TableCell className="text-sm text-zinc-300">
                             {row.totalNetWeightKg}
-                          </TableCell>
+                          </TableCell> */}
                           <TableCell className="text-sm text-zinc-300">
                             {row.totalQuantity}
                           </TableCell>

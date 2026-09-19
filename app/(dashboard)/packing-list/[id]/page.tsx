@@ -339,7 +339,7 @@ export default function PackingListViewPage() {
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="view-total-cbm" className={labelCls}>
-                Total CBM
+                Volume in CBM
               </Label>
               <Input
                 id="view-total-cbm"

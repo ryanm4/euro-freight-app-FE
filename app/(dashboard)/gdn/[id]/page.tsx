@@ -86,7 +86,7 @@ const createGDNObject = (gdn: any) => {
         uom: m.uom ?? "cm",
         total: m.packages ?? m.quantity ?? 0,
         cbm,
-        volume: cbm * Number(total || 0),
+        volume: m.volume,
       }
     }) ?? []
 
@@ -643,7 +643,7 @@ export default function GdnByID() {
                       </Label>
                       <Input
                         disabled
-                        value={row.volume.toFixed(4)}
+                        value={row.volume}
                         className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                       />
                     </div>
@@ -700,9 +700,9 @@ export default function GdnByID() {
                       <TableHead className="text-xs font-medium text-zinc-400">
                         Total CBM
                       </TableHead>
-                      <TableHead className="text-xs font-medium text-zinc-400">
+                      {/* <TableHead className="text-xs font-medium text-zinc-400">
                         Total Net Weight(kg)
-                      </TableHead>
+                      </TableHead> */}
                       <TableHead className="text-xs font-medium text-zinc-400">
                         Total Gross Weight(kg)
                       </TableHead>
@@ -736,9 +736,9 @@ export default function GdnByID() {
                           <TableCell className="text-sm text-zinc-300">
                             {row.totalCbm}
                           </TableCell>
-                          <TableCell className="text-sm text-zinc-300">
+                          {/* <TableCell className="text-sm text-zinc-300">
                             {row.totalNetWeightKg}
-                          </TableCell>
+                          </TableCell> */}
                           <TableCell className="text-sm text-zinc-300">
                             {row.totalGrossWeightKg}
                           </TableCell>

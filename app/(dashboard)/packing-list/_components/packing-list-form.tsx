@@ -849,7 +849,7 @@ export default function PackingListForm({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-foreground">
-                      Total CBM
+                      Volume in CBM
                     </label>
                     <input
                       readOnly

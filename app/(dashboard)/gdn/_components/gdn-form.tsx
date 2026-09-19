@@ -1360,9 +1360,9 @@ export default function GoodsDispatchNoteForm() {
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Total CBM
                     </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
+                    {/* <TableHead className="text-xs font-medium text-zinc-400">
                       Total Net Weight(kg)
-                    </TableHead>
+                    </TableHead> */}
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Total Quantity
                     </TableHead>
@@ -1399,9 +1399,9 @@ export default function GoodsDispatchNoteForm() {
                         <TableCell className="text-sm text-zinc-300">
                           {row.totalCbm}
                         </TableCell>
-                        <TableCell className="text-sm text-zinc-300">
+                        {/* <TableCell className="text-sm text-zinc-300">
                           {row.totalNetWeightKg}
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell className="text-sm text-zinc-300">
                           {row.totalQuantity}
                         </TableCell>

@@ -209,7 +209,7 @@ export default function GoodsReceiveNoteForm() {
     )
   }
 
-  const getActualRowVolumeM3 = (row: {
+  const getActualRowCbm = (row: {
     length: string
     width: string
     height: string
@@ -221,13 +221,9 @@ export default function GoodsReceiveNoteForm() {
     const h = Number(row.height)
     const packages = Number(row.total)
 
-    if (row.uom === "m") {
-      return (l * w * h * packages) / 6000
-    }
-    return ((l * w * h) / 1_000_000) * packages
+    const factor = row.uom === "m" ? 100 : 1
+    return (l * factor * (w * factor) * (h * factor) * packages) / 1_000_000
   }
-
-  const getActualRowCbm = getActualRowVolumeM3
 
   const getActualRowTotalVolume = (row: {
     length: string
@@ -236,7 +232,13 @@ export default function GoodsReceiveNoteForm() {
     total: string
     uom: string
   }) => {
-    return getActualRowCbm(row) * Number(row.total)
+    const l = Number(row.length)
+    const w = Number(row.width)
+    const h = Number(row.height)
+    const packages = Number(row.total)
+    const factor = row.uom === "m" ? 100 : 1
+
+    return (l * factor * (w * factor) * (h * factor) * packages) / 6000
   }
 
   const totalActualVolume = useMemo(() => {
@@ -1016,7 +1018,7 @@ export default function GoodsReceiveNoteForm() {
 
               <div className="flex flex-1 flex-col gap-1.5">
                 <Label className="text-xs font-medium text-foreground">
-                  Volume (m³)
+                  Volume Weight
                 </Label>
                 <Input
                   disabled
@@ -1062,7 +1064,7 @@ export default function GoodsReceiveNoteForm() {
                       CBM (m³)
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Volume (m³)
+                      Volume Weight (kg)
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Actions
@@ -1123,9 +1125,9 @@ export default function GoodsReceiveNoteForm() {
 
             <div className="flex justify-end border-t border-neutral-800 pt-3">
               <div className="text-xs text-zinc-400">
-                Total Actual Volume:{" "}
+                Total Actual Volume Weight:{" "}
                 <span className="font-medium text-zinc-100">
-                  {totalActualVolume.toFixed(4)} m³
+                  {totalActualVolume.toFixed(4)} kg
                 </span>
               </div>
             </div>

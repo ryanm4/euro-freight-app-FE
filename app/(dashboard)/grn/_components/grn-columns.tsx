@@ -214,7 +214,9 @@ export const goodsReceiveNoteColumns = (
       enableHiding: false,
       cell: ({ row }) => {
         const id = String(row.original.id)
-
+        const status = row.original.status?.trim().toUpperCase()
+        const canModifyRow =
+          canModify && ["DRAFT", "COMPLETED", "SAVED"].includes(status ?? "")
         return (
           <div className="flex items-center gap-1">
             <Tooltip>
@@ -240,6 +242,7 @@ export const goodsReceiveNoteColumns = (
                       size="icon"
                       className="h-8 w-8 p-0"
                       onClick={() => actions.onEdit(id)}
+                      disabled={!canModifyRow}
                     >
                       <IconPencil className="h-4 w-4 text-zinc-400 hover:text-zinc-100" />
                     </Button>
@@ -254,6 +257,7 @@ export const goodsReceiveNoteColumns = (
                       size="icon"
                       className="h-8 w-8 p-0"
                       onClick={() => actions.onDelete(id)}
+                      disabled={!canModifyRow}
                     >
                       <IconTrash className="h-4 w-4 text-destructive hover:text-red-400" />
                     </Button>

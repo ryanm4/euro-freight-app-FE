@@ -39,3 +39,11 @@ export interface GOODS_RECEIVE_NOTE {
   vehicle_number?: string | null
   remarks?: string | null
 }
+
+export enum GRNStatus {
+  DRAFT = "DRAFT",
+  COMPLETED = "COMPLETED",
+  SHIPPED = "SHIPPED",
+  CANCELLED = "CANCELLED",
+  SAVED = "SAVED",
+}

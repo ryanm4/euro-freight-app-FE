@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { fetchGoodsReceiveNoteById } from "@/lib/api/goods_receive_notes"
+import { GRNStatus } from "@/modules/grn/types"
 import { useQuery } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { useParams, useRouter } from "next/navigation"
@@ -129,6 +130,10 @@ export default function GrnByID() {
     )
   }, [grn])
 
+   const canEdit = [GRNStatus.DRAFT, GRNStatus.COMPLETED].includes(
+      String(grn?.status ?? "").trim().toUpperCase() as GRNStatus
+    )
+
   if (isLoading) return <div>Loading…</div>
   if (isError || !grn) return <>Not found</>
 
@@ -148,6 +153,7 @@ export default function GrnByID() {
         <Button
           className="rounded-md"
           onClick={() => router.push(`/grn/${id}/edit`)}
+          disabled={!canEdit} 
         >
           Edit
         </Button>

@@ -34,11 +34,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { fetchClients } from "@/lib/api/clients"
+import { fetchGDNs } from "@/lib/api/goods_dispatch_notes"
 import {
   fetchGoodsReceiveNoteById,
   updateGoodsReceiveNote,
 } from "@/lib/api/goods_receive_notes"
-import { fetchPackingLists } from "@/lib/api/packing_lists"
 import { fetchRecipients } from "@/lib/api/recipients"
 import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
@@ -50,15 +50,14 @@ import { useEffect, useMemo, useRef, useState } from "react"
 
 interface PackingListRow {
   id: number
-  packingListNo: string
+  gdnNo: string
   documentDate: string
-  shipTo: string
-  shippingMode: string
-  totalCartons: number
-  totalCbm: string
-  totalNetWeightKg: string
-  totalQuantity: number
-  totalVolume: string
+  cartons: string | number
+  vehicleNo: string
+  transportMode: string
+  containerNo: string
+  grossWeight: string
+  grossVolume: string
 }
 
 interface ActualMeasurementRow {
@@ -154,9 +153,9 @@ export default function GRNEdit() {
     queryFn: fetchClients,
   })
 
-  const { data: packingLists } = useQuery({
-    queryKey: ["packingLists", "completed"],
-    queryFn: () => fetchPackingLists("completed"),
+  const { data: gdns } = useQuery({
+    queryKey: ["gdns", "completed"],
+    queryFn: () => fetchGDNs("completed"),
   })
 
   const { data: recipientsList } = useQuery({
@@ -201,9 +200,9 @@ export default function GRNEdit() {
       if (!row) return prev
 
       // If something is already selected, block a different shipping mode
-      if (lockedShippingMode && row.shippingMode !== lockedShippingMode) {
+      if (lockedShippingMode && row.transportMode !== lockedShippingMode) {
         alert(
-          `You can only select packing lists with the same Shipping Mode (${lockedShippingMode}).`
+          `You can only select GDNs with the same Transport Mode (${lockedShippingMode}).`
         )
         return prev
       }
@@ -212,40 +211,39 @@ export default function GRNEdit() {
     })
   }
 
-  // Rows available for selection, sourced from the "completed" packing
-  // lists endpoint.
+  // Rows available for selection, sourced from the completed GDNs endpoint.
   const availableRows: PackingListRow[] = useMemo(() => {
     return (
-      packingLists?.data?.map((pl: any) => ({
-        id: pl.packing_list_id,
-        packingListNo: pl.packing_list_no ?? "",
-        documentDate: pl.document_date
-          ? format(new Date(pl.document_date), "dd/MMM/yy HH:mm")
+      gdns?.data?.map((gdn: any) => ({
+        id: gdn.id,
+        gdnNo: gdn.gdn_no ?? `GDN-${gdn.id}`,
+        documentDate: gdn.date
+          ? format(new Date(gdn.date), "dd/MMM/yy")
           : "N/A",
-        shipTo: pl.ship_to ?? "",
-        shippingMode: pl.shipping_mode ?? "",
-        totalCartons: pl.total_cartons ?? 0,
-        totalCbm: pl.total_cbm ?? "0",
-        totalNetWeightKg: pl.total_net_weight_kg ?? "0",
-        totalQuantity: pl.total_quantity ?? 0,
-        totalVolume: pl.total_volume ?? "0",
+        cartons: gdn.cartoons ?? "N/A",
+        vehicleNo: gdn.vehicle_no ?? "N/A",
+        transportMode: gdn.transport_mode ?? "N/A",
+        containerNo: gdn.container_no ?? "N/A",
+        grossWeight: gdn.gross_weight ?? gdn.actual_gross_weight ?? "N/A",
+        grossVolume: gdn.gross_volume ?? "N/A",
       })) ?? []
     )
-  }, [packingLists])
+  }, [gdns])
 
   const linkedRows: PackingListRow[] = useMemo(() => {
     return (
-      grnRes?.data?.packing_lists?.map((pl: any) => ({
-        id: pl.id,
-        packingListNo: pl.packing_list_no ?? `PL-${pl.id}`,
-        documentDate: pl.date ? format(new Date(pl.date), "dd/MMM/yy") : "N/A",
-        shipTo: pl.ship_to ?? "",
-        shippingMode: pl.shipping_mode ?? "",
-        totalCartons: pl.total_cartons ?? 0,
-        totalCbm: pl.total_cbm ?? "0",
-        totalNetWeightKg: pl.total_net_weight_kg ?? "0",
-        totalQuantity: pl.total_quantity ?? 0,
-        totalVolume: pl.total_volume ?? "0",
+      (grnRes?.data?.gdns ?? grnRes?.data?.packing_lists)?.map((gdn: any) => ({
+        id: gdn.id,
+        gdnNo: gdn.gdn_no ?? `GDN-${gdn.id}`,
+        documentDate: gdn.date
+          ? format(new Date(gdn.date), "dd/MMM/yy")
+          : "N/A",
+        cartons: gdn.cartoons ?? "N/A",
+        vehicleNo: gdn.vehicle_no ?? "N/A",
+        transportMode: gdn.transport_mode ?? "N/A",
+        containerNo: gdn.container_no ?? "N/A",
+        grossWeight: gdn.gross_weight ?? gdn.actual_gross_weight ?? "N/A",
+        grossVolume: gdn.gross_volume ?? "N/A",
       })) ?? []
     )
   }, [grnRes])
@@ -266,13 +264,13 @@ export default function GRNEdit() {
   )
 
   const lockedShippingMode = useMemo(() => {
-    return selectedPackingListRows[0]?.shippingMode ?? null
+    return selectedPackingListRows[0]?.transportMode ?? null
   }, [selectedPackingListRows])
 
   const totalCartonCount = useMemo(
     () =>
       selectedPackingListRows.reduce(
-        (accumulator, row) => accumulator + (row.totalCartons ?? 0),
+        (accumulator, row) => accumulator + Number(row.cartons ?? 0),
         0
       ),
     [selectedPackingListRows]
@@ -281,7 +279,7 @@ export default function GRNEdit() {
   const totalVolume = useMemo(
     () =>
       selectedPackingListRows.reduce(
-        (accumulator, row) => accumulator + Number(row.totalVolume ?? 0),
+        (accumulator, row) => accumulator + Number(row.grossVolume ?? 0),
         0
       ),
     [selectedPackingListRows]
@@ -289,19 +287,17 @@ export default function GRNEdit() {
 
   const totalGrossWeight = useMemo(
     () =>
-      selectedRows.reduce((accumulator, rowId) => {
-        const packingList = packingLists?.data?.find(
-          (pl: any) => pl.packing_list_id === rowId
-        )
-        return accumulator + Number(packingList?.total_gross_weight_kg ?? 0)
-      }, 0),
-    [selectedRows, packingLists]
+      selectedPackingListRows.reduce(
+        (accumulator, row) => accumulator + Number(row.grossWeight ?? 0),
+        0
+      ),
+    [selectedPackingListRows]
   )
 
   const quantity = useMemo(
     () =>
       selectedPackingListRows.reduce(
-        (accumulator, row) => accumulator + Number(row.totalQuantity ?? 0),
+        (accumulator, row) => accumulator + Number(row.cartons ?? 0),
         0
       ),
     [selectedPackingListRows]
@@ -428,7 +424,9 @@ export default function GRNEdit() {
     setRecipientContact(grn.recipient_contact ?? "")
     setStatus(grn.status ?? "draft")
     setRemarks(grn.comments ?? "")
-    setSelectedRows(grn.packing_lists?.map((pl: any) => pl.id) ?? [])
+    setSelectedRows(
+      (grn.gdns ?? grn.packing_lists)?.map((item: any) => item.id) ?? []
+    )
 
     // Hydrate actual measurements from grn.measurements (added)
     setActualMeasurements(
@@ -808,32 +806,30 @@ export default function GRNEdit() {
                   <TableHeader>
                     <TableRow className="border-neutral-700 hover:bg-transparent">
                       <TableHead className="text-xs font-medium text-zinc-400">
-                        Packing List No
+                        GDN No
                       </TableHead>
                       <TableHead className="text-xs font-medium text-zinc-400">
                         Date
                       </TableHead>
                       <TableHead className="text-xs font-medium text-zinc-400">
-                        Ship To
+                        Vehicle No
                       </TableHead>
                       <TableHead className="text-xs font-medium text-zinc-400">
-                        Shipping Mode
+                        Transport Mode
                       </TableHead>
                       <TableHead className="text-xs font-medium text-zinc-400">
-                        Total Cartons
+                        Container No
                       </TableHead>
                       <TableHead className="text-xs font-medium text-zinc-400">
-                        Total CBM
+                        Gross Weight
                       </TableHead>
                       <TableHead className="text-xs font-medium text-zinc-400">
-                        Total Net Weight(kg)
+                        Gross Volume
                       </TableHead>
                       <TableHead className="text-xs font-medium text-zinc-400">
-                        Total Quantity
+                        Cartons
                       </TableHead>
-                      <TableHead className="text-xs font-medium text-zinc-400">
-                        Total Volume
-                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400"></TableHead>
                       <TableHead className="text-xs font-medium text-zinc-400">
                         Actions
                       </TableHead>
@@ -847,37 +843,35 @@ export default function GRNEdit() {
                           className="border-neutral-800 hover:bg-neutral-800/40"
                         >
                           <TableCell className="text-sm text-zinc-100">
-                            {row.packingListNo}
+                            {row.gdnNo}
                           </TableCell>
                           <TableCell className="text-sm text-zinc-300">
                             {row.documentDate}
                           </TableCell>
                           <TableCell className="text-sm text-zinc-300">
-                            {row.shipTo}
+                            {row.vehicleNo}
                           </TableCell>
                           <TableCell className="text-sm text-zinc-300">
-                            {row.shippingMode}
+                            {row.transportMode}
                           </TableCell>
                           <TableCell className="text-sm text-zinc-300">
-                            {row.totalCartons}
+                            {row.containerNo}
                           </TableCell>
                           <TableCell className="text-sm text-zinc-300">
-                            {row.totalCbm}
+                            {row.grossWeight}
                           </TableCell>
                           <TableCell className="text-sm text-zinc-300">
-                            {row.totalNetWeightKg}
+                            {row.grossVolume}
                           </TableCell>
                           <TableCell className="text-sm text-zinc-300">
-                            {row.totalQuantity}
+                            {row.cartons}
                           </TableCell>
-                          <TableCell className="text-sm text-zinc-300">
-                            {row.totalVolume}
-                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300"></TableCell>
                           <TableCell>
                             {(() => {
                               const isDisabled =
                                 !!lockedShippingMode &&
-                                row.shippingMode !== lockedShippingMode &&
+                                row.transportMode !== lockedShippingMode &&
                                 !selectedRows.includes(row.id)
 
                               const checkboxEl = (
@@ -900,7 +894,7 @@ export default function GRNEdit() {
                                       </span>
                                     </TooltipTrigger>
                                     <TooltipContent className="border-neutral-700 bg-[#0A0A0A] text-xs text-zinc-100">
-                                      Shipping Mode locked to{" "}
+                                      Transport Mode locked to{" "}
                                       {lockedShippingMode}. Deselect all rows to
                                       switch modes.
                                     </TooltipContent>
@@ -914,7 +908,7 @@ export default function GRNEdit() {
                     ) : (
                       <TableRow>
                         <TableCell
-                          colSpan={10}
+                          colSpan={9}
                           className="h-24 text-center text-sm text-zinc-500"
                         >
                           No results.
@@ -945,9 +939,6 @@ export default function GRNEdit() {
                   <TableHeader>
                     <TableRow className="border-neutral-700 hover:bg-transparent">
                       <TableHead className="text-xs font-medium text-zinc-400">
-                        Packages
-                      </TableHead>
-                      <TableHead className="text-xs font-medium text-zinc-400">
                         Length (cm)
                       </TableHead>
                       <TableHead className="text-xs font-medium text-zinc-400">
@@ -955,6 +946,9 @@ export default function GRNEdit() {
                       </TableHead>
                       <TableHead className="text-xs font-medium text-zinc-400">
                         Height (cm)
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Packages
                       </TableHead>
                       <TableHead className="text-xs font-medium text-zinc-400">
                         CBM
@@ -976,9 +970,6 @@ export default function GRNEdit() {
                         key={m.id}
                         className="border-neutral-800 hover:bg-neutral-800/40"
                       >
-                        <TableCell className="text-sm text-zinc-100">
-                          {m.packages ?? "N/A"}
-                        </TableCell>
                         <TableCell className="text-sm text-zinc-300">
                           {m.length_cm ?? "N/A"}
                         </TableCell>
@@ -987,6 +978,9 @@ export default function GRNEdit() {
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
                           {m.height_cm ?? "N/A"}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-100">
+                          {m.packages ?? "N/A"}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
                           {m.cbm ?? "N/A"}

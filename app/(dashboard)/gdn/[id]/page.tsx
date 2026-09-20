@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { fetchGoodsDispatchNoteById } from "@/lib/api/goods_dispatch_notes"
 import { useQuery } from "@tanstack/react-query"
 import { format } from "date-fns"
+import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 
 const DISPATCH_LOCATION_OPTIONS = [

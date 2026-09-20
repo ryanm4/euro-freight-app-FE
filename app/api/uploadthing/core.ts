@@ -22,9 +22,6 @@ export const ourFileRouter = {
       return { userId: user.id }
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log("Upload complete for userId:", metadata.userId)
-      console.log("file url", file.ufsUrl)
-
       return {
         uploadedBy: metadata.userId,
       }
@@ -53,12 +50,6 @@ export const ourFileRouter = {
       }
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log("Purchase order uploaded for userId:", metadata.userId)
-
-      console.log("File name:", file.name)
-      console.log("File URL:", file.ufsUrl)
-      console.log("File key:", file.key)
-
       return {
         uploadedBy: metadata.userId,
         fileUrl: file.ufsUrl,

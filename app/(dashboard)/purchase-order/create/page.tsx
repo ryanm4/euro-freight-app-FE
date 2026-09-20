@@ -9,9 +9,6 @@ export default function PurchaseOrderCreatePage() {
   const [importedData, setImportedData] = useState<any | null>(null)
   const [sourceFile, setSourceFile] = useState<File | null>(null)
 
-  console.log("importedData", importedData)
-  console.log("sourceFile", sourceFile)
-
   return (
     <div className="mt-3 flex flex-1 flex-col gap-4 p-6 pt-0">
       <PageTitleWithBreadcrumb

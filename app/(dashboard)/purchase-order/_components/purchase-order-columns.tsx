@@ -98,8 +98,6 @@ export const purchaseOrderColumns = (
       id: "actions",
       enableHiding: false,
       cell: ({ row }) => {
-        console.log("row", row?.original?.filePath)
-
         const id = String(row.original.id)
 
         return (

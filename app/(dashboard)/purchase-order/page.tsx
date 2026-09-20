@@ -27,7 +27,7 @@ export default function PurchaseOrderPage() {
   const actions = useMemo(
     () => ({
       onEdit: (id: string) => router.push(`/purchase-order/edit/${id}`),
-      onDelete: (id: string) => console.log("Delete", id),
+      onDelete: (id: string) => {},
       onView: (id: string) => router.push(`/purchase-order/${id}`),
       onDownload: async (filePath: string | null) => {
         if (!filePath) {
@@ -58,8 +58,7 @@ export default function PurchaseOrderPage() {
           console.error("Failed to download file:", error)
         }
       },
-      onStatusChange: (id: string, status: string) =>
-        console.log("Status change", id, status),
+      onStatusChange: (id: string, status: string) => {},
     }),
     [router]
   )

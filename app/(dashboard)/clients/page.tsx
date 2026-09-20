@@ -26,7 +26,7 @@ export default function ClientsPage() {
 
   const actions = {
     onEdit: (id: string) => router.push(`/clients/edit/${id}`),
-    onDelete: (id: string) => console.log("Delete client:", id),
+    onDelete: (id: string) => {},
     onView: (id: string) => router.push(`/clients/${id}`),
   }
 

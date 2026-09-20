@@ -1,3 +1,5 @@
+import { getLoggedInUserIdentifier } from "@/lib/auth"
+
 export interface Measurement {
   length_cm: number
   width_cm: number
@@ -23,7 +25,8 @@ export interface CreateGoodsDispatchNotePayload {
   gross_volume: number
   actual_gross_volume?: string
   status: string
-  created_by: string
+  created_by?: string
+  updated_by?: string
   gdn_grn_ref: string | null
   vehicle_no: string
   driver_id: number
@@ -46,9 +49,7 @@ export interface CreateGoodsDispatchNotePayload {
   measurements: Measurement[]
 }
 
-export type UpdateGoodsDispatchNotePayload = Partial<
-  Omit<CreateGoodsDispatchNotePayload, "created_by">
->
+export type UpdateGoodsDispatchNotePayload = Partial<CreateGoodsDispatchNotePayload>
 
 export async function fetchGDNs(status?: string) {
   const url = status
@@ -62,10 +63,17 @@ export async function fetchGDNs(status?: string) {
 export async function createGoodsDispatchNote(
   payload: CreateGoodsDispatchNotePayload
 ) {
+  const userIdentifier = getLoggedInUserIdentifier()
+  const body = {
+    ...payload,
+    created_by: payload.created_by || userIdentifier,
+    updated_by: payload.updated_by || userIdentifier,
+  }
+
   const res = await fetch("/api/goods_dispatch_notes", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   })
 
   if (!res.ok) throw new Error("Failed to create goods dispatch note")
@@ -82,10 +90,16 @@ export async function updateGoodsDispatchNote(
   id: string | number,
   payload: UpdateGoodsDispatchNotePayload
 ) {
+  const userIdentifier = getLoggedInUserIdentifier()
+  const body = {
+    ...payload,
+    updated_by: payload.updated_by || userIdentifier,
+  }
+
   const res = await fetch(`/api/goods_dispatch_notes/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   })
 
   if (!res.ok) throw new Error("Failed to update goods dispatch note")

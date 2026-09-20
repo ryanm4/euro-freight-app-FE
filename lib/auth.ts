@@ -15,6 +15,26 @@ export const setUser = (user: any) => {
   }
 };
 
+export const getUser = () => {
+  if (typeof window !== "undefined") {
+    const storedUser = sessionStorage.getItem("user");
+    if (storedUser) {
+      try {
+        return JSON.parse(storedUser);
+      } catch (e) {
+        return null;
+      }
+    }
+  }
+  return null;
+};
+
+export const getLoggedInUserIdentifier = (): string => {
+  const user = getUser();
+  if (!user) return "";
+  return user.id !== undefined && user.id !== null ? String(user.id) : (user.username || user.full_name || "");
+};
+
 export const removeAuth = () => {
   if (typeof window !== "undefined") {
     sessionStorage.removeItem("accessToken");

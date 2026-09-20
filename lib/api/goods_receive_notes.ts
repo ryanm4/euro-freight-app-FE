@@ -1,3 +1,5 @@
+import { getLoggedInUserIdentifier } from "@/lib/auth"
+
 export async function fetchGRNs(status?: string, mode?: string) {
   const params = new URLSearchParams()
   if (status) params.set("status", status)
@@ -12,7 +14,8 @@ export async function fetchGRNs(status?: string, mode?: string) {
 }
 
 export async function createGoodsReceiveNote(data: any) {
-  
+  const userIdentifier = getLoggedInUserIdentifier()
+
   const payload = {
     client_id: parseInt(data.client_id),
     manufacture_id: parseInt(data.manufacture_id),
@@ -22,7 +25,8 @@ export async function createGoodsReceiveNote(data: any) {
     date: data.date,
     quantity: parseInt(data.quantity),
     status: data.status,
-    created_by: "admin",
+    created_by: userIdentifier || "admin",
+    updated_by: userIdentifier || "admin",
     gdn_id: parseInt(data.gdn_id),
     measurements: data.measurements.map((m: any) => ({
       length_cm: m.length_cm,
@@ -53,6 +57,8 @@ export async function fetchGoodsReceiveNoteById(id: string) {
 }
 
 export async function updateGoodsReceiveNote(id: string, data: any) {
+  const userIdentifier = getLoggedInUserIdentifier()
+
   const payload = {
     client_id: parseInt(data.client),
     manufacture_id: parseInt(data.manufacturer),
@@ -60,7 +66,7 @@ export async function updateGoodsReceiveNote(id: string, data: any) {
     date: data.date,
     quantity: parseInt(data.quantity),
     status: data.status,
-    updated_by: "admin",
+    updated_by: userIdentifier || "admin",
     packing_list_ids: data.selectedRows.map((r: any) => parseInt(r)),
     recipient_id: parseInt(data.recipient),
     recipient_contact: data.recipient_contact,

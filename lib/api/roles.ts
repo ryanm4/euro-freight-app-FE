@@ -1,3 +1,5 @@
+import { getLoggedInUserIdentifier } from "@/lib/auth"
+
 export async function fetchRoles(status?: string) {
   const url = status
     ? `/api/roles?status=${encodeURIComponent(status)}`
@@ -10,13 +12,22 @@ export async function fetchRoles(status?: string) {
 export async function createRole(roleData: {
   role_name: string
   description: string
+  created_by?: string
+  updated_by?: string
 }) {
+  const userIdentifier = getLoggedInUserIdentifier()
+  const payload = {
+    ...roleData,
+    created_by: roleData.created_by || userIdentifier,
+    updated_by: roleData.updated_by || userIdentifier,
+  }
+
   const res = await fetch("/api/roles", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(roleData),
+    body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error("Failed to create role")
   return res.json()
@@ -30,14 +41,20 @@ export async function fetchRoleById(id: string) {
 
 export async function updateRole(
   id: string,
-  roleData: { role_name: string; description: string }
+  roleData: { role_name: string; description: string; updated_by?: string }
 ) {
+  const userIdentifier = getLoggedInUserIdentifier()
+  const payload = {
+    ...roleData,
+    updated_by: roleData.updated_by || userIdentifier,
+  }
+
   const res = await fetch(`/api/roles/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(roleData),
+    body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error("Failed to update role")
   return res.json()

@@ -22,12 +22,10 @@ import {
   IconLayoutDashboard,
   IconListCheck,
   IconReceipt,
+  IconSettings,
   IconShip,
   IconTruckDelivery,
-  IconUserCircle,
-  IconUserCog,
   IconUsers,
-  IconUsersGroup,
 } from "@tabler/icons-react"
 
 // This is sample data.
@@ -79,19 +77,15 @@ const data = {
       icon: <IconUsers />,
     },
     {
-      title: "Users",
-      url: "/users",
-      icon: <IconUserCircle />,
-    },
-    {
-      title: "Roles",
-      url: "/roles",
-      icon: <IconUserCog />,
-    },
-    {
-      title: "Groups",
-      url: "/groups",
-      icon: <IconUsersGroup />,
+      title: "Settings",
+      url: "/settings/user-management",
+      icon: <IconSettings />,
+      items: [
+        {
+          title: "User Management",
+          url: "/settings/user-management",
+        },
+      ],
     },
   ],
 }

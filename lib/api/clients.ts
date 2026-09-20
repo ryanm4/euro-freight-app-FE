@@ -1,3 +1,5 @@
+import { getLoggedInUserIdentifier } from "@/lib/auth"
+
 export interface CreateClientPayload {
   name: string
   address: string
@@ -6,6 +8,7 @@ export interface CreateClientPayload {
   status: string
   type: string | number
   created_by?: string
+  updated_by?: string
 }
 
 export async function fetchClients() {
@@ -15,10 +18,17 @@ export async function fetchClients() {
 }
 
 export async function createClient(payload: CreateClientPayload) {
+  const userIdentifier = getLoggedInUserIdentifier()
+  const body = {
+    ...payload,
+    created_by: payload.created_by || userIdentifier,
+    updated_by: payload.updated_by || userIdentifier,
+  }
+
   const res = await fetch("/api/clients", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   })
 
   if (!res.ok) {
@@ -28,4 +38,3 @@ export async function createClient(payload: CreateClientPayload) {
 
   return res.json()
 }
-

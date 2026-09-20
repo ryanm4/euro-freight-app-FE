@@ -1,3 +1,5 @@
+import { getLoggedInUserIdentifier } from "@/lib/auth"
+
 export async function fetchHBLHAWBs(status?: string, mode?: string) {
   const params = new URLSearchParams()
   if (status) params.set("status", status)
@@ -37,7 +39,8 @@ export interface CreateBillOfLadingPayload {
   cbm: string
   container_seal_no: string
   onboard_date: string
-  created_by: string
+  created_by?: string
+  updated_by?: string
   grn_ids: number[]
   ports: BillOfLadingPort[]
   shipper_id: number
@@ -81,6 +84,7 @@ const formatDate = (val: string) =>
 function buildBillOfLadingPayload(
   input: CreateBillOfLadingInput
 ): CreateBillOfLadingPayload {
+  const userIdentifier = getLoggedInUserIdentifier()
   return {
     client_id: Number(input.client),
     manufacture_id: Number(input.manufacturer),
@@ -102,7 +106,8 @@ function buildBillOfLadingPayload(
     cbm: input.cbm,
     container_seal_no: input.containerSealNo,
     onboard_date: formatDate(input.onboardedDate),
-    created_by: "admin",
+    created_by: userIdentifier || "admin",
+    updated_by: userIdentifier || "admin",
     grn_ids: Array.from(input.selectedGrnIds),
     ports: input.ports
       .filter((p) => p.value.trim() !== "")

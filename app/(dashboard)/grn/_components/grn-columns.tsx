@@ -156,32 +156,34 @@ export const goodsReceiveNoteColumns = (
     },
     {
       accessorKey: "total_gdn_carton_count",
-      header: "Total GDN Carton Count",
+      header: "Carton Count",
       cell: ({ row }) => {
         const total = row.original.packing_lists?.reduce(
-          (sum, packingList) => sum + (packingList.total_quantity ?? 0),
+          (sum, packingList) => sum + (packingList.total_cartons ?? 0),
           0
         )
 
         return <div>{total ?? "N/A"}</div>
       },
     },
-    {
-      accessorKey: "quantity",
-      header: "Actual Carton Received",
-      cell: ({ row }) => <div>{row.original.quantity ?? "N/A"}</div>,
-    },
+    // {
+    //   accessorKey: "quantity",
+    //   header: "Actual Carton Received",
+    //   cell: ({ row }) => <div>{row.original.quantity ?? "N/A"}</div>,
+    // },
     {
       accessorKey: "custom_document_status",
       header: "Customs Document Status",
       cell: ({ row }) => (
-        <div>{row.original.custom_document_status ?? "N/A"}</div>
+        <div>{row.original.gdns?.[0]?.custom_doc_status ?? "N/A"}</div>
       ),
     },
     {
       accessorKey: "vehicle_number",
       header: "Vehicle Number",
-      cell: ({ row }) => <div>{row.original.vehicle_number ?? "N/A"}</div>,
+      cell: ({ row }) => (
+        <div>{row.original.gdns?.[0]?.vehicle_no ?? "N/A"}</div>
+      ),
     },
     {
       accessorKey: "shipping_mode",

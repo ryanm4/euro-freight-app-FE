@@ -58,6 +58,7 @@ interface PackingListRow {
   containerNo: string
   grossWeight: string
   grossVolume: string
+  total_quantity: number | string
 }
 
 interface ActualMeasurementRow {
@@ -121,6 +122,7 @@ export default function GRNEdit() {
   const [recipientContact, setRecipientContact] = useState("")
   const [status, setStatus] = useState("draft")
   const [remarks, setRemarks] = useState("")
+  const [actual_cartons, setActualCartons] = useState(0)
 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
 
@@ -226,6 +228,12 @@ export default function GRNEdit() {
         containerNo: gdn.container_no ?? "N/A",
         grossWeight: gdn.gross_weight ?? gdn.actual_gross_weight ?? "N/A",
         grossVolume: gdn.gross_volume ?? "N/A",
+        total_quantity:
+          gdn.packing_lists?.reduce(
+            (total: number, packingList: any) =>
+              total + Number(packingList.total_quantity ?? 0),
+            0
+          ) ?? 0,
       })) ?? []
     )
   }, [gdns])
@@ -244,6 +252,17 @@ export default function GRNEdit() {
         containerNo: gdn.container_no ?? "N/A",
         grossWeight: gdn.gross_weight ?? gdn.actual_gross_weight ?? "N/A",
         grossVolume: gdn.gross_volume ?? "N/A",
+        total_quantity:
+          gdn.packing_lists?.reduce(
+            (total: number, packingList: any) =>
+              total + Number(packingList.total_quantity ?? 0),
+            0
+          ) ??
+          (grnRes?.data?.packing_lists ?? []).reduce(
+            (total: number, packingList: any) =>
+              total + Number(packingList.total_quantity ?? 0),
+            0
+          ),
       })) ?? []
     )
   }, [grnRes])
@@ -297,7 +316,7 @@ export default function GRNEdit() {
   const quantity = useMemo(
     () =>
       selectedPackingListRows.reduce(
-        (accumulator, row) => accumulator + Number(row.cartons ?? 0),
+        (accumulator, row) => accumulator + Number(row.total_quantity ?? 0),
         0
       ),
     [selectedPackingListRows]
@@ -427,6 +446,14 @@ export default function GRNEdit() {
     setSelectedRows(
       (grn.gdns ?? grn.packing_lists)?.map((item: any) => item.id) ?? []
     )
+    setActualCartons(
+      Number(
+        grn.actual_carton_count ??
+          grn.actual_cartons ??
+          grn.actual_cartoons ??
+          0
+      )
+    )
 
     // Hydrate actual measurements from grn.measurements (added)
     setActualMeasurements(
@@ -486,10 +513,12 @@ export default function GRNEdit() {
         forwarder,
         recipient,
         recipientContact,
+        actual_carton_count: actual_cartons,
         status,
         date,
         quantity,
-        selectedRows,
+        gdn_id: selectedRows[0],
+        comments: remarks,
         remarks,
         measurements: actualMeasurements.map((m) => ({
           length_cm: Number(m.length),
@@ -731,7 +760,7 @@ export default function GRNEdit() {
                     htmlFor="quantity"
                     className="text-xs font-medium text-foreground"
                   >
-                    Quantity
+                    Total Pieces
                   </Label>
                   <Input
                     id="quantity"
@@ -753,6 +782,21 @@ export default function GRNEdit() {
                     placeholder="Enter Total Carton Count"
                     value={totalCartonCount}
                     disabled
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="total-carton-count"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Actual Carton Count
+                  </Label>
+                  <Input
+                    id="total-carton-count"
+                    placeholder="Enter Actual Carton Count"
+                    value={actual_cartons}
+                    onChange={(e) => setActualCartons(e.target.value ? Number(e.target.value) : 0)}
                     className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                   />
                 </div>
@@ -793,7 +837,7 @@ export default function GRNEdit() {
           <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
             <div className="mb-4">
               <h2 className="text-sm font-semibold text-zinc-100">
-                Available Packing Lists
+                Available GDN's
               </h2>
               <p className="mt-0.5 text-xs text-zinc-500">
                 Select from the available packing lists to associate with this

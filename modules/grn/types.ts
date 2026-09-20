@@ -7,6 +7,7 @@ export interface PackingList {
   gdn_id: number
   grn_id: number
   total_quantity: number
+  total_cartons: number
   ship_to: string
   shipping_mode: string
   status: string
@@ -19,6 +20,11 @@ export interface PackingList {
 export interface GDN {
   gdn_no: string
   id: number
+  custom_doc_status: string
+  status: string
+  vehicle_no: string
+  volume: number
+  weight: string | number
 }
 export interface GOODS_RECEIVE_NOTE {
   id: number

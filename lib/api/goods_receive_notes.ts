@@ -12,7 +12,6 @@ export async function fetchGRNs(status?: string, mode?: string) {
 }
 
 export async function createGoodsReceiveNote(data: any) {
-  
   const payload = {
     client_id: parseInt(data.client_id),
     manufacture_id: parseInt(data.manufacture_id),
@@ -21,6 +20,7 @@ export async function createGoodsReceiveNote(data: any) {
     recipient_contact: data.recipient_contact,
     date: data.date,
     quantity: parseInt(data.quantity),
+    actual_cartons: parseInt(data.actual_cartons),
     status: data.status,
     created_by: "admin",
     gdn_id: parseInt(data.gdn_id),
@@ -60,10 +60,15 @@ export async function updateGoodsReceiveNote(id: string, data: any) {
     date: data.date,
     quantity: parseInt(data.quantity),
     status: data.status,
+    actual_carton_count: parseInt(
+      String(data.actual_carton_count ?? data.actual_cartons ?? 0),
+      10
+    ),
     updated_by: "admin",
-    packing_list_ids: data.selectedRows.map((r: any) => parseInt(r)),
+    gdn_id: parseInt(data.gdn_id),
     recipient_id: parseInt(data.recipient),
     recipient_contact: data.recipient_contact,
+    comments: data.comments,
     measurements: data.measurements.map((m: any) => ({
       length_cm: m.length_cm,
       width_cm: m.width_cm,

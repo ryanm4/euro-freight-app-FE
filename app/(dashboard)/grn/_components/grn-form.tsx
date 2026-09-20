@@ -71,8 +71,8 @@ export default function GoodsReceiveNoteForm() {
   // const [packingList, setPackingList] = useState("")
   const [remarks, setRemarks] = useState("")
 
- 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
+  const [actual_cartons, setActualCartons] = useState<number>(0)
 
   const ACTUAL_UOM_OPTIONS = ["cm", "m"]
 
@@ -108,8 +108,6 @@ export default function GoodsReceiveNoteForm() {
     queryKey: ["recipientsList"],
     queryFn: fetchRecipients,
   })
-
- 
 
   const clientOptions = useMemo(() => {
     return (
@@ -192,7 +190,6 @@ export default function GoodsReceiveNoteForm() {
     () => rows.filter((r) => selectedRows.includes(r.id)),
     [rows, selectedRows]
   )
-
 
   // const quantity = useMemo(
   //   () =>
@@ -344,6 +341,7 @@ export default function GoodsReceiveNoteForm() {
         recipient_contact: recipientContact,
         date: `${date} 00:00:00`,
         quantity: Number(selectedGdn.total_quantity) || 0,
+        total_cartons: actual_cartons,
         status,
         created_by: "admin", // TODO: replace with actual logged-in user
         gdn_id: selectedGdn.id,
@@ -615,6 +613,21 @@ export default function GoodsReceiveNoteForm() {
                   placeholder="Enter Total Carton Count"
                   value={selectedPackingListRows[0]?.cartoons ?? 0}
                   disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="total-carton-count"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Actual Carton Count
+                </Label>
+                <Input
+                  id="total-carton-count"
+                  placeholder="Enter Actual Carton Count"
+                  value={actual_cartons}
+                  onChange={(e) => setActualCartons(e.target.value ? Number(e.target.value) : 0)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>

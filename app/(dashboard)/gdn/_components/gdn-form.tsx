@@ -11,6 +11,7 @@ interface PackingListRow {
   totalNetWeightKg: string
   totalQuantity: number
   totalVolume: string
+  total_gross_weight_kg: string
 }
 
 interface MeasurementRow {
@@ -106,7 +107,6 @@ export default function GoodsDispatchNoteForm() {
   const [secondarySealNo, setSecondarySealNo] = useState("")
   const [customDocStatus, setCustomDocStatus] = useState("")
   const [status, setStatus] = useState("Draft")
-  const [grossWeight, setGrossWeight] = useState("")
   const [remarks, setRemarks] = useState("")
   const [client, setClient] = useState("")
   const [forwarder, setForwarder] = useState("")
@@ -302,6 +302,7 @@ export default function GoodsDispatchNoteForm() {
         totalCartons: pl.total_cartons ?? 0,
         totalCbm: pl.total_cbm ?? "0",
         totalNetWeightKg: pl.total_net_weight_kg ?? "0",
+        total_weight: pl.total_gross_weight_kg ?? "0",
         totalQuantity: pl.total_quantity ?? 0,
         totalVolume: pl.total_volume ?? "0",
       })) ?? []
@@ -336,6 +337,21 @@ export default function GoodsDispatchNoteForm() {
       }, 0),
     [selectedRows, packingLists]
   )
+
+  const packingListGrossWeight = useMemo(
+    () =>
+      selectedRows.reduce((accumulator, id) => {
+        const packingList = packingLists?.data?.find(
+          (pl: any) => pl.packing_list_id === id
+        )
+        return accumulator + Number(packingList?.total_gross_weight_kg ?? 0)
+      }, 0),
+    [selectedRows, packingLists]
+  )
+
+  const calculatedGrossWeight = useMemo(() => {
+    return packingListGrossWeight ? packingListGrossWeight.toFixed(3) : ""
+  }, [packingListGrossWeight])
 
   const quantityExceedsAvailable = useMemo(() => {
     const loaded = Number(quantityLoaded)
@@ -413,7 +429,7 @@ export default function GoodsDispatchNoteForm() {
         date: formattedDate,
         packing_list_ids: selectedRows,
         cartoons: quantityLoaded,
-        gross_weight: grossWeight,
+        gross_weight: calculatedGrossWeight,
         gross_volume: totalCalculatedVolume,
         status: status,
         // TODO: replace with the actual logged-in user (e.g. from an auth/session context)
@@ -1078,11 +1094,11 @@ export default function GoodsDispatchNoteForm() {
                   Gross Weight
                 </Label>
                 <Input
+                  disabled
                   id="gross-weight"
-                  placeholder="Enter Gross Weight"
-                  value={grossWeight}
-                  onChange={(e) => setGrossWeight(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  placeholder="Calculated Gross Weight"
+                  value={calculatedGrossWeight}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
                 />
               </div>
             </div>
@@ -1364,7 +1380,10 @@ export default function GoodsDispatchNoteForm() {
                       Total Net Weight(kg)
                     </TableHead> */}
                     <TableHead className="text-xs font-medium text-zinc-400">
-                      Total Quantity
+                      Total Pieces
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total Weight
                     </TableHead>
                     <TableHead className="text-xs font-medium text-zinc-400">
                       Total Volume
@@ -1404,6 +1423,9 @@ export default function GoodsDispatchNoteForm() {
                         </TableCell> */}
                         <TableCell className="text-sm text-zinc-300">
                           {row.totalQuantity}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.total_gross_weight_kg}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
                           {row.totalVolume}

@@ -11,6 +11,8 @@ interface PackingListRow {
   totalNetWeightKg: string
   totalQuantity: number
   totalVolume: string
+  total_gross_weight_kg: string | number
+  total_net_weight_kg: string | number
 }
 
 interface MeasurementRow {
@@ -329,6 +331,7 @@ export default function GDNEdit() {
         totalNetWeightKg: pl.total_net_weight_kg ?? "0",
         totalQuantity: pl.total_quantity ?? 0,
         totalVolume: pl.total_volume ?? "0",
+        total_gross_weight_kg: pl.total_gross_weight_kg ?? "0",
       })) ?? []
     )
   }, [packingLists])
@@ -355,6 +358,7 @@ export default function GDNEdit() {
         totalNetWeightKg: pl.total_net_weight_kg ?? "0",
         totalQuantity: pl.total_quantity ?? 0,
         totalVolume: pl.total_volume ?? "0",
+        total_gross_weight_kg: pl.total_gross_weight_kg ?? "0",
       })) ?? []
     )
   }, [gdnRes])
@@ -1259,7 +1263,8 @@ export default function GDNEdit() {
                 ).map(([field, label]) => (
                   <div className="flex flex-1 flex-col gap-1.5">
                     <Label className="text-xs font-medium text-foreground">
-                      {label}{field !== "total" ? ` (${draft.uom})` : ""}
+                      {label}
+                      {field !== "total" ? ` (${draft.uom})` : ""}
                     </Label>
                     <Input
                       ref={field === "length" ? draftLengthRef : undefined}
@@ -1273,61 +1278,133 @@ export default function GDNEdit() {
                 ))}
 
                 <div className="flex flex-1 flex-col gap-1.5">
-                  <Label className="text-xs font-medium text-foreground">UOM</Label>
-                  <Select value={draft.uom} onValueChange={(val) => updateDraftField("uom", val)}>
-                      <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                        <SelectValue placeholder="UOM" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                        {UOM_OPTIONS.map((u) => (
-                          <SelectItem key={u} value={u}>
-                            {u}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <Label className="text-xs font-medium text-foreground">
+                    UOM
+                  </Label>
+                  <Select
+                    value={draft.uom}
+                    onValueChange={(val) => updateDraftField("uom", val)}
+                  >
+                    <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                      <SelectValue placeholder="UOM" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                      {UOM_OPTIONS.map((u) => (
+                        <SelectItem key={u} value={u}>
+                          {u}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="flex flex-1 flex-col gap-1.5">
-                  <Label className="text-xs font-medium text-foreground">CBM (m³)</Label>
-                  <Input disabled value={isDraftValid ? getRowCbm(draft).toFixed(4) : "0.0000"} className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100" />
+                  <Label className="text-xs font-medium text-foreground">
+                    CBM (m³)
+                  </Label>
+                  <Input
+                    disabled
+                    value={
+                      isDraftValid ? getRowCbm(draft).toFixed(4) : "0.0000"
+                    }
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100"
+                  />
                 </div>
 
                 <div className="flex flex-1 flex-col gap-1.5">
-                  <Label className="text-xs font-medium text-foreground">Volume Weight (kg)</Label>
-                  <Input disabled value={isDraftValid ? getRowTotalVolume(draft).toFixed(4) : "0.0000"} className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100" />
+                  <Label className="text-xs font-medium text-foreground">
+                    Volume Weight (kg)
+                  </Label>
+                  <Input
+                    disabled
+                    value={
+                      isDraftValid
+                        ? getRowTotalVolume(draft).toFixed(4)
+                        : "0.0000"
+                    }
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100"
+                  />
                 </div>
 
-                <Button onClick={handleAddMeasurement} disabled={!isDraftValid} className="mb-0.5 h-9 rounded-md">Add</Button>
+                <Button
+                  onClick={handleAddMeasurement}
+                  disabled={!isDraftValid}
+                  className="mb-0.5 h-9 rounded-md"
+                >
+                  Add
+                </Button>
               </div>
 
               <div className="overflow-x-auto rounded-md border border-neutral-700">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-neutral-700 hover:bg-transparent">
-                      {['Length', 'Width', 'Height', 'Packages', 'UOM', 'CBM (m³)', 'Volume Weight (kg)', 'Actions'].map((heading) => (
-                        <TableHead key={heading} className="text-xs font-medium text-zinc-400">{heading}</TableHead>
+                      {[
+                        "Length",
+                        "Width",
+                        "Height",
+                        "Packages",
+                        "UOM",
+                        "CBM (m³)",
+                        "Volume Weight (kg)",
+                        "Actions",
+                      ].map((heading) => (
+                        <TableHead
+                          key={heading}
+                          className="text-xs font-medium text-zinc-400"
+                        >
+                          {heading}
+                        </TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {measurements.length ? measurements.map((row) => (
-                      <TableRow key={row.id} className="border-neutral-800 hover:bg-neutral-800/40">
-                        <TableCell className="text-sm text-zinc-300">{row.length}</TableCell>
-                        <TableCell className="text-sm text-zinc-300">{row.width}</TableCell>
-                        <TableCell className="text-sm text-zinc-300">{row.height}</TableCell>
-                        <TableCell className="text-sm text-zinc-300">{row.total}</TableCell>
-                        <TableCell className="text-sm text-zinc-300">{row.uom}</TableCell>
-                        <TableCell className="text-sm text-zinc-300">{getRowCbm(row).toFixed(4)}</TableCell>
-                        <TableCell className="text-sm text-zinc-300">{getRowTotalVolume(row).toFixed(4)}</TableCell>
-                        <TableCell>
-                          <button onClick={() => removeMeasurement(row.id)} className="flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 p-2 text-zinc-400 transition-colors hover:bg-neutral-700 hover:text-zinc-100">
-                            <IconTrash size={15} />
-                          </button>
+                    {measurements.length ? (
+                      measurements.map((row) => (
+                        <TableRow
+                          key={row.id}
+                          className="border-neutral-800 hover:bg-neutral-800/40"
+                        >
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.length}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.width}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.height}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.total}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.uom}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {getRowCbm(row).toFixed(4)}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {getRowTotalVolume(row).toFixed(4)}
+                          </TableCell>
+                          <TableCell>
+                            <button
+                              onClick={() => removeMeasurement(row.id)}
+                              className="flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 p-2 text-zinc-400 transition-colors hover:bg-neutral-700 hover:text-zinc-100"
+                            >
+                              <IconTrash size={15} />
+                            </button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="h-20 text-center text-sm text-zinc-500"
+                        >
+                          No measurements added yet.
                         </TableCell>
                       </TableRow>
-                    )) : (
-                      <TableRow><TableCell colSpan={8} className="h-20 text-center text-sm text-zinc-500">No measurements added yet.</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>
@@ -1384,7 +1461,10 @@ export default function GDNEdit() {
                         Total Net Weight(kg)
                       </TableHead> */}
                       <TableHead className="text-xs font-medium text-zinc-400">
-                        Total Quantity
+                        Total Pieces
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Total Weight
                       </TableHead>
                       <TableHead className="text-xs font-medium text-zinc-400">
                         Total Volume
@@ -1424,6 +1504,9 @@ export default function GDNEdit() {
                           </TableCell> */}
                           <TableCell className="text-sm text-zinc-300">
                             {row.totalQuantity}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.total_gross_weight_kg}
                           </TableCell>
                           <TableCell className="text-sm text-zinc-300">
                             {row.totalVolume}

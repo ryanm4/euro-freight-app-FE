@@ -123,7 +123,7 @@ export const packingListColumns = (
     },
     {
       accessorKey: "total_volume",
-      header: "Total volume",
+      header: "Total Volume",
     },
     {
       accessorKey: "status",

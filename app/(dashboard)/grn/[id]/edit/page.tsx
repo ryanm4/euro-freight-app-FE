@@ -49,6 +49,8 @@ import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 interface PackingListRow {
+  ship_to: any
+  row: string
   id: number
   gdnNo: string
   documentDate: string
@@ -119,7 +121,10 @@ export default function GRNEdit() {
   const [forwarder, setForwarder] = useState("")
   const [manufacturer, setManufacturer] = useState("")
   const [recipient, setRecipient] = useState("")
-  const [recipientContact, setRecipientContact] = useState("")
+  // const [recipientContact, setRecipientContact] = useState("")
+  const [destination, setDestination] = useState("")
+  console.log("destination", destination)
+
   const [status, setStatus] = useState("draft")
   const [remarks, setRemarks] = useState("")
   const [actual_cartons, setActualCartons] = useState(0)
@@ -193,7 +198,6 @@ export default function GRNEdit() {
 
   const toggleRow = (rowId: number) => {
     setSelectedRows((prev) => {
-      // Always allow unchecking
       if (prev.includes(rowId)) {
         return prev.filter((r) => r !== rowId)
       }
@@ -201,10 +205,16 @@ export default function GRNEdit() {
       const row = rows.find((r) => r.id === rowId)
       if (!row) return prev
 
-      // If something is already selected, block a different shipping mode
       if (lockedShippingMode && row.transportMode !== lockedShippingMode) {
         alert(
           `You can only select GDNs with the same Transport Mode (${lockedShippingMode}).`
+        )
+        return prev
+      }
+
+      if (lockedShipTo && row.ship_to !== lockedShipTo) {
+        alert(
+          `You can only select GDNs with the same Ship To (${lockedShipTo}).`
         )
         return prev
       }
@@ -228,6 +238,7 @@ export default function GRNEdit() {
         containerNo: gdn.container_no ?? "N/A",
         grossWeight: gdn.gross_weight ?? gdn.actual_gross_weight ?? "N/A",
         grossVolume: gdn.gross_volume ?? "N/A",
+        ship_to: gdn.packing_lists?.[0]?.ship_to ?? "N/A",
         total_quantity:
           gdn.packing_lists?.reduce(
             (total: number, packingList: any) =>
@@ -252,6 +263,7 @@ export default function GRNEdit() {
         containerNo: gdn.container_no ?? "N/A",
         grossWeight: gdn.gross_weight ?? gdn.actual_gross_weight ?? "N/A",
         grossVolume: gdn.gross_volume ?? "N/A",
+        ship_to: gdn?.packing_lists?.[0]?.ship_to ?? "N/A",
         total_quantity:
           gdn.packing_lists?.reduce(
             (total: number, packingList: any) =>
@@ -281,9 +293,14 @@ export default function GRNEdit() {
     () => rows.filter((r) => selectedRows.includes(r.id)),
     [rows, selectedRows]
   )
+  console.log("selectedPackingListRows", selectedPackingListRows)
 
   const lockedShippingMode = useMemo(() => {
     return selectedPackingListRows[0]?.transportMode ?? null
+  }, [selectedPackingListRows])
+
+  const lockedShipTo = useMemo(() => {
+    return selectedPackingListRows[0]?.ship_to ?? null
   }, [selectedPackingListRows])
 
   const totalCartonCount = useMemo(
@@ -440,7 +457,8 @@ export default function GRNEdit() {
       findOptionValueByName(manufacturerOptions, grn.manufacture_id)
     )
     setRecipient(findOptionValueByName(recipientOptions, grn.recipient_name))
-    setRecipientContact(grn.recipient_contact ?? "")
+    // setRecipientContact(grn.recipient_contact ?? "")
+    setDestination(grn.packing_lists?.[0]?.ship_to ?? "")
     setStatus(grn.status ?? "draft")
     setRemarks(grn.comments ?? "")
     setSelectedRows(
@@ -512,7 +530,7 @@ export default function GRNEdit() {
         manufacturer,
         forwarder,
         recipient,
-        recipientContact,
+        // recipientContact,
         actual_carton_count: actual_cartons,
         status,
         date,
@@ -719,17 +737,17 @@ export default function GRNEdit() {
 
                 <div className="flex flex-col gap-1.5">
                   <Label
-                    htmlFor="recipient-contact"
+                    htmlFor="destination"
                     className="text-xs font-medium text-foreground"
                   >
-                    Additional Phone Number
+                    Destination
                   </Label>
                   <Input
-                    id="recipient-contact"
-                    placeholder="Enter Additional Phone Number"
-                    value={recipientContact}
-                    onChange={(e) => setRecipientContact(e.target.value)}
+                    id="destination"
+                    placeholder="Enter Destination"
+                    value={destination ?? ""}
                     className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                    disabled
                   />
                 </div>
 
@@ -796,7 +814,11 @@ export default function GRNEdit() {
                     id="total-carton-count"
                     placeholder="Enter Actual Carton Count"
                     value={actual_cartons}
-                    onChange={(e) => setActualCartons(e.target.value ? Number(e.target.value) : 0)}
+                    onChange={(e) =>
+                      setActualCartons(
+                        e.target.value ? Number(e.target.value) : 0
+                      )
+                    }
                     className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                   />
                 </div>
@@ -914,9 +936,11 @@ export default function GRNEdit() {
                           <TableCell>
                             {(() => {
                               const isDisabled =
-                                !!lockedShippingMode &&
-                                row.transportMode !== lockedShippingMode &&
-                                !selectedRows.includes(row.id)
+                                !selectedRows.includes(row.id) &&
+                                ((!!lockedShippingMode &&
+                                  row.transportMode !== lockedShippingMode) ||
+                                  (!!lockedShipTo &&
+                                    row.ship_to !== lockedShipTo))
 
                               const checkboxEl = (
                                 <Checkbox
@@ -929,6 +953,22 @@ export default function GRNEdit() {
 
                               if (!isDisabled) return checkboxEl
 
+                              const reasonParts: string[] = []
+                              if (
+                                lockedShippingMode &&
+                                row.transportMode !== lockedShippingMode
+                              ) {
+                                reasonParts.push(
+                                  `Transport Mode (${lockedShippingMode})`
+                                )
+                              }
+                              if (
+                                lockedShipTo &&
+                                row.ship_to !== lockedShipTo
+                              ) {
+                                reasonParts.push(`Ship To (${lockedShipTo})`)
+                              }
+
                               return (
                                 <TooltipProvider>
                                   <Tooltip>
@@ -938,9 +978,8 @@ export default function GRNEdit() {
                                       </span>
                                     </TooltipTrigger>
                                     <TooltipContent className="border-neutral-700 bg-[#0A0A0A] text-xs text-zinc-100">
-                                      Transport Mode locked to{" "}
-                                      {lockedShippingMode}. Deselect all rows to
-                                      switch modes.
+                                      Locked to {reasonParts.join(" and ")}.
+                                      Deselect all rows to change.
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>

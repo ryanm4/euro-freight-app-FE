@@ -288,27 +288,145 @@ export default function GDNEdit() {
     return measurements.reduce((sum, row) => sum + getRowCbm(row), 0)
   }, [measurements])
 
-  const toggleRow = (rowId: number) => {
-    setSelectedRows((prev) => {
-      // Always allow unchecking
-      if (prev.includes(rowId)) {
-        return prev.filter((r) => r !== rowId)
-      }
+const toggleRow = (rowId: number) => {
+  setSelectedRows((prev) => {
+    // Always allow unchecking
+    if (prev.includes(rowId)) {
+      return prev.filter((r) => r !== rowId)
+    }
 
+    const row = rows.find((r) => r.id === rowId)
+    if (!row) return prev
+
+    // If something is already selected, block a different shipping mode
+    if (lockedShippingMode && row.shippingMode !== lockedShippingMode) {
+      alert(
+        `You can only select packing lists with the same Shipping Mode (${lockedShippingMode}).`
+      )
+      return prev
+    }
+
+    // If something is already selected, block a different Ship To
+    if (lockedShipTo && row.shipTo !== lockedShipTo) {
+      alert(
+        `You can only select packing lists with the same Ship To (${lockedShipTo}).`
+      )
+      return prev
+    }
+
+    return [...prev, rowId]
+  })
+}
+
+// Rows available for selection, sourced from the "completed" packing
+// lists endpoint.
+const availableRows: PackingListRow[] = useMemo(() => {
+  return (
+    packingLists?.data?.map((pl: any) => ({
+      id: pl.packing_list_id,
+      packingListNo: pl.packing_list_no ?? "",
+      documentDate: pl.document_date
+        ? new Date(pl.document_date).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })
+        : "—",
+      shipTo: pl.ship_to ?? "",
+      shippingMode: pl.shipping_mode ?? "",
+      totalCartons: pl.total_cartons ?? 0,
+      totalCbm: pl.total_cbm ?? "0",
+      totalNetWeightKg: pl.total_net_weight_kg ?? "0",
+      totalQuantity: pl.total_quantity ?? 0,
+      totalVolume: pl.total_volume ?? "0",
+      total_gross_weight_kg: pl.total_gross_weight_kg ?? "0",
+    })) ?? []
+  )
+}, [packingLists])
+
+// The GDN's currently-linked packing lists — kept visible in the table
+// even if they no longer show up in the "completed" list, so the user
+// never loses sight of what's already attached to this GDN.
+const linkedRows: PackingListRow[] = useMemo(() => {
+  return (
+    gdnRes?.data?.packing_lists?.map((pl: any) => ({
+      id: pl.id,
+      packingListNo: pl.packing_list_no ?? `PL-${pl.id}`,
+      documentDate: pl.date
+        ? new Date(pl.date.replace(" ", "T")).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })
+        : "—",
+      shipTo: pl.ship_to ?? "",
+      shippingMode: pl.shipping_mode ?? "",
+      totalCartons: pl.total_cartons ?? 0,
+      totalCbm: pl.total_cbm ?? "0",
+      totalNetWeightKg: pl.total_net_weight_kg ?? "0",
+      totalQuantity: pl.total_quantity ?? 0,
+      totalVolume: pl.total_volume ?? "0",
+      total_gross_weight_kg: pl.total_gross_weight_kg ?? "0",
+    })) ?? []
+  )
+}, [gdnRes])
+
+const rows: PackingListRow[] = useMemo(() => {
+  const merged = [...linkedRows]
+  availableRows.forEach((row) => {
+    if (!merged.some((r) => r.id === row.id)) {
+      merged.push(row)
+    }
+  })
+  return merged
+}, [linkedRows, availableRows])
+
+// Client & Forwarder are derived from the selected packing list(s) —
+// the GDN generator cannot amend these directly.
+const selectedPackingListRows = useMemo(
+  () => rows.filter((r) => selectedRows.includes(r.id)),
+  [rows, selectedRows]
+)
+
+const derivedClient = selectedPackingListRows[0] ?? null
+const derivedForwarder = selectedPackingListRows[0] ?? null
+
+const lockedShippingMode = useMemo(() => {
+  return selectedPackingListRows[0]?.shippingMode ?? null
+}, [selectedPackingListRows])
+
+const lockedShipTo = useMemo(() => {
+  return selectedPackingListRows[0]?.shipTo ?? null
+}, [selectedPackingListRows])
+
+const selectedDriver = useMemo(
+  () => driverOptions.find((d: any) => String(d.id) === driver),
+  [driverOptions, driver]
+)
+
+const selectedWharfStaff = useMemo(
+  () => wharfStaffOptions.find((w: any) => String(w.id) === wharfStaff),
+  [wharfStaffOptions, wharfStaff]
+)
+
+const packingListQuantity = useMemo(
+  () =>
+    selectedRows.reduce((accumulator, rowId) => {
       const row = rows.find((r) => r.id === rowId)
-      if (!row) return prev
+      return accumulator + (row?.totalCartons ?? 0)
+    }, 0),
+  [selectedRows, rows]
+)
 
-      // If something is already selected, block a different shipping mode
-      if (lockedShippingMode && row.shippingMode !== lockedShippingMode) {
-        alert(
-          `You can only select packing lists with the same Shipping Mode (${lockedShippingMode}).`
-        )
-        return prev
-      }
+const quantityExceedsAvailable = useMemo(() => {
+  const loaded = Number(quantityLoaded)
+  return quantityLoaded !== "" && loaded > packingListQuantity
+}, [quantityLoaded, packingListQuantity])
 
-      return [...prev, rowId]
-    })
-  }
+// Hydrate all form state from the fetched GDN, once, when it arrives.
+useEffect(() => {
+  if (hasHydrated || !gdnRes?.data) return
+  const gdn = gdnRes.data
 
   // Rows available for selection, sourced from the "completed" packing
   // lists endpoint.
@@ -363,126 +481,73 @@ export default function GDNEdit() {
     )
   }, [gdnRes])
 
-  const rows: PackingListRow[] = useMemo(() => {
-    const merged = [...linkedRows]
-    availableRows.forEach((row) => {
-      if (!merged.some((r) => r.id === row.id)) {
-        merged.push(row)
-      }
-    })
-    return merged
-  }, [linkedRows, availableRows])
-
-  // Client & Forwarder are derived from the selected packing list(s) —
-  // the GDN generator cannot amend these directly.
-  const selectedPackingListRows = useMemo(
-    () => rows.filter((r) => selectedRows.includes(r.id)),
-    [rows, selectedRows]
+  setDate(
+    gdn.date
+      ? format(parseDateValue(gdn.date) ?? new Date(gdn.date), "yyyy-MM-dd")
+      : ""
   )
 
-  const derivedClient = selectedPackingListRows[0] ?? null
-  const derivedForwarder = selectedPackingListRows[0] ?? null
-
-  const lockedShippingMode = useMemo(() => {
-    return selectedPackingListRows[0]?.shippingMode ?? null
-  }, [selectedPackingListRows])
-
-  const selectedDriver = useMemo(
-    () => driverOptions.find((d: any) => String(d.id) === driver),
-    [driverOptions, driver]
+  setGdnReference(gdn.gdn_grn_ref ?? "")
+  setVehicleNo(gdn.vehicle_no ?? "")
+  setManufacturer(
+    gdn.manufacture_id
+      ? String(gdn.manufacture_id)
+      : findOptionValueByName(manufacturerOptions, gdn.manufacture_name)
   )
-
-  const selectedWharfStaff = useMemo(
-    () => wharfStaffOptions.find((w: any) => String(w.id) === wharfStaff),
-    [wharfStaffOptions, wharfStaff]
+  setDriver(
+    gdn.driver_id
+      ? String(gdn.driver_id)
+      : findOptionValueByName(driverOptions, gdn.driver_name)
   )
-
-  const packingListQuantity = useMemo(
-    () =>
-      selectedRows.reduce((accumulator, rowId) => {
-        const row = rows.find((r) => r.id === rowId)
-        return accumulator + (row?.totalCartons ?? 0)
-      }, 0),
-    [selectedRows, rows]
+  setWharfStaff(
+    gdn.wharf_staff_id
+      ? String(gdn.wharf_staff_id)
+      : findOptionValueByName(wharfStaffOptions, gdn.wharf_staff_name)
   )
+  setDeliveredTo(gdn.dispatch_location ?? "")
+  setTransportMode(gdn.transport_mode ?? "")
+  setContainerNo(gdn.container_no ?? "")
+  setContainerSize(gdn.container_size ?? "")
+  setPrimarySealNo(gdn.primary_seal_no ?? "")
+  setSecondarySealNo(gdn.secondary_seal_no ?? "")
+  setCustomDocStatus(gdn.custom_doc_status ?? "")
+  setStatus(gdn.status ?? "")
+  setGrossWeight(gdn.gross_weight ? String(gdn.gross_weight) : "")
+  setRemarks(gdn.remarks ?? "")
+  setClient(
+    gdn.client_id
+      ? String(gdn.client_id)
+      : findOptionValueByName(clientOptions, gdn.client_name)
+  )
+  setForwarder(
+    gdn.forwarder_id
+      ? String(gdn.forwarder_id)
+      : findOptionValueByName(forwarderOptions, gdn.forwarder_name)
+  )
+  setDriverContactNoOptional(gdn.driver_contact_no ?? "")
+  setWharfStaffContactNoOptional(gdn.wharf_contact_no ?? "")
+  setQuantityLoaded(gdn.cartoons ? String(gdn.cartoons) : "")
+  setDriverNic(gdn.driver_nic_no ?? "")
+  setDriverContactNo(gdn.driver_contact_no ?? "")
+  setWharfStaffContactNo(gdn.wharf_contact_no ?? "")
+  setSelectedRows(gdn.packing_lists?.map((pl: any) => pl.id) ?? [])
 
-  const quantityExceedsAvailable = useMemo(() => {
-    const loaded = Number(quantityLoaded)
-    return quantityLoaded !== "" && loaded > packingListQuantity
-  }, [quantityLoaded, packingListQuantity])
-
-  // Hydrate all form state from the fetched GDN, once, when it arrives.
-  useEffect(() => {
-    if (hasHydrated || !gdnRes?.data) return
-    const gdn = gdnRes.data
-
-    const readyToHydrate =
-      (!gdn.client_name || clientOptions.length > 0) &&
-      (!gdn.forwarder_name || forwarderOptions.length > 0) &&
-      (!gdn.manufacture_name || manufacturerOptions.length > 0) &&
-      (!gdn.driver_name || driverOptions.length > 0) &&
-      (!gdn.wharf_staff_name || wharfStaffOptions.length > 0)
-
-    if (!readyToHydrate) return
-
-    setDate(
-      gdn.date
-        ? format(parseDateValue(gdn.date) ?? new Date(gdn.date), "yyyy-MM-dd")
-        : ""
-    )
-
-    setGdnReference(gdn.gdn_grn_ref ?? "")
-    setVehicleNo(gdn.vehicle_no ?? "")
-    setManufacturer(
-      gdn.manufacture_id
-        ? String(gdn.manufacture_id)
-        : findOptionValueByName(manufacturerOptions, gdn.manufacture_name)
-    )
-    setDriver(
-      gdn.driver_id
-        ? String(gdn.driver_id)
-        : findOptionValueByName(driverOptions, gdn.driver_name)
-    )
-    setWharfStaff(
-      gdn.wharf_staff_id
-        ? String(gdn.wharf_staff_id)
-        : findOptionValueByName(wharfStaffOptions, gdn.wharf_staff_name)
-    )
-    setDeliveredTo(gdn.dispatch_location ?? "")
-    setTransportMode(gdn.transport_mode ?? "")
-    setContainerNo(gdn.container_no ?? "")
-    setContainerSize(gdn.container_size ?? "")
-    setPrimarySealNo(gdn.primary_seal_no ?? "")
-    setSecondarySealNo(gdn.secondary_seal_no ?? "")
-    setCustomDocStatus(gdn.custom_doc_status ?? "")
-    setStatus(gdn.status ?? "")
-    setGrossWeight(gdn.gross_weight ? String(gdn.gross_weight) : "")
-    setRemarks(gdn.remarks ?? "")
-    setClient(
-      gdn.client_id
-        ? String(gdn.client_id)
-        : findOptionValueByName(clientOptions, gdn.client_name)
-    )
-    setForwarder(
-      gdn.forwarder_id
-        ? String(gdn.forwarder_id)
-        : findOptionValueByName(forwarderOptions, gdn.forwarder_name)
-    )
-    setDriverContactNoOptional(gdn.driver_contact_no ?? "")
-    setWharfStaffContactNoOptional(gdn.wharf_contact_no ?? "")
-    setQuantityLoaded(gdn.cartoons ? String(gdn.cartoons) : "")
-    setDriverNic(gdn.driver_nic_no ?? "")
-    setDriverContactNo(gdn.driver_contact_no ?? "")
-    setWharfStaffContactNo(gdn.wharf_contact_no ?? "")
-    setSelectedRows(gdn.packing_lists?.map((pl: any) => pl.id) ?? [])
-
-    // Hydrate repeatable measurement rows from the API, falling back to
-    // legacy single length_cm/width_cm/height_cm fields, then to one
-    // blank row if neither is present.
-    if (Array.isArray(gdn.measurements) && gdn.measurements.length > 0) {
-      setMeasurements(
-        gdn.measurements.map((m: any, idx: number) => ({
-          id: m.id ?? Date.now() + idx,
+  // Hydrate repeatable measurement rows from the API, falling back to
+  // legacy single length_cm/width_cm/height_cm fields, then to one
+  // blank row if neither is present.
+  if (Array.isArray(gdn.measurements) && gdn.measurements.length > 0) {
+    setMeasurements(
+      gdn.measurements.map((m: any, idx: number) => ({
+        id: m.id ?? Date.now() + idx,
+        length: m.length_cm != null ? String(m.length_cm) : "",
+        width: m.width_cm != null ? String(m.width_cm) : "",
+        height: m.height_cm != null ? String(m.height_cm) : "",
+        total:
+          m.packages != null
+            ? String(m.packages ?? "")
+            : String(m.quantity ?? ""),
+        uom: m.uom ?? "cm",
+        cbm: getRowCbm({
           length: m.length_cm != null ? String(m.length_cm) : "",
           width: m.width_cm != null ? String(m.width_cm) : "",
           height: m.height_cm != null ? String(m.height_cm) : "",
@@ -651,29 +716,167 @@ export default function GDNEdit() {
     }
   }
 
-  useEffect(() => {
-    if (!selectedDriver) return
-    setDriverNic(selectedDriver?.nic_no ?? "")
-    setDriverContactNo(selectedDriver?.contact_no ?? "")
-  }, [selectedDriver])
+  setHasHydrated(true)
+}, [
+  gdnRes,
+  hasHydrated,
+  clientOptions,
+  forwarderOptions,
+  manufacturerOptions,
+  driverOptions,
+  wharfStaffOptions,
+])
 
-  useEffect(() => {
-    if (!selectedWharfStaff) return
-    setWharfStaffContactNo(selectedWharfStaff?.contact_no ?? "")
-  }, [selectedWharfStaff])
+const handleSave = async () => {
+  if (!derivedClient || !derivedForwarder) {
+    alert(
+      "Please select at least one packing list to derive Client and Forwarder."
+    )
+    return
+  }
+  if (!manufacturer || !date) {
+    alert("Please fill in Date and Manufacturer.")
+    return
+  }
+  if (!deliveredTo) {
+    alert("Please select a Dispatch Location.")
+    return
+  }
+  if (!transportMode) {
+    alert("Please select a Cargo Transport Mode.")
+    return
+  }
+  if (
+    transportMode === "FCL container" &&
+    (!containerNo || !containerSize || !primarySealNo || !secondarySealNo)
+  ) {
+    alert(
+      "Please fill in Container No, Container Size, Primary Seal No, and Secondary Seal No."
+    )
+    return
+  }
+  if (!driver) {
+    alert("Please select a Driver.")
+    return
+  }
+  if (!wharfStaff) {
+    alert("Please select Wharf Staff.")
+    return
+  }
+  if (!status) {
+    alert("Please select a Status.")
+    return
+  }
+  if (!client || !forwarder) {
+    alert("Please select a Client and Forwarder.")
+    return
+  }
+  if (!quantityLoaded || Number(quantityLoaded) <= 0) {
+    alert("Please enter a valid Quantity Loaded.")
+    return
+  }
+  if (Number(quantityLoaded) > packingListQuantity) {
+    alert(
+      `Quantity Loaded (${quantityLoaded}) cannot exceed the Packing List Quantity (${packingListQuantity}).`
+    )
+    return
+  }
 
-  if (isGdnLoading) return <div>Loading…</div>
+  try {
+    setIsSaving(true)
 
-  return (
-    <div className="mx-6 mb-6 space-y-5">
-      <div className="mt-3">
-        <PageTitleWithBreadcrumb
-          title={`${gdnRes?.data?.gdn_no ?? ""}`}
-          breadcrumbs={[
-            { title: "Dashboard", href: "/dashboard" },
-            { title: "Good Dispatch Note", href: "/gdn" },
-          ]}
-        />
+    const formattedDate = `${date} 00:00:00`
+
+    await updateGoodsDispatchNote(id, {
+      client_id: Number(client),
+      forwarder_id: Number(forwarder),
+      manufacture_id: Number(manufacturer),
+      date: formattedDate,
+      packing_list_ids: selectedRows,
+      cartoons: quantityLoaded,
+      gross_weight: grossWeight,
+      gross_volume: totalCalculatedVolume,
+      status,
+      gdn_grn_ref: gdnReference,
+      vehicle_no: vehicleNo,
+      driver_id: Number(driver),
+      dispatch_location: deliveredTo,
+      transport_mode: transportMode,
+      ...(transportMode === "FCL container"
+        ? {
+            container_no: containerNo,
+            container_size: containerSize,
+            primary_seal_no: primarySealNo,
+            secondary_seal_no: secondarySealNo,
+          }
+        : {}),
+      custom_doc_status: customDocStatus,
+      wharf_staff_id: Number(wharfStaff),
+      driver_contact_no: driverContactNo,
+      driver_contact_no_optional: driverContactNoOptional,
+      wharf_contact_no: wharfStaffContactNo,
+      wharf_contact_no_optional: wharfStaffContactNoOptional,
+      measurements: measurements.map((m) => ({
+        length_cm: Number(m.length),
+        width_cm: Number(m.width),
+        height_cm: Number(m.height),
+        uom: m.uom,
+        total: Number(m.total),
+        per_carton_volume_m3: getRowCbmPerCarton(m),
+        calculated_volume_m3: getRowTotalVolume(m),
+        packages: Number(m.total),
+        cbm: getRowCbm(m),
+        volume: getRowTotalVolume(m),
+      })),
+      remarks,
+    })
+    router.push("/gdn")
+  } catch (err) {
+    console.error(err)
+    alert("Failed to update goods dispatch note.")
+  } finally {
+    setIsSaving(false)
+  }
+}
+
+useEffect(() => {
+  if (!selectedDriver) return
+  setDriverNic(selectedDriver?.nic_no ?? "")
+  setDriverContactNo(selectedDriver?.contact_no ?? "")
+}, [selectedDriver])
+
+useEffect(() => {
+  if (!selectedWharfStaff) return
+  setWharfStaffContactNo(selectedWharfStaff?.contact_no ?? "")
+}, [selectedWharfStaff])
+
+if (isGdnLoading) return <div>Loading…</div>
+
+return (
+  <div className="mx-6 mb-6 space-y-5">
+    <div className="mt-3">
+      <PageTitleWithBreadcrumb
+        title={`${gdnRes?.data?.gdn_no ?? ""}`}
+        breadcrumbs={[
+          { title: "Dashboard", href: "/dashboard" },
+          { title: "Good Dispatch Note", href: "/gdn" },
+        ]}
+      />
+    </div>
+
+    <div className="mx-auto space-y-5">
+      <div className="flex justify-end gap-3">
+        <Button
+          variant="outline"
+          className="rounded-md"
+          onClick={() => router.push("/gdn")}
+          disabled={isSaving}
+        >
+          Cancel
+        </Button>
+        <Button className="rounded-md" onClick={handleSave} disabled={isSaving}>
+          {isSaving ? "Saving…" : "Save"}
+        </Button>
       </div>
 
       <div className="mx-auto space-y-5">
@@ -793,224 +996,14 @@ export default function GDNEdit() {
             </div>
           </div>
 
-          <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-            <div className="mb-4">
-              <h2 className="text-sm font-semibold text-zinc-100">
-                Business Partners
-              </h2>
-              <p className="mt-0.5 text-xs text-zinc-500">
-                Client and Forwarder are derived automatically from the selected
-                packing list(s) and cannot be changed here.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs font-medium text-foreground">
-                    Customer (Client)
-                  </Label>
-                  <Select value={client} onValueChange={setClient}>
-                    <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                      <SelectValue placeholder="Choose Client" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                      {clientOptions.map((c: any) => (
-                        <SelectItem key={c.id} value={String(c.id)}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs font-medium text-foreground">
-                    Forwarder
-                  </Label>
-                  <Select value={forwarder} onValueChange={setForwarder}>
-                    <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                      <SelectValue placeholder="Choose Forwarder" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                      {forwarderOptions.map((c: any) => (
-                        <SelectItem key={c.id} value={String(c.id)}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs font-medium text-foreground">
-                    Manufacturer
-                  </Label>
-                  <Select value={manufacturer} onValueChange={setManufacturer}>
-                    <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                      <SelectValue placeholder="Choose Manufacturer" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                      {manufacturerOptions.map((c: any) => (
-                        <SelectItem key={c.id} value={String(c.id)}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-            <div className="mb-4">
-              <h2 className="text-sm font-semibold text-zinc-100">
-                Dispatch Location & Transport
-              </h2>
-              <p className="mt-0.5 text-xs text-zinc-500">
-                Where the shipment is dispatched from and how it's moving.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
-                  Delivered To
-                </Label>
-                <Select value={deliveredTo} onValueChange={setDeliveredTo}>
-                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                    <SelectValue placeholder="Choose Delivered To Location" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    {DISPATCH_LOCATION_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
-                  Cargo Transport Mode
-                </Label>
-                <Select value={transportMode} onValueChange={setTransportMode}>
-                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                    <SelectValue placeholder="Choose Transport Mode" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    {TRANSPORT_MODE_OPTIONS.map((m) => (
-                      <SelectItem key={m} value={m}>
-                        {m}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {transportMode === "FCL container" && (
-                <div className="space-y-4 rounded-md border border-neutral-800 bg-neutral-950/40 p-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1.5">
-                      <Label
-                        htmlFor="container-no"
-                        className="text-xs font-medium text-foreground"
-                      >
-                        Container Number
-                      </Label>
-                      <Input
-                        id="container-no"
-                        placeholder="Enter Container Number"
-                        value={containerNo}
-                        onChange={(e) => setContainerNo(e.target.value)}
-                        className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs font-medium text-foreground">
-                        Container Size
-                      </Label>
-                      <Select
-                        value={containerSize}
-                        onValueChange={setContainerSize}
-                      >
-                        <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                          <SelectValue placeholder="Choose Size" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                          {CONTAINER_SIZE_OPTIONS.map((s) => (
-                            <SelectItem key={s} value={s}>
-                              {s}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1.5">
-                      <Label
-                        htmlFor="primary-seal-no"
-                        className="text-xs font-medium text-foreground"
-                      >
-                        Primary Seal Number
-                      </Label>
-                      <Input
-                        id="primary-seal-no"
-                        placeholder="Enter Primary Seal Number"
-                        value={primarySealNo}
-                        onChange={(e) => setPrimarySealNo(e.target.value)}
-                        className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <Label
-                        htmlFor="secondary-seal-no"
-                        className="text-xs font-medium text-foreground"
-                      >
-                        Secondary (Final) Seal Number
-                      </Label>
-                      <Input
-                        id="secondary-seal-no"
-                        placeholder="Enter Secondary Seal Number"
-                        value={secondarySealNo}
-                        onChange={(e) => setSecondarySealNo(e.target.value)}
-                        className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-            <div className="mb-4">
-              <h2 className="text-sm font-semibold text-zinc-100">
-                Vehicle & Personnel
-              </h2>
-              <p className="mt-0.5 text-xs text-zinc-500">
-                Driver and wharf staff details are extracted from their existing
-                profiles.
-              </p>
-            </div>
-
-            <div className="space-y-4">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
                 <Label
-                  htmlFor="vehicle-no"
+                  htmlFor="date"
                   className="text-xs font-medium text-foreground"
                 >
-                  Vehicle No
+                  Date
                 </Label>
                 <Input
                   id="vehicle-no"
@@ -1471,11 +1464,33 @@ export default function GDNEdit() {
                 </div>
 
                 <Button
-                  onClick={handleAddMeasurement}
-                  disabled={!isDraftValid}
-                  className="mb-0.5 h-9 rounded-md"
+                  id="date"
+                  variant="outline"
+                  disabled
+                  className={cn(
+                    "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 opacity-100 disabled:cursor-not-allowed disabled:opacity-100",
+                    !date && "text-zinc-500"
+                  )}
                 >
-                  Add
+                  {date
+                    ? (() => {
+                        const parseDate = (val: string): Date | undefined => {
+                          if (!val) return undefined
+                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
+                          if (isValid(d)) return d
+                          d = parse(val, "yyyy-MM-dd", new Date())
+                          if (isValid(d)) return d
+                          d = new Date(val)
+                          if (isValid(d)) return d
+                          return undefined
+                        }
+                        const selectedDate = parseDate(date)
+                        return selectedDate
+                          ? format(selectedDate, "yyyy-MM-dd")
+                          : "Pick a date"
+                      })()
+                    : "Pick a date"}
+                  <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                 </Button>
               </div>
 
@@ -1555,49 +1570,594 @@ export default function GDNEdit() {
                 </Table>
               </div>
 
-              <div className="flex justify-end border-t border-neutral-800 pt-3">
-                <div className="text-xs text-zinc-400">
-                  Total Calculated Volume:{" "}
-                  <span className="font-medium text-zinc-100">
-                    {totalCalculatedVolume.toFixed(4)} m³
-                  </span>
-                </div>
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="gdn-destination"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Destination
+                </Label>
+                <Input
+                  id="gdn-destination"
+                  placeholder="Enter Destination"
+                  value={lockedShipTo ?? ""}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
               </div>
             </div>
           </div>
         </div>
 
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              Business Partners
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Client and Forwarder are derived automatically from the selected
+              packing list(s) and cannot be changed here.
+            </p>
+          </div>
 
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Customer (Client)
+                </Label>
+                <Select value={client} onValueChange={setClient}>
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Choose Client" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {clientOptions.map((c: any) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-1">
-          <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-            <div className="mb-4">
-              <h2 className="text-sm font-semibold text-zinc-100">
-                Additional Information
-              </h2>
-              <p className="mt-0.5 text-xs text-zinc-500">
-                Any other notes relevant to this dispatch.
-              </p>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Forwarder
+                </Label>
+                <Select value={forwarder} onValueChange={setForwarder}>
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Choose Forwarder" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {forwarderOptions.map((c: any) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Manufacturer
+                </Label>
+                <Select value={manufacturer} onValueChange={setManufacturer}>
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Choose Manufacturer" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {manufacturerOptions.map((c: any) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              Dispatch Location & Transport
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Where the shipment is dispatched from and how it's moving.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-foreground">
+                Delivered To
+              </Label>
+              <Select value={deliveredTo} onValueChange={setDeliveredTo}>
+                <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                  <SelectValue placeholder="Choose Delivered To Location" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                  {DISPATCH_LOCATION_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-foreground">
+                Cargo Transport Mode
+              </Label>
+              <Select value={transportMode} onValueChange={setTransportMode}>
+                <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                  <SelectValue placeholder="Choose Transport Mode" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                  {TRANSPORT_MODE_OPTIONS.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {transportMode === "FCL container" && (
+              <div className="space-y-4 rounded-md border border-neutral-800 bg-neutral-950/40 p-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <Label
+                      htmlFor="container-no"
+                      className="text-xs font-medium text-foreground"
+                    >
+                      Container Number
+                    </Label>
+                    <Input
+                      id="container-no"
+                      placeholder="Enter Container Number"
+                      value={containerNo}
+                      onChange={(e) => setContainerNo(e.target.value)}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-xs font-medium text-foreground">
+                      Container Size
+                    </Label>
+                    <Select
+                      value={containerSize}
+                      onValueChange={setContainerSize}
+                    >
+                      <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                        <SelectValue placeholder="Choose Size" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                        {CONTAINER_SIZE_OPTIONS.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <Label
+                      htmlFor="primary-seal-no"
+                      className="text-xs font-medium text-foreground"
+                    >
+                      Primary Seal Number
+                    </Label>
+                    <Input
+                      id="primary-seal-no"
+                      placeholder="Enter Primary Seal Number"
+                      value={primarySealNo}
+                      onChange={(e) => setPrimarySealNo(e.target.value)}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label
+                      htmlFor="secondary-seal-no"
+                      className="text-xs font-medium text-foreground"
+                    >
+                      Secondary (Final) Seal Number
+                    </Label>
+                    <Input
+                      id="secondary-seal-no"
+                      placeholder="Enter Secondary Seal Number"
+                      value={secondarySealNo}
+                      onChange={(e) => setSecondarySealNo(e.target.value)}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4 flex items-start justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-zinc-100">
+                Shipment Measurements
+              </h2>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Enter a carton dimension set, then click Add (or hit Enter) to
+                add it to the list below.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-end gap-2 rounded-md border border-neutral-800 bg-neutral-950/40 p-3">
+              {(
+                [
+                  ["length", "Length"],
+                  ["width", "Width"],
+                  ["height", "Height"],
+                  ["total", "Packages"],
+                ] as const
+              ).map(([field, label]) => (
                 <div className="flex flex-1 flex-col gap-1.5">
                   <Label className="text-xs font-medium text-foreground">
-                    Remarks
+                    {label}
+                    {field !== "total" ? ` (${draft.uom})` : ""}
                   </Label>
-                  <Textarea
-                    placeholder="Type your message here."
-                    value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
-                    className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"
+                  <Input
+                    ref={field === "length" ? draftLengthRef : undefined}
+                    placeholder={label}
+                    value={draft[field]}
+                    onChange={(e) => updateDraftField(field, e.target.value)}
+                    onKeyDown={handleDraftKeyDown}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
                   />
                 </div>
+              ))}
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  UOM
+                </Label>
+                <Select
+                  value={draft.uom}
+                  onValueChange={(val) => updateDraftField("uom", val)}
+                >
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="UOM" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {UOM_OPTIONS.map((u) => (
+                      <SelectItem key={u} value={u}>
+                        {u}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  CBM (m³)
+                </Label>
+                <Input
+                  disabled
+                  value={isDraftValid ? getRowCbm(draft).toFixed(4) : "0.0000"}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100"
+                />
+              </div>
+
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Volume Weight (kg)
+                </Label>
+                <Input
+                  disabled
+                  value={
+                    isDraftValid
+                      ? getRowTotalVolume(draft).toFixed(4)
+                      : "0.0000"
+                  }
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100"
+                />
+              </div>
+
+              <Button
+                onClick={handleAddMeasurement}
+                disabled={!isDraftValid}
+                className="mb-0.5 h-9 rounded-md"
+              >
+                Add
+              </Button>
+            </div>
+
+            <div className="overflow-x-auto rounded-md border border-neutral-700">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-neutral-700 hover:bg-transparent">
+                    {[
+                      "Length",
+                      "Width",
+                      "Height",
+                      "Packages",
+                      "UOM",
+                      "CBM (m³)",
+                      "Volume Weight (kg)",
+                      "Actions",
+                    ].map((heading) => (
+                      <TableHead
+                        key={heading}
+                        className="text-xs font-medium text-zinc-400"
+                      >
+                        {heading}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {measurements.length ? (
+                    measurements.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        className="border-neutral-800 hover:bg-neutral-800/40"
+                      >
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.length}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.width}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.height}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.total}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.uom}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {getRowCbm(row).toFixed(4)}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {getRowTotalVolume(row).toFixed(4)}
+                        </TableCell>
+                        <TableCell>
+                          <button
+                            onClick={() => removeMeasurement(row.id)}
+                            className="flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 p-2 text-zinc-400 transition-colors hover:bg-neutral-700 hover:text-zinc-100"
+                          >
+                            <IconTrash size={15} />
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={8}
+                        className="h-20 text-center text-sm text-zinc-500"
+                      >
+                        No measurements added yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex justify-end border-t border-neutral-800 pt-3">
+              <div className="text-xs text-zinc-400">
+                Total Calculated Volume:{" "}
+                <span className="font-medium text-zinc-100">
+                  {totalCalculatedVolume.toFixed(4)} m³
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-1">
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              Available Packing Lists
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Select the packing list(s) for this dispatch. Customer and
+              Forwarder above are extracted automatically from your selection.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="overflow-x-auto rounded-md border border-neutral-700">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-neutral-700 hover:bg-transparent">
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Packing List No
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Date
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Ship To
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Shipping Mode
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total Cartons
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total CBM
+                    </TableHead>
+                    {/* <TableHead className="text-xs font-medium text-zinc-400">
+                        Total Net Weight(kg)
+                      </TableHead> */}
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total Pieces
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total Weight
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total Volume
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.length ? (
+                    rows.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        className="border-neutral-800 hover:bg-neutral-800/40"
+                      >
+                        <TableCell className="text-sm text-zinc-100">
+                          {row.packingListNo}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.documentDate}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.shipTo}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.shippingMode}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.totalCartons}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.totalCbm}
+                        </TableCell>
+                        {/* <TableCell className="text-sm text-zinc-300">
+                            {row.totalNetWeightKg}
+                          </TableCell> */}
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.totalQuantity}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.total_gross_weight_kg}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.totalVolume}
+                        </TableCell>
+                        <TableCell>
+                          {(() => {
+                            const isDisabled =
+                              !selectedRows.includes(row.id) &&
+                              ((!!lockedShippingMode &&
+                                row.shippingMode !== lockedShippingMode) ||
+                                (!!lockedShipTo && row.shipTo !== lockedShipTo))
+
+                            const checkboxEl = (
+                              <Checkbox
+                                checked={selectedRows.includes(row.id)}
+                                disabled={isDisabled}
+                                onCheckedChange={() => toggleRow(row.id)}
+                                className="border-neutral-600"
+                              />
+                            )
+
+                            if (!isDisabled) return checkboxEl
+
+                            const reasonParts: string[] = []
+                            if (
+                              lockedShippingMode &&
+                              row.shippingMode !== lockedShippingMode
+                            ) {
+                              reasonParts.push(
+                                `Shipping Mode (${lockedShippingMode})`
+                              )
+                            }
+                            if (lockedShipTo && row.shipTo !== lockedShipTo) {
+                              reasonParts.push(`Ship To (${lockedShipTo})`)
+                            }
+
+                            return (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="inline-flex cursor-not-allowed">
+                                      {checkboxEl}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="border-neutral-700 bg-[#0A0A0A] text-xs text-zinc-100">
+                                    Locked to {reasonParts.join(" and ")}.
+                                    Deselect all rows to change.
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )
+                          })()}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={10}
+                        className="h-24 text-center text-sm text-zinc-500"
+                      >
+                        No results.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-1">
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              Additional Information
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Any other notes relevant to this dispatch.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Remarks
+                </Label>
+                <Textarea
+                  placeholder="Type your message here."
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  className="min-h-25 resize-none rounded-md border-neutral-700 bg-[#0A0A0A] text-sm text-neutral-100 placeholder:text-neutral-600 focus-visible:border-neutral-500 focus-visible:ring-1 focus-visible:ring-neutral-500"
+                />
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  )
+  </div>
+)
 }

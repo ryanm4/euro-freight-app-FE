@@ -1,6 +1,7 @@
 "use client"
 
 interface PackingListRow {
+  total_weight: string
   id: number
   packingListNo: string
   documentDate: string
@@ -285,6 +286,14 @@ export default function GoodsDispatchNoteForm() {
         return prev
       }
 
+      // If something is already selected, block a different Ship To
+      if (lockedShipTo && row.shipTo !== lockedShipTo) {
+        alert(
+          `You can only select packing lists with the same Ship To (${lockedShipTo}).`
+        )
+        return prev
+      }
+
       return [...prev, id]
     })
   }
@@ -361,6 +370,12 @@ export default function GoodsDispatchNoteForm() {
   const lockedShippingMode = useMemo(() => {
     return selectedPackingListRows[0]?.shippingMode ?? null
   }, [selectedPackingListRows])
+
+  const lockedShipTo = useMemo(() => {
+    return selectedPackingListRows[0]?.shipTo ?? null
+  }, [selectedPackingListRows])
+
+  console.log("lockedShipTo", lockedShipTo)
 
   const handleSave = async () => {
     if (!derivedClient || !derivedForwarder) {
@@ -441,11 +456,11 @@ export default function GoodsDispatchNoteForm() {
         transport_mode: transportMode,
         ...(transportMode === "FCL container"
           ? {
-            container_no: containerNo,
-            container_size: containerSize,
-            primary_seal_no: primarySealNo,
-            secondary_seal_no: secondarySealNo,
-          }
+              container_no: containerNo,
+              container_size: containerSize,
+              primary_seal_no: primarySealNo,
+              secondary_seal_no: secondarySealNo,
+            }
           : {}),
         custom_doc_status: customDocStatus,
         wharf_staff_id: Number(wharfStaff),
@@ -602,21 +617,21 @@ export default function GoodsDispatchNoteForm() {
                 >
                   {date
                     ? (() => {
-                      const parseDate = (val: string): Date | undefined => {
-                        if (!val) return undefined
-                        let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                        if (isValid(d)) return d
-                        d = parse(val, "yyyy-MM-dd", new Date())
-                        if (isValid(d)) return d
-                        d = new Date(val)
-                        if (isValid(d)) return d
-                        return undefined
-                      }
-                      const selectedDate = parseDate(date)
-                      return selectedDate
-                        ? format(selectedDate, "yyyy-MM-dd")
-                        : "Pick a date"
-                    })()
+                        const parseDate = (val: string): Date | undefined => {
+                          if (!val) return undefined
+                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
+                          if (isValid(d)) return d
+                          d = parse(val, "yyyy-MM-dd", new Date())
+                          if (isValid(d)) return d
+                          d = new Date(val)
+                          if (isValid(d)) return d
+                          return undefined
+                        }
+                        const selectedDate = parseDate(date)
+                        return selectedDate
+                          ? format(selectedDate, "yyyy-MM-dd")
+                          : "Pick a date"
+                      })()
                     : "Pick a date"}
                   <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                 </Button>
@@ -657,6 +672,22 @@ export default function GoodsDispatchNoteForm() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="gdn-destination"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Destination
+                </Label>
+                <Input
+                  id="gdn-destination"
+                  placeholder="Enter Destination"
+                  value={lockedShipTo ?? ""}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
               </div>
             </div>
           </div>
@@ -1197,7 +1228,7 @@ export default function GoodsDispatchNoteForm() {
                   className={cn(
                     "h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
                     quantityExceedsAvailable &&
-                    "border-red-500 focus-visible:ring-red-500"
+                      "border-red-500 focus-visible:ring-red-500"
                   )}
                 />
                 {quantityExceedsAvailable && (
@@ -1453,7 +1484,7 @@ export default function GoodsDispatchNoteForm() {
                           <button
                             type="button"
                             onClick={() => removeMeasurement(row.id)}
-                            className="flex items-center justify-center rounded-md border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 p-2 text-red-600 dark:text-red-400 transition-colors hover:bg-red-100 dark:hover:bg-neutral-700"
+                            className="flex items-center justify-center rounded-md border border-neutral-300 bg-neutral-100 p-2 text-red-600 transition-colors hover:bg-red-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-red-400 dark:hover:bg-neutral-700"
                           >
                             <IconTrash size={15} />
                           </button>
@@ -1485,8 +1516,6 @@ export default function GoodsDispatchNoteForm() {
           </div>
         </div>
       </div>
-
-
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-1">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">

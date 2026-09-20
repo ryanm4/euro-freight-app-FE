@@ -131,6 +131,7 @@ const createGDNObject = (gdn: any) => {
     totalCalculatedVolume,
     remarks: gdn.remarks ?? "—",
     packingLists,
+    ship_to: gdn.packing_lists?.[0]?.ship_to ?? null,
   }
 }
 
@@ -235,6 +236,21 @@ export default function GdnByID() {
                   </Label>
                   <Input
                     value={gdn.status}
+                    disabled
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="destination"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Destination
+                  </Label>
+                  <Input
+                    id="destination"
+                    value={gdn.ship_to ?? ""}
                     disabled
                     className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                   />

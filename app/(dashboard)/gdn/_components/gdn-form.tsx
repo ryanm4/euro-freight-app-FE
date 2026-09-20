@@ -1,6 +1,7 @@
 "use client"
 
 interface PackingListRow {
+  total_weight: string
   id: number
   packingListNo: string
   documentDate: string
@@ -285,6 +286,14 @@ export default function GoodsDispatchNoteForm() {
         return prev
       }
 
+      // If something is already selected, block a different Ship To
+      if (lockedShipTo && row.shipTo !== lockedShipTo) {
+        alert(
+          `You can only select packing lists with the same Ship To (${lockedShipTo}).`
+        )
+        return prev
+      }
+
       return [...prev, id]
     })
   }
@@ -361,6 +370,12 @@ export default function GoodsDispatchNoteForm() {
   const lockedShippingMode = useMemo(() => {
     return selectedPackingListRows[0]?.shippingMode ?? null
   }, [selectedPackingListRows])
+
+  const lockedShipTo = useMemo(() => {
+    return selectedPackingListRows[0]?.shipTo ?? null
+  }, [selectedPackingListRows])
+
+  console.log("lockedShipTo", lockedShipTo)
 
   const handleSave = async () => {
     if (!derivedClient || !derivedForwarder) {
@@ -657,6 +672,22 @@ export default function GoodsDispatchNoteForm() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="gdn-destination"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Destination
+                </Label>
+                <Input
+                  id="gdn-destination"
+                  placeholder="Enter Destination"
+                  value={lockedShipTo ?? ""}
+                  disabled
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
               </div>
             </div>
           </div>
@@ -1425,7 +1456,7 @@ export default function GoodsDispatchNoteForm() {
                           {row.totalQuantity}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
-                          {row.total_gross_weight_kg}
+                          {row.total_weight}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-300">
                           {row.totalVolume}
@@ -1433,9 +1464,10 @@ export default function GoodsDispatchNoteForm() {
                         <TableCell>
                           {(() => {
                             const isDisabled =
-                              !!lockedShippingMode &&
-                              row.shippingMode !== lockedShippingMode &&
-                              !selectedRows.includes(row.id)
+                              !selectedRows.includes(row.id) &&
+                              ((!!lockedShippingMode &&
+                                row.shippingMode !== lockedShippingMode) ||
+                                (!!lockedShipTo && row.shipTo !== lockedShipTo))
 
                             const checkboxEl = (
                               <Checkbox
@@ -1448,18 +1480,30 @@ export default function GoodsDispatchNoteForm() {
 
                             if (!isDisabled) return checkboxEl
 
+                            const reasonParts: string[] = []
+                            if (
+                              lockedShippingMode &&
+                              row.shippingMode !== lockedShippingMode
+                            ) {
+                              reasonParts.push(
+                                `Shipping Mode (${lockedShippingMode})`
+                              )
+                            }
+                            if (lockedShipTo && row.shipTo !== lockedShipTo) {
+                              reasonParts.push(`Ship To (${lockedShipTo})`)
+                            }
+
                             return (
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    {/* span wrapper so the tooltip still fires on a disabled checkbox */}
                                     <span className="inline-flex cursor-not-allowed">
                                       {checkboxEl}
                                     </span>
                                   </TooltipTrigger>
                                   <TooltipContent className="border-neutral-700 bg-[#0A0A0A] text-xs text-zinc-100">
-                                    Shipping Mode locked to {lockedShippingMode}
-                                    . Deselect all rows to switch modes.
+                                    Locked to {reasonParts.join(" and ")}.
+                                    Deselect all rows to change.
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>

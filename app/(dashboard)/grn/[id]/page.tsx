@@ -58,6 +58,7 @@ interface GrnData {
   remarks: string
   gdn: SelectedGdn | null
   actualMeasurements: MeasurementRow[]
+  ship_to: string | null
 }
 
 const createGRNObject = (grn: any): GrnData => {
@@ -91,6 +92,7 @@ const createGRNObject = (grn: any): GrnData => {
         }
       : null,
     actualMeasurements: grn.measurements ?? [],
+    ship_to: grn?.packing_lists?.[0]?.ship_to ?? null,
   }
 }
 
@@ -130,9 +132,11 @@ export default function GrnByID() {
     )
   }, [grn])
 
-   const canEdit = [GRNStatus.DRAFT, GRNStatus.COMPLETED].includes(
-      String(grn?.status ?? "").trim().toUpperCase() as GRNStatus
-    )
+  const canEdit = [GRNStatus.DRAFT, GRNStatus.COMPLETED].includes(
+    String(grn?.status ?? "")
+      .trim()
+      .toUpperCase() as GRNStatus
+  )
 
   if (isLoading) return <div>Loading…</div>
   if (isError || !grn) return <>Not found</>
@@ -153,7 +157,7 @@ export default function GrnByID() {
         <Button
           className="rounded-md"
           onClick={() => router.push(`/grn/${id}/edit`)}
-          disabled={!canEdit} 
+          disabled={!canEdit}
         >
           Edit
         </Button>
@@ -251,10 +255,10 @@ export default function GrnByID() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-foreground">
-                  Additional Phone Number
+                  Destination
                 </Label>
                 <Input
-                  value={grn.recipientContact}
+                  value={grn.ship_to ?? ""}
                   disabled
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500 disabled:cursor-not-allowed disabled:opacity-60"
                 />

@@ -24,20 +24,21 @@ export interface CreateBillOfLadingPayload {
   voyage_no: string
   etd: string
   eta: string
-  actual_etd: string
-  actual_eta: string
+  actual_etd: string | null
+  actual_eta: string | null
   arrival_port: string
   inland_location: string
   mbl_mawb_no: string
   house_bl_no: string
   status: string
   no_pieces: number
-  gross_weight: string
-  chargeable_weight: string
-  cbm: string
+  gross_weight: string | number
+  chargeable_weight: string | number
+  cbm: string | number
   container_seal_no: string
   onboard_date: string
   created_by: string
+  shipment_ids: number[]
   grn_ids: number[]
   ports: BillOfLadingPort[]
   shipper_id: number
@@ -67,6 +68,7 @@ export interface CreateBillOfLadingInput {
   onboardedDate: string
   actualTimeOfDelivery: string
   actualTimeOfArrival: string
+  selectedShipmentIds?: Set<number>
   selectedGrnIds: Set<number>
   ports: { id: number; value: string }[]
   status: string
@@ -91,21 +93,22 @@ function buildBillOfLadingPayload(
     voyage_no: input.voyageNo,
     etd: formatDate(input.estimatedTimeOfDelivery),
     eta: formatDate(input.estimatedTimeOfArrival),
-    actual_etd: formatDate(input.actualTimeOfDelivery),
-    actual_eta: formatDate(input.actualTimeOfArrival),
+    actual_etd: input.actualTimeOfDelivery ? formatDate(input.actualTimeOfDelivery) : null,
+    actual_eta: input.actualTimeOfArrival ? formatDate(input.actualTimeOfArrival) : null,
     arrival_port: input.arrivalPort,
     inland_location: input.inlandLocation,
     mbl_mawb_no: input.mblMawbNo,
     house_bl_no: input.house_bl_no,
     status: input.status,
-    no_pieces: Number(input.noOfPieces),
+    no_pieces: Number(input.noOfPieces) || 0,
     gross_weight: input.grossWeight,
     chargeable_weight: input.chargeableWeight,
     cbm: input.cbm,
     container_seal_no: input.containerSealNo,
     onboard_date: formatDate(input.onboardedDate),
     created_by: "admin",
-    grn_ids: Array.from(input.selectedGrnIds),
+    shipment_ids: Array.from(input.selectedShipmentIds ?? []),
+    grn_ids: Array.from(input.selectedGrnIds ?? []),
     ports: input.ports
       .filter((p) => p.value.trim() !== "")
       .map((p) => ({ port: p.value, status: "Pending" })),

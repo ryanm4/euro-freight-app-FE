@@ -10,12 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { fetchHBLHAWBs } from "@/lib/api/bill_of_lading"
+import { fetchGRNs } from "@/lib/api/goods_receive_notes"
 import { createShipment } from "@/lib/api/shipments"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
-import HBLTable from "./HBLTable"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
+import GRNTable from "./GRNTable"
 
 export default function ShipmentForm() {
   const router = useRouter()
@@ -23,7 +24,7 @@ export default function ShipmentForm() {
   const [mode, setMode] = useState("") // "AIR" | "SEA"
   const [status, setStatus] = useState("planned")
   const [isSaving, setIsSaving] = useState(false)
-  const [selectedHBLIds, setSelectedHBLIds] = useState<Set<number>>(new Set())
+  const [selectedGRNIds, setSelectedGRNIds] = useState<Set<number>>(new Set())
 
   // Common
   const [mblMawbNo, setMblMawbNo] = useState("")
@@ -49,83 +50,185 @@ export default function ShipmentForm() {
   const [etdOrigin, setEtdOrigin] = useState("")
   const [etaDestination, setEtaDestination] = useState("")
 
-  const { data: hblsRes } = useQuery({
-    queryKey: ["hbl-hawbs", "COMPLETED", mode],
-    queryFn: () => fetchHBLHAWBs("COMPLETED", mode),
+  // Fetch GRNs based on completed status and mode query parameter
+  const { data: grnsRes } = useQuery({
+    queryKey: ["goods_receive_notes", "completed", mode],
+    queryFn: () => fetchGRNs("completed", mode),
     enabled: !!mode,
   })
 
-  const hbls = hblsRes?.data ?? []
+  const rawGrns = Array.isArray(grnsRes)
+    ? grnsRes
+    : Array.isArray(grnsRes?.data)
+      ? grnsRes.data
+      : []
 
-  const toggleHblRow = (id: number) => {
-    setSelectedHBLIds((prev) =>
-      prev.has(id)
-        ? new Set([...prev].filter((r) => r !== id))
-        : new Set([...prev, id])
-    )
-  }
+  // Filter GRNs based on completed status and selected mode (AIR vs SEA/LCL/FCL)
+  const grns = rawGrns.filter((grn: any) => {
+    if (!mode) return false
 
-  const handleHblRowClick = (hbl: any) => {
-    // console.log("Navigate to HBL view:", hbl.id)
+    // Filter to show only completed status GRNs
+    const statusLower = grn.status?.toLowerCase()
+    if (statusLower !== "completed") return false
+
+    const packingLists = grn.packing_lists ?? []
+    if (packingLists.length === 0) return true
+
+    if (mode === "AIR") {
+      return packingLists.some(
+        (pl: any) => pl.shipping_mode?.toUpperCase() === "AIR"
+      )
+    }
+
+    if (mode === "SEA") {
+      return packingLists.some((pl: any) => {
+        const sm = pl.shipping_mode?.toUpperCase()
+        return sm === "SEA" || sm === "LCL" || sm === "FCL"
+      })
+    }
+
+    return true
+  })
+
+  // Auto-fill destination / final place of delivery from selected GRN packing_lists ship_to
+  useEffect(() => {
+    if (selectedGRNIds.size === 0) {
+      setDestination("")
+      setFinalPlaceOfDelivery("")
+      return
+    }
+
+    const selectedGrns = grns.filter((g: any) => selectedGRNIds.has(g.id))
+    const shipTos: string[] = []
+    selectedGrns.forEach((g: any) => {
+      (g.packing_lists ?? []).forEach((pl: any) => {
+        if (pl.ship_to && !shipTos.includes(pl.ship_to)) {
+          shipTos.push(pl.ship_to)
+        }
+      })
+    })
+
+    const autoDestination = shipTos.join(", ")
+    setDestination(autoDestination)
+    setFinalPlaceOfDelivery(autoDestination)
+  }, [selectedGRNIds, grns])
+
+  const toggleGrnRow = (id: number) => {
+    setSelectedGRNIds((prev) => {
+      // Allow unselecting
+      if (prev.has(id)) {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      }
+
+      // Check existing selected GRNs' ship_to places
+      const selectedGrns = grns.filter((g: any) => prev.has(g.id))
+      const activeShipTos: string[] = []
+      selectedGrns.forEach((g: any) => {
+        (g.packing_lists ?? []).forEach((pl: any) => {
+          if (
+            pl.ship_to &&
+            pl.ship_to.trim() &&
+            !activeShipTos.includes(pl.ship_to.trim())
+          ) {
+            activeShipTos.push(pl.ship_to.trim())
+          }
+        })
+      })
+
+      if (activeShipTos.length > 0) {
+        const candidateGrn = grns.find((g: any) => g.id === id)
+        const candidateShipTos: string[] = []
+        ;(candidateGrn?.packing_lists ?? []).forEach((pl: any) => {
+          if (
+            pl.ship_to &&
+            pl.ship_to.trim() &&
+            !candidateShipTos.includes(pl.ship_to.trim())
+          ) {
+            candidateShipTos.push(pl.ship_to.trim())
+          }
+        })
+
+        const isMatch = candidateShipTos.some((st) =>
+          activeShipTos.some((ast) => ast.toLowerCase() === st.toLowerCase())
+        )
+
+        if (!isMatch) {
+          toast.error(
+            `Cannot select GRN #${id}: Ship To place (${
+              candidateShipTos.join(", ") || "N/A"
+            }) does not match selected GRN Ship To (${activeShipTos.join(
+              ", "
+            )}).`
+          )
+          return prev
+        }
+      }
+
+      return new Set([...prev, id])
+    })
   }
 
   const handleModeChange = (v: string) => {
     setMode(v)
-    setSelectedHBLIds(new Set())
+    setSelectedGRNIds(new Set())
   }
 
   const handleSave = async () => {
     if (!mode) return
     setIsSaving(true)
     try {
+      const selectedIds = Array.from(selectedGRNIds)
       const basePayload = {
         status,
         mbl_mawb_no: mblMawbNo || null,
         airline_shipping_line: airlineShippingLine || null,
         created_by: "admin",
-        hbl_ids: Array.from(selectedHBLIds),
+        grn_ids: selectedIds,
+        hbl_ids: selectedIds,
       }
 
       const payload =
         mode === "AIR"
           ? {
-              ...basePayload,
-              vessel_name: null,
-              voyage_number: null,
-              origin_port: null,
-              discharge_port: null,
-              final_place_of_delivery: null,
-              etd_colombo: null,
-              eta_discharge_port: null,
-              eta_final_delivery_place: null,
-              container_number: null,
-              container_size: null,
-              final_seal_no: null,
-              flight_number: flightNumber || null,
-              origin: origin || null,
-              destination: destination || null,
-              etd_origin: etdOrigin || null,
-              eta_destination: etaDestination || null,
-            }
+            ...basePayload,
+            vessel_name: null,
+            voyage_number: null,
+            origin_port: null,
+            discharge_port: null,
+            final_place_of_delivery: null,
+            etd_colombo: null,
+            eta_discharge_port: null,
+            eta_final_delivery_place: null,
+            container_number: null,
+            container_size: null,
+            final_seal_no: null,
+            flight_number: flightNumber || null,
+            origin: origin || null,
+            destination: destination || null,
+            etd_origin: etdOrigin || null,
+            eta_destination: etaDestination || null,
+          }
           : {
-              ...basePayload,
-              vessel_name: vesselName || null,
-              voyage_number: voyageNumber || null,
-              origin_port: originPort || null,
-              discharge_port: dischargePort || null,
-              final_place_of_delivery: finalPlaceOfDelivery || null,
-              etd_colombo: etdColombo || null,
-              eta_discharge_port: etaDischargePort || null,
-              eta_final_delivery_place: etaFinalDeliveryPlace || null,
-              container_number: containerNumber || null,
-              container_size: containerSize || null,
-              final_seal_no: finalSealNo || null,
-              flight_number: null,
-              origin: null,
-              destination: null,
-              etd_origin: null,
-              eta_destination: null,
-            }
+            ...basePayload,
+            vessel_name: vesselName || null,
+            voyage_number: voyageNumber || null,
+            origin_port: originPort || null,
+            discharge_port: dischargePort || null,
+            final_place_of_delivery: finalPlaceOfDelivery || null,
+            etd_colombo: etdColombo || null,
+            eta_discharge_port: etaDischargePort || null,
+            eta_final_delivery_place: etaFinalDeliveryPlace || null,
+            container_number: containerNumber || null,
+            container_size: containerSize || null,
+            final_seal_no: finalSealNo || null,
+            flight_number: null,
+            origin: null,
+            destination: null,
+            etd_origin: null,
+            eta_destination: null,
+          }
 
       await createShipment(payload)
       router.push("/shipment")
@@ -303,10 +406,10 @@ export default function ShipmentForm() {
                 </Label>
                 <Input
                   id="destination"
-                  placeholder="Enter Destination"
+                  placeholder="Destination"
                   value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
-                  className={inputClass}
+                  className={`${inputClass} cursor-not-allowed font-medium text-zinc-100 opacity-100 bg-[#0A0A0A] border-zinc-700`}
+                  readOnly
                 />
               </div>
 
@@ -445,10 +548,10 @@ export default function ShipmentForm() {
                 </Label>
                 <Input
                   id="final-place-of-delivery"
-                  placeholder="Enter Final Place of Delivery"
+                  placeholder="Destination"
                   value={finalPlaceOfDelivery}
-                  onChange={(e) => setFinalPlaceOfDelivery(e.target.value)}
-                  className={inputClass}
+                  className={`${inputClass} cursor-not-allowed font-medium text-zinc-100 opacity-100 bg-[#0A0A0A] border-zinc-700`}
+                  readOnly
                 />
               </div>
 
@@ -554,25 +657,24 @@ export default function ShipmentForm() {
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
             <h2 className="text-sm font-semibold text-zinc-100">
-              HBL / HAWB Information
+              GRN Information
             </h2>
             <p className="mt-0.5 text-xs text-zinc-500">
-              Select HBL / HAWB records to associate with this shipment
+              Select GRN records to associate with this shipment
             </p>
           </div>
 
           <div className="space-y-4">
             {!mode ? (
               <p className="text-xs text-zinc-500">
-                Select a mode to load HBL / HAWB records.
+                Select a mode to load GRN records.
               </p>
             ) : (
               <div className="overflow-x-auto rounded-md border border-neutral-700">
-                <HBLTable
-                  hbls={(hbls ?? []) as any[]}
-                  selectedIds={selectedHBLIds}
-                  onToggle={toggleHblRow}
-                  onRowClick={handleHblRowClick}
+                <GRNTable
+                  grns={grns}
+                  selectedIds={selectedGRNIds}
+                  onToggle={toggleGrnRow}
                 />
               </div>
             )}

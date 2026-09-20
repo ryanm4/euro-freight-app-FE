@@ -46,9 +46,9 @@ export const hblHawbColumns = (
       ),
       cell: ({ row }) => (
         <div className="font-semibold">
-          {row.original.type === "LCL" || row.original.type === "FCL"
-            ? `HBL/${row.original.id}`
-            : `HAWB/${row.original.id}`}
+          {row.original.type?.toUpperCase() === "AIR"
+            ? `HAWB-${row.original.id}`
+            : `HBL-${row.original.id}`}
         </div>
       ),
     },
@@ -108,7 +108,7 @@ export const hblHawbColumns = (
             }}
             disabled={row.original.shipment_id === null} // Disable button if shipment_id is null
           >
-           {row.original.type==="SEA"? `Ocean Shipment-${ref}` : `Air Cargo-${ref}`}
+            {row.original.type === "SEA" ? `Ocean Shipment-${ref}` : `Air Cargo-${ref}`}
           </button>
         )
       },
@@ -161,7 +161,11 @@ export const hblHawbColumns = (
     {
       accessorKey: "no_pieces",
       header: "Pieces",
-      cell: ({ row }) => <div>{row.original.grns[0].quantity ?? "N/A"}</div>,
+      cell: ({ row }) => (
+        <div>
+          {row.original.grns?.[0]?.quantity ?? row.original.no_pieces ?? "N/A"}
+        </div>
+      ),
     },
     {
       accessorKey: "gross_weight",
@@ -225,6 +229,10 @@ export const hblHawbColumns = (
       enableHiding: false,
       cell: ({ row }) => {
         const id = String(row.original.id)
+        const statusLower = row.original.status?.trim().toLowerCase() ?? ""
+        const isCompleted =
+          statusLower === "completed" || statusLower === "completed_hbl"
+        const canModifyRow = canModify && !isCompleted
 
         return (
           <div className="flex items-center gap-1">
@@ -249,13 +257,18 @@ export const hblHawbColumns = (
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 p-0"
+                      className="h-8 w-8 p-0 disabled:opacity-30 disabled:cursor-not-allowed"
+                      disabled={!canModifyRow}
                       onClick={() => actions.onEdit(id)}
                     >
                       <IconPencil className="h-4 w-4 text-zinc-400 hover:text-zinc-100" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Edit</TooltipContent>
+                  <TooltipContent>
+                    {canModifyRow
+                      ? "Edit"
+                      : "Editing disabled for completed records"}
+                  </TooltipContent>
                 </Tooltip>
 
                 <Tooltip>
@@ -263,13 +276,18 @@ export const hblHawbColumns = (
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 p-0"
+                      className="h-8 w-8 p-0 disabled:opacity-30 disabled:cursor-not-allowed"
+                      disabled={!canModifyRow}
                       onClick={() => actions.onDelete(id)}
                     >
                       <IconTrash className="h-4 w-4 text-destructive hover:text-red-400" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Delete</TooltipContent>
+                  <TooltipContent>
+                    {canModifyRow
+                      ? "Delete"
+                      : "Deleting disabled for completed records"}
+                  </TooltipContent>
                 </Tooltip>
               </>
             )}

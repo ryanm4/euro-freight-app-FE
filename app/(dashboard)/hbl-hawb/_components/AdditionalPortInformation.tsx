@@ -1,6 +1,7 @@
 import { IconPlus, IconTrash } from "@tabler/icons-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 import { useState } from "react"
 
 interface Port {
@@ -34,13 +35,16 @@ export default function YourComponent() {
             Packing lists and carton quantities.
           </p>
         </div>
-        <button
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
           onClick={addPort}
-          className="flex items-center gap-1.5 rounded-md border border-neutral-600 bg-neutral-800 px-3 py-1.5 text-xs text-zinc-100 transition-colors hover:bg-neutral-700"
+          className="h-8 gap-1.5 text-xs border-neutral-300 bg-white text-neutral-900 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700 dark:hover:text-white"
         >
           <IconPlus size={13} />
           Add Port
-        </button>
+        </Button>
       </div>
 
       <div className="space-y-4">
@@ -57,13 +61,16 @@ export default function YourComponent() {
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
-              <button
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
                 onClick={() => removePort(port.id)}
                 disabled={ports.length === 1}
-                className="mb-0.5 flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 p-2 text-zinc-400 transition-colors hover:bg-neutral-700 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
+                className="mb-0.5 h-9 w-9 shrink-0 border-neutral-300 bg-white text-destructive hover:bg-neutral-100 hover:text-red-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-red-400 dark:hover:bg-neutral-700 dark:hover:text-red-300 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <IconTrash size={15} />
-              </button>
+              </Button>
             </div>
           ))}
         </div>

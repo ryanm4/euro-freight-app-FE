@@ -441,11 +441,11 @@ export default function GoodsDispatchNoteForm() {
         transport_mode: transportMode,
         ...(transportMode === "FCL container"
           ? {
-              container_no: containerNo,
-              container_size: containerSize,
-              primary_seal_no: primarySealNo,
-              secondary_seal_no: secondarySealNo,
-            }
+            container_no: containerNo,
+            container_size: containerSize,
+            primary_seal_no: primarySealNo,
+            secondary_seal_no: secondarySealNo,
+          }
           : {}),
         custom_doc_status: customDocStatus,
         wharf_staff_id: Number(wharfStaff),
@@ -602,21 +602,21 @@ export default function GoodsDispatchNoteForm() {
                 >
                   {date
                     ? (() => {
-                        const parseDate = (val: string): Date | undefined => {
-                          if (!val) return undefined
-                          let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
-                          if (isValid(d)) return d
-                          d = parse(val, "yyyy-MM-dd", new Date())
-                          if (isValid(d)) return d
-                          d = new Date(val)
-                          if (isValid(d)) return d
-                          return undefined
-                        }
-                        const selectedDate = parseDate(date)
-                        return selectedDate
-                          ? format(selectedDate, "yyyy-MM-dd")
-                          : "Pick a date"
-                      })()
+                      const parseDate = (val: string): Date | undefined => {
+                        if (!val) return undefined
+                        let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
+                        if (isValid(d)) return d
+                        d = parse(val, "yyyy-MM-dd", new Date())
+                        if (isValid(d)) return d
+                        d = new Date(val)
+                        if (isValid(d)) return d
+                        return undefined
+                      }
+                      const selectedDate = parseDate(date)
+                      return selectedDate
+                        ? format(selectedDate, "yyyy-MM-dd")
+                        : "Pick a date"
+                    })()
                     : "Pick a date"}
                   <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                 </Button>
@@ -999,6 +999,150 @@ export default function GoodsDispatchNoteForm() {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-1">
+        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              Available Packing Lists
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Select the packing list(s) for this dispatch. Customer and
+              Forwarder above are extracted automatically from your selection.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="overflow-x-auto rounded-md border border-neutral-700">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-neutral-700 hover:bg-transparent">
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Packing List No
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Date
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Ship To
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Shipping Mode
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total Cartons
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total CBM
+                    </TableHead>
+                    {/* <TableHead className="text-xs font-medium text-zinc-400">
+                      Total Net Weight(kg)
+                    </TableHead> */}
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total Pieces
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total Weight
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Total Volume
+                    </TableHead>
+                    <TableHead className="text-xs font-medium text-zinc-400">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.length ? (
+                    rows.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        className="border-neutral-800 hover:bg-neutral-800/40"
+                      >
+                        <TableCell className="text-sm text-zinc-100">
+                          {row.packingListNo}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.documentDate}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.shipTo}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.shippingMode}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.totalCartons}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.totalCbm}
+                        </TableCell>
+                        {/* <TableCell className="text-sm text-zinc-300">
+                          {row.totalNetWeightKg}
+                        </TableCell> */}
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.totalQuantity}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.total_gross_weight_kg}
+                        </TableCell>
+                        <TableCell className="text-sm text-zinc-300">
+                          {row.totalVolume}
+                        </TableCell>
+                        <TableCell>
+                          {(() => {
+                            const isDisabled =
+                              !!lockedShippingMode &&
+                              row.shippingMode !== lockedShippingMode &&
+                              !selectedRows.includes(row.id)
+
+                            const checkboxEl = (
+                              <Checkbox
+                                checked={selectedRows.includes(row.id)}
+                                disabled={isDisabled}
+                                onCheckedChange={() => toggleRow(row.id)}
+                                className="border-neutral-600"
+                              />
+                            )
+
+                            if (!isDisabled) return checkboxEl
+
+                            return (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    {/* span wrapper so the tooltip still fires on a disabled checkbox */}
+                                    <span className="inline-flex cursor-not-allowed">
+                                      {checkboxEl}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="border-neutral-700 bg-[#0A0A0A] text-xs text-zinc-100">
+                                    Shipping Mode locked to {lockedShippingMode}
+                                    . Deselect all rows to switch modes.
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )
+                          })()}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={9}
+                        className="h-24 text-center text-sm text-zinc-500"
+                      >
+                        No results.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-5">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
@@ -1053,7 +1197,7 @@ export default function GoodsDispatchNoteForm() {
                   className={cn(
                     "h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
                     quantityExceedsAvailable &&
-                      "border-red-500 focus-visible:ring-red-500"
+                    "border-red-500 focus-visible:ring-red-500"
                   )}
                 />
                 {quantityExceedsAvailable && (
@@ -1307,8 +1451,9 @@ export default function GoodsDispatchNoteForm() {
                         </TableCell>
                         <TableCell>
                           <button
+                            type="button"
                             onClick={() => removeMeasurement(row.id)}
-                            className="flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 p-2 text-zinc-400 transition-colors hover:bg-neutral-700 hover:text-zinc-100"
+                            className="flex items-center justify-center rounded-md border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 p-2 text-red-600 dark:text-red-400 transition-colors hover:bg-red-100 dark:hover:bg-neutral-700"
                           >
                             <IconTrash size={15} />
                           </button>
@@ -1341,149 +1486,7 @@ export default function GoodsDispatchNoteForm() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-1">
-        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-zinc-100">
-              Available Packing Lists
-            </h2>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Select the packing list(s) for this dispatch. Customer and
-              Forwarder above are extracted automatically from your selection.
-            </p>
-          </div>
 
-          <div className="space-y-4">
-            <div className="overflow-x-auto rounded-md border border-neutral-700">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-neutral-700 hover:bg-transparent">
-                    <TableHead className="text-xs font-medium text-zinc-400">
-                      Packing List No
-                    </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
-                      Date
-                    </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
-                      Ship To
-                    </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
-                      Shipping Mode
-                    </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
-                      Total Cartons
-                    </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
-                      Total CBM
-                    </TableHead>
-                    {/* <TableHead className="text-xs font-medium text-zinc-400">
-                      Total Net Weight(kg)
-                    </TableHead> */}
-                    <TableHead className="text-xs font-medium text-zinc-400">
-                      Total Pieces
-                    </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
-                      Total Weight
-                    </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
-                      Total Volume
-                    </TableHead>
-                    <TableHead className="text-xs font-medium text-zinc-400">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rows.length ? (
-                    rows.map((row) => (
-                      <TableRow
-                        key={row.id}
-                        className="border-neutral-800 hover:bg-neutral-800/40"
-                      >
-                        <TableCell className="text-sm text-zinc-100">
-                          {row.packingListNo}
-                        </TableCell>
-                        <TableCell className="text-sm text-zinc-300">
-                          {row.documentDate}
-                        </TableCell>
-                        <TableCell className="text-sm text-zinc-300">
-                          {row.shipTo}
-                        </TableCell>
-                        <TableCell className="text-sm text-zinc-300">
-                          {row.shippingMode}
-                        </TableCell>
-                        <TableCell className="text-sm text-zinc-300">
-                          {row.totalCartons}
-                        </TableCell>
-                        <TableCell className="text-sm text-zinc-300">
-                          {row.totalCbm}
-                        </TableCell>
-                        {/* <TableCell className="text-sm text-zinc-300">
-                          {row.totalNetWeightKg}
-                        </TableCell> */}
-                        <TableCell className="text-sm text-zinc-300">
-                          {row.totalQuantity}
-                        </TableCell>
-                        <TableCell className="text-sm text-zinc-300">
-                          {row.total_gross_weight_kg}
-                        </TableCell>
-                        <TableCell className="text-sm text-zinc-300">
-                          {row.totalVolume}
-                        </TableCell>
-                        <TableCell>
-                          {(() => {
-                            const isDisabled =
-                              !!lockedShippingMode &&
-                              row.shippingMode !== lockedShippingMode &&
-                              !selectedRows.includes(row.id)
-
-                            const checkboxEl = (
-                              <Checkbox
-                                checked={selectedRows.includes(row.id)}
-                                disabled={isDisabled}
-                                onCheckedChange={() => toggleRow(row.id)}
-                                className="border-neutral-600"
-                              />
-                            )
-
-                            if (!isDisabled) return checkboxEl
-
-                            return (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    {/* span wrapper so the tooltip still fires on a disabled checkbox */}
-                                    <span className="inline-flex cursor-not-allowed">
-                                      {checkboxEl}
-                                    </span>
-                                  </TooltipTrigger>
-                                  <TooltipContent className="border-neutral-700 bg-[#0A0A0A] text-xs text-zinc-100">
-                                    Shipping Mode locked to {lockedShippingMode}
-                                    . Deselect all rows to switch modes.
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )
-                          })()}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={9}
-                        className="h-24 text-center text-sm text-zinc-500"
-                      >
-                        No results.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-1">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">

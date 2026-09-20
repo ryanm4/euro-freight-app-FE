@@ -1263,8 +1263,9 @@ export default function GRNEdit() {
                           </TableCell>
                           <TableCell>
                             <button
+                              type="button"
                               onClick={() => removeActualMeasurement(row.id)}
-                              className="flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 p-2 text-zinc-400 transition-colors hover:bg-neutral-700 hover:text-zinc-100"
+                              className="flex items-center justify-center rounded-md border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 p-2 text-red-600 dark:text-red-400 transition-colors hover:bg-red-100 dark:hover:bg-neutral-700"
                             >
                               <IconTrash size={15} />
                             </button>

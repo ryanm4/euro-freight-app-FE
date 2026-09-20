@@ -40,12 +40,6 @@ export async function POST(request: NextRequest) {
       );
     }
     const data = await response.json();
-    if (process.env.NODE_ENV === "development") {
-      console.log("✅ Login successful:", {
-        email,
-        user: data.user || data.data?.user,
-      });
-    }
 
     const token = data.accessToken || data.token || data.data?.token;
 

@@ -48,7 +48,6 @@ export default function HBLHABWForm() {
   const [isSaving, setIsSaving] = useState(false)
 
   const [type, setType] = useState("")
-  console.log("type", type)
 
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"))
   const [client, setClient] = useState("")

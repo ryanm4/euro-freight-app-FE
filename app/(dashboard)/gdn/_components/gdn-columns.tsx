@@ -16,6 +16,7 @@ import {
 } from "@tabler/icons-react"
 import { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 interface GoodsDeliverNoteTableActions {
@@ -80,9 +81,59 @@ export const goodsDeliverNoteColumns = (
       },
     },
     {
-      accessorKey: "grn_no",
+      id: "grn_no",
       header: "GRN No",
-      cell: ({ row }) => <div>{row.original.gdn_grn_ref ?? "N/A"}</div>,
+      cell: ({ row }) => {
+        const rawRef =
+          row.original.gdn_grn_ref ??
+          row.original.grn_no ??
+          (row.original as any).grn_id
+
+        const rawGrns =
+          (row.original as any).grns ?? (row.original as any).grn_details
+
+        let grnList: { id: string | number; label: string }[] = []
+
+        if (Array.isArray(rawGrns) && rawGrns.length > 0) {
+          grnList = rawGrns.map((g: any) => {
+            const rawId = typeof g === "object" ? g.id ?? g.grn_no : g
+            const cleanId = String(rawId)
+              .replace(/^GRN\s*-\s*/i, "")
+              .replace(/^GRN-?/i, "")
+              .trim()
+            return { id: cleanId, label: `GRN - ${cleanId}` }
+          })
+        } else if (rawRef) {
+          const cleanId = String(rawRef)
+            .replace(/^GRN\s*-\s*/i, "")
+            .replace(/^GRN-?/i, "")
+            .trim()
+          if (cleanId) {
+            grnList = [{ id: cleanId, label: `GRN - ${cleanId}` }]
+          }
+        }
+
+        if (grnList.length === 0) {
+          return <div>N/A</div>
+        }
+
+        return (
+          <div className="flex flex-wrap items-center gap-1 font-semibold">
+            {grnList.map((g, idx) => (
+              <span key={g.id}>
+                <Link
+                  href={`/grn/${g.id}`}
+                  className="text-primary underline-offset-4 hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {g.label}
+                </Link>
+                {idx < grnList.length - 1 && <span className="text-zinc-400">, </span>}
+              </span>
+            ))}
+          </div>
+        )
+      },
     },
     {
       accessorKey: "forwarder_name",

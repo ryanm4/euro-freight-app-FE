@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 
 export async function POST(req: NextRequest) {
   try {
-    console.log("req", req)
-
     const incomingFormData = await req.formData()
     const file = incomingFormData.get("purchase_order")
 

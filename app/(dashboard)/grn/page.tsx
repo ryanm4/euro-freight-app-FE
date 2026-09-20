@@ -26,7 +26,7 @@ export default function GRNPage() {
 
   const actions = {
     onEdit: (id: string) => router.push(`/grn/${id}/edit`),
-    onDelete: (id: string) => console.log("Delete", id),
+    onDelete: (id: string) => {},
     onView: (id: string) => router.push(`/grn/${id}`),
   }
 

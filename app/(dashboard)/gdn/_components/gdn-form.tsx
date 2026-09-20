@@ -375,8 +375,6 @@ export default function GoodsDispatchNoteForm() {
     return selectedPackingListRows[0]?.shipTo ?? null
   }, [selectedPackingListRows])
 
-  console.log("lockedShipTo", lockedShipTo)
-
   const handleSave = async () => {
     if (!derivedClient || !derivedForwarder) {
       alert(

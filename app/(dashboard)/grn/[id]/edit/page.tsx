@@ -121,9 +121,7 @@ export default function GRNEdit() {
   const [forwarder, setForwarder] = useState("")
   const [manufacturer, setManufacturer] = useState("")
   const [recipient, setRecipient] = useState("")
-  // const [recipientContact, setRecipientContact] = useState("")
   const [destination, setDestination] = useState("")
-  console.log("destination", destination)
 
   const [status, setStatus] = useState("draft")
   const [remarks, setRemarks] = useState("")
@@ -293,7 +291,6 @@ export default function GRNEdit() {
     () => rows.filter((r) => selectedRows.includes(r.id)),
     [rows, selectedRows]
   )
-  console.log("selectedPackingListRows", selectedPackingListRows)
 
   const lockedShippingMode = useMemo(() => {
     return selectedPackingListRows[0]?.transportMode ?? null

@@ -26,7 +26,6 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  console.log("BACKEND_URL:", process.env.BACKEND_URL)
   const body = await request.json()
 
   const res = await fetch(
@@ -39,9 +38,6 @@ export async function POST(request: Request) {
   )
 
   const data = await res.json()
-
-  console.log("backend status:", res.status)
-  console.log("backend response:", data)
 
   return Response.json(data, { status: res.status })
 }

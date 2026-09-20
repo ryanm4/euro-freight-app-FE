@@ -26,7 +26,7 @@ export default function HBLHAWBPage() {
 
   const actions = {
     onEdit: (id: string) => router.push(`/hbl-hawb/${id}/edit`),
-    onDelete: (id: string) => console.log("Delete", id),
+    onDelete: (id: string) => {},
     onView: (id: string) => router.push(`/hbl-hawb/${id}`),
   }
 

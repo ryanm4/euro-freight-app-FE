@@ -44,4 +44,5 @@ export interface GOODS_DELIVER_NOTE {
     width: number
     height: number
   }[]
+  ship_to: string
 }

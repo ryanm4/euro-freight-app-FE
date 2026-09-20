@@ -65,7 +65,7 @@ export default function GoodsReceiveNoteForm() {
   const [forwarder, setForwarder] = useState("")
   const [manufacturer, setManufacturer] = useState("")
   const [recipient, setRecipient] = useState("")
-  const [recipientContact, setRecipientContact] = useState("")
+  // const [recipientContact, setRecipientContact] = useState("")
   const [status, setStatus] = useState("draft")
   // const [quantity, setQuantity] = useState("")
   // const [packingList, setPackingList] = useState("")
@@ -176,6 +176,7 @@ export default function GoodsReceiveNoteForm() {
           custom_doc_status: gdn.custom_doc_status ?? null,
           status: gdn.status ?? null,
           shipping_mode: primaryPackingList?.shipping_mode ?? "N/A",
+          ship_to: primaryPackingList?.ship_to ?? "N/A",
           packing_list_no: primaryPackingList?.packing_list_no ?? "N/A",
           total_quantity: totalQuantity ?? "N/A",
           total_cbm: totalCbm ?? "N/A",
@@ -191,6 +192,10 @@ export default function GoodsReceiveNoteForm() {
     [rows, selectedRows]
   )
 
+  const lockedShipTo = useMemo(() => {
+    return selectedPackingListRows[0]?.ship_to ?? null
+  }, [selectedPackingListRows])
+
   // const quantity = useMemo(
   //   () =>
   //     selectedRows.reduce((accumulator, id) => {
@@ -201,9 +206,23 @@ export default function GoodsReceiveNoteForm() {
   // )
 
   const toggleRow = (id: number) => {
-    setSelectedRows((prev) =>
-      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
-    )
+    setSelectedRows((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((r) => r !== id)
+      }
+
+      const row = rows.find((r) => r.id === id)
+      if (!row) return prev
+
+      if (lockedShipTo && row.ship_to !== lockedShipTo) {
+        alert(
+          `You can only select GDNs with the same Ship To (${lockedShipTo}).`
+        )
+        return prev
+      }
+
+      return [...prev, id]
+    })
   }
 
   const getActualRowCbm = (row: {
@@ -338,7 +357,7 @@ export default function GoodsReceiveNoteForm() {
         manufacture_id: Number(manufacturer),
         forwarder_id: Number(forwarder),
         recipient_id: Number(recipient),
-        recipient_contact: recipientContact,
+        // recipient_contact: recipientContact,
         date: `${date} 00:00:00`,
         quantity: Number(selectedGdn.total_quantity) || 0,
         total_cartons: actual_cartons,
@@ -553,17 +572,17 @@ export default function GoodsReceiveNoteForm() {
 
               <div className="flex flex-col gap-1.5">
                 <Label
-                  htmlFor="recipient-contact"
+                  htmlFor="destination"
                   className="text-xs font-medium text-foreground"
                 >
-                  Additional Phone Number
+                  Destination
                 </Label>
                 <Input
-                  id="recipient-contact"
-                  placeholder="Enter Additional Phone Number"
-                  value={recipientContact}
-                  onChange={(e) => setRecipientContact(e.target.value)}
+                  id="destination"
+                  placeholder="Enter Destination"
+                  value={lockedShipTo ?? ""}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  disabled
                 />
               </div>
 
@@ -627,7 +646,11 @@ export default function GoodsReceiveNoteForm() {
                   id="total-carton-count"
                   placeholder="Enter Actual Carton Count"
                   value={actual_cartons}
-                  onChange={(e) => setActualCartons(e.target.value ? Number(e.target.value) : 0)}
+                  onChange={(e) =>
+                    setActualCartons(
+                      e.target.value ? Number(e.target.value) : 0
+                    )
+                  }
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>
@@ -749,8 +772,10 @@ export default function GoodsReceiveNoteForm() {
                         <TableCell>
                           {(() => {
                             const isDisabled =
-                              selectedRows.length === 1 &&
-                              !selectedRows.includes(row.id)
+                              !selectedRows.includes(row.id) &&
+                              (selectedRows.length === 1 ||
+                                (!!lockedShipTo &&
+                                  row.ship_to !== lockedShipTo))
 
                             const checkboxEl = (
                               <Checkbox
@@ -763,18 +788,21 @@ export default function GoodsReceiveNoteForm() {
 
                             if (!isDisabled) return checkboxEl
 
+                            const reason =
+                              selectedRows.length === 1
+                                ? "Row already selected. Deselect the current row to select a different one."
+                                : `Locked to Ship To (${lockedShipTo}). Deselect all rows to change.`
+
                             return (
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    {/* span wrapper so the tooltip still fires on a disabled checkbox */}
                                     <span className="inline-flex cursor-not-allowed">
                                       {checkboxEl}
                                     </span>
                                   </TooltipTrigger>
                                   <TooltipContent className="border-neutral-700 bg-[#0A0A0A] text-xs text-zinc-100">
-                                    Row already selected. Deselect the current
-                                    row to select a different one.
+                                    {reason}
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>

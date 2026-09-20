@@ -101,10 +101,16 @@ const createGDNObject = (gdn: any) => {
     gdn.dispatch_location ??
     "—"
 
+  const rawGrnRef = gdn.gdn_grn_ref ?? gdn.grn_no ?? gdn.grn_id
+  const cleanGrnId = rawGrnRef
+    ? String(rawGrnRef).replace(/^GRN\s*-\s*/i, "").replace(/^GRN-?/i, "").trim()
+    : null
+
   return {
     gdnNo: gdn.gdn_no ?? "—",
     date: gdn.date ?? "",
-    gdnReference: gdn.gdn_grn_ref ? `GRN-${gdn.gdn_grn_ref}` : "—",
+    gdnReference: cleanGrnId ? `GRN - ${cleanGrnId}` : "—",
+    grnId: cleanGrnId,
     vehicleNo: gdn.vehicle_no ?? "—",
     status: gdn.status ?? "—",
     client: gdn.client_name ?? "—",
@@ -220,12 +226,21 @@ export default function GdnByID() {
                   >
                     GDN/GRN Reference
                   </Label>
-                  <Input
-                    id="gdn-reference"
-                    value={gdn.gdnReference}
-                    disabled
-                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                  />
+                  {gdn.grnId ? (
+                    <Link
+                      href={`/grn/${gdn.grnId}`}
+                      className="flex h-9 w-full items-center rounded-md border border-zinc-700 bg-[#0A0A0A] px-3 text-sm font-semibold text-primary underline-offset-4 hover:underline"
+                    >
+                      {gdn.gdnReference}
+                    </Link>
+                  ) : (
+                    <Input
+                      id="gdn-reference"
+                      value={gdn.gdnReference}
+                      disabled
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                    />
+                  )}
                 </div>
               </div>
 

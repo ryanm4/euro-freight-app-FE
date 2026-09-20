@@ -831,7 +831,11 @@ return (
                   <Input
                     id="gdn-reference"
                     placeholder="Enter GDN/GRN Reference"
-                    value={`GRN-${gdnReference}`}
+                    value={
+                      gdnReference
+                        ? `GRN - ${gdnReference.replace(/^GRN\s*-\s*/i, "").replace(/^GRN-?/i, "").trim()}`
+                        : "—"
+                    }
                     onChange={(e) => setGdnReference(e.target.value)}
                     readOnly
                     className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"

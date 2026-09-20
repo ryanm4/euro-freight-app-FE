@@ -42,4 +42,5 @@ export enum PackingListStatus {
   COMPLETED = "COMPLETED",
   SHIPPED = "SHIPPED",
   CANCELLED = "CANCELLED",
+  SAVED = "SAVED",
 }

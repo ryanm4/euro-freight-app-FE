@@ -7,10 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import {
-  PACKING_LIST,
-  PackingListStatus,
-} from "@/modules/packing-list/types"
+import { PACKING_LIST, PackingListStatus } from "@/modules/packing-list/types"
 import {
   IconArrowsSort,
   IconCloudDownload,
@@ -116,7 +113,10 @@ export const packingListColumns = (
       accessorKey: "shipping_mode",
       header: "Shipping Mode",
     },
-
+    {
+      accessorKey: "ship_to",
+      header: "Destination",
+    },
     {
       accessorKey: "total_gross_weight_kg",
       header: "Total Weight (Kg)",
@@ -168,7 +168,8 @@ export const packingListColumns = (
         const canModifyRow =
           canModify &&
           (status === PackingListStatus.DRAFT ||
-            status === PackingListStatus.COMPLETED)
+            status === PackingListStatus.COMPLETED ||
+            status === PackingListStatus.SAVED)
 
         return (
           <div className="flex items-center gap-1">

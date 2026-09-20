@@ -20,8 +20,14 @@ interface MeasurementRow {
   height: string
   total: string
   uom: string
-  volume: number
+  cbm: string
+  volume: string
 }
+
+type MeasurementInput = Pick<
+  MeasurementRow,
+  "length" | "width" | "height" | "total" | "uom"
+>
 
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
@@ -60,11 +66,11 @@ import { fetchPackingLists } from "@/lib/api/packing_lists"
 import { fetchWharfStaff } from "@/lib/api/wharf_staff"
 import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
-import { IconCalendarFilled, IconPlus, IconTrash } from "@tabler/icons-react"
+import { IconCalendarFilled, IconTrash } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
 import { format, isValid, parse } from "date-fns"
 import { useParams, useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 const DISPATCH_LOCATION_OPTIONS = [
   { label: "Airport – Katunayaka (Air)", value: "Katunayaka Airport" },
@@ -143,17 +149,16 @@ export default function GDNEdit() {
   const [quantityLoaded, setQuantityLoaded] = useState("")
 
   // Shipment Measurements — repeatable rows, matching the create form
-  const [measurements, setMeasurements] = useState<MeasurementRow[]>([
-    {
-      id: 1,
-      length: "",
-      width: "",
-      height: "",
-      total: "",
-      uom: "cm",
-      volume: 0,
-    },
-  ])
+  const [measurements, setMeasurements] = useState<MeasurementRow[]>([])
+  const EMPTY_DRAFT = {
+    length: "",
+    width: "",
+    height: "",
+    total: "",
+    uom: "cm",
+  }
+  const [draft, setDraft] = useState(EMPTY_DRAFT)
+  const draftLengthRef = useRef<HTMLInputElement | null>(null)
 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
 
@@ -202,20 +207,11 @@ export default function GDNEdit() {
     return data?.data?.filter((c: any) => c.type === UserRole.Forwarder) || []
   }, [data])
 
-  // Per-row measurement helpers — identical to the create form
-  const addMeasurement = () => {
-    setMeasurements((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        length: "",
-        width: "",
-        height: "",
-        total: "",
-        uom: "cm",
-        volume: 0,
-      },
-    ])
+  const updateDraftField = (
+    field: "length" | "width" | "height" | "total" | "uom",
+    value: string
+  ) => {
+    setDraft((prev) => ({ ...prev, [field]: value }))
   }
 
   const removeMeasurement = (rowId: number) => {
@@ -232,28 +228,62 @@ export default function GDNEdit() {
     )
   }
 
-  const getRowVolumeM3 = (row: MeasurementRow) => {
-    const l = Number(row.length)
-    const w = Number(row.width)
-    const h = Number(row.height)
-    const packages = Number(row.total)
-
-    if (row.uom === "m") {
-      return l * w * h * packages
+  const getDimsInCm = (row: MeasurementInput) => {
+    const factor = row.uom === "m" ? 100 : 1
+    return {
+      l: Number(row.length) * factor,
+      w: Number(row.width) * factor,
+      h: Number(row.height) * factor,
     }
-    return ((l * w * h) / 1_000_000) * packages
   }
 
-  const getRowCbm = (row: MeasurementRow) => {
-    return getRowVolumeM3(row)
+  const getRowCbm = (row: MeasurementInput) => {
+    const { l, w, h } = getDimsInCm(row)
+    return (l * w * h * Number(row.total)) / 1_000_000
   }
 
-  const getRowTotalVolume = (row: MeasurementRow) => {
-    return row.volume
+  const getRowCbmPerCarton = (row: MeasurementInput) => {
+    const packages = Number(row.total)
+    return packages ? getRowCbm(row) / packages : 0
+  }
+
+  const getRowTotalVolume = (row: MeasurementInput) => {
+    const { l, w, h } = getDimsInCm(row)
+    return (l * w * h * Number(row.total)) / 6000
+  }
+
+  const isDraftValid = useMemo(
+    () =>
+      [draft.length, draft.width, draft.height, draft.total].every(
+        (value) => value !== "" && Number(value) > 0
+      ),
+    [draft]
+  )
+
+  const handleAddMeasurement = () => {
+    if (!isDraftValid) return
+
+    setMeasurements((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        ...draft,
+        cbm: getRowCbm(draft).toFixed(4),
+        volume: getRowTotalVolume(draft).toFixed(4),
+      },
+    ])
+    setDraft(EMPTY_DRAFT)
+    requestAnimationFrame(() => draftLengthRef.current?.focus())
+  }
+
+  const handleDraftKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return
+    e.preventDefault()
+    handleAddMeasurement()
   }
 
   const totalCalculatedVolume = useMemo(() => {
-    return measurements.reduce((sum, row) => sum + getRowTotalVolume(row), 0)
+    return measurements.reduce((sum, row) => sum + getRowCbm(row), 0)
   }, [measurements])
 
   const toggleRow = (rowId: number) => {
@@ -457,7 +487,26 @@ export default function GDNEdit() {
               ? String(m.packages ?? "")
               : String(m.quantity ?? ""),
           uom: m.uom ?? "cm",
-          volume: m.volume,
+          cbm: getRowCbm({
+            length: m.length_cm != null ? String(m.length_cm) : "",
+            width: m.width_cm != null ? String(m.width_cm) : "",
+            height: m.height_cm != null ? String(m.height_cm) : "",
+            total:
+              m.packages != null
+                ? String(m.packages ?? "")
+                : String(m.quantity ?? ""),
+            uom: m.uom ?? "cm",
+          }).toFixed(4),
+          volume: getRowTotalVolume({
+            length: m.length_cm != null ? String(m.length_cm) : "",
+            width: m.width_cm != null ? String(m.width_cm) : "",
+            height: m.height_cm != null ? String(m.height_cm) : "",
+            total:
+              m.packages != null
+                ? String(m.packages ?? "")
+                : String(m.quantity ?? ""),
+            uom: m.uom ?? "cm",
+          }).toFixed(4),
         }))
       )
     } else if (gdn.length_cm || gdn.width_cm || gdn.height_cm) {
@@ -469,7 +518,8 @@ export default function GDNEdit() {
           height: gdn.height_cm ? String(gdn.height_cm) : "",
           total: gdn.cartoons ? String(gdn.cartoons) : "",
           uom: "cm",
-          volume: 0,
+          cbm: "0.0000",
+          volume: "0.0000",
         },
       ])
     }
@@ -580,7 +630,7 @@ export default function GDNEdit() {
           height_cm: Number(m.height),
           uom: m.uom,
           total: Number(m.total),
-          per_carton_volume_m3: getRowVolumeM3(m),
+          per_carton_volume_m3: getRowCbmPerCarton(m),
           calculated_volume_m3: getRowTotalVolume(m),
           packages: Number(m.total),
           cbm: getRowCbm(m),
@@ -1191,107 +1241,40 @@ export default function GDNEdit() {
                   Shipment Measurements
                 </h2>
                 <p className="mt-0.5 text-xs text-zinc-500">
-                  Add a row per carton dimension type. Volumes are calculated
-                  automatically.
+                  Enter a carton dimension set, then click Add (or hit Enter) to
+                  add it to the list below.
                 </p>
               </div>
-              <button
-                onClick={addMeasurement}
-                className="flex items-center gap-1.5 rounded-md border border-neutral-600 bg-neutral-800 px-3 py-1.5 text-xs text-zinc-100 transition-colors hover:bg-neutral-700"
-              >
-                <IconPlus size={13} />
-                Add Measurement
-              </button>
             </div>
 
-            <div className="space-y-3">
-              {measurements.map((row) => (
-                <div
-                  key={row.id}
-                  className="flex items-end gap-2 rounded-md border border-neutral-800 bg-neutral-950/40 p-3"
-                >
-                  <div className="flex flex-1 flex-col gap-1.5">
-                    <Label
-                      htmlFor={`length-${row.id}`}
-                      className="text-xs font-medium text-foreground"
-                    >
-                      Cartoon Dimensions - L ({row.uom})
-                    </Label>
-                    <Input
-                      id={`length-${row.id}`}
-                      placeholder="Length"
-                      value={row.length}
-                      onChange={(e) =>
-                        updateMeasurement(row.id, "length", e.target.value)
-                      }
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                    />
-                  </div>
-
-                  <div className="flex flex-1 flex-col gap-1.5">
-                    <Label
-                      htmlFor={`width-${row.id}`}
-                      className="text-xs font-medium text-foreground"
-                    >
-                      Cartoon Dimensions - W ({row.uom})
-                    </Label>
-                    <Input
-                      id={`width-${row.id}`}
-                      placeholder="Width"
-                      value={row.width}
-                      onChange={(e) =>
-                        updateMeasurement(row.id, "width", e.target.value)
-                      }
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                    />
-                  </div>
-
-                  <div className="flex flex-1 flex-col gap-1.5">
-                    <Label
-                      htmlFor={`height-${row.id}`}
-                      className="text-xs font-medium text-foreground"
-                    >
-                      Cartoon Dimensions - H ({row.uom})
-                    </Label>
-                    <Input
-                      id={`height-${row.id}`}
-                      placeholder="Height"
-                      value={row.height}
-                      onChange={(e) =>
-                        updateMeasurement(row.id, "height", e.target.value)
-                      }
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                    />
-                  </div>
-
-                  <div className="flex flex-1 flex-col gap-1.5">
-                    <Label
-                      htmlFor={`total-${row.id}`}
-                      className="text-xs font-medium text-foreground"
-                    >
-                      Total
-                    </Label>
-                    <Input
-                      id={`total-${row.id}`}
-                      placeholder="Total Cartons"
-                      value={row.total}
-                      onChange={(e) =>
-                        updateMeasurement(row.id, "total", e.target.value)
-                      }
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                    />
-                  </div>
-
+            <div className="space-y-4">
+              <div className="flex items-end gap-2 rounded-md border border-neutral-800 bg-neutral-950/40 p-3">
+                {(
+                  [
+                    ["length", "Length"],
+                    ["width", "Width"],
+                    ["height", "Height"],
+                    ["total", "Packages"],
+                  ] as const
+                ).map(([field, label]) => (
                   <div className="flex flex-1 flex-col gap-1.5">
                     <Label className="text-xs font-medium text-foreground">
-                      UOM
+                      {label}{field !== "total" ? ` (${draft.uom})` : ""}
                     </Label>
-                    <Select
-                      value={row.uom}
-                      onValueChange={(val) =>
-                        updateMeasurement(row.id, "uom", val)
-                      }
-                    >
+                    <Input
+                      ref={field === "length" ? draftLengthRef : undefined}
+                      placeholder={label}
+                      value={draft[field]}
+                      onChange={(e) => updateDraftField(field, e.target.value)}
+                      onKeyDown={handleDraftKeyDown}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
+                    />
+                  </div>
+                ))}
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-foreground">UOM</Label>
+                  <Select value={draft.uom} onValueChange={(val) => updateDraftField("uom", val)}>
                       <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
                         <SelectValue placeholder="UOM" />
                       </SelectTrigger>
@@ -1303,47 +1286,52 @@ export default function GDNEdit() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-
-                  <div className="flex flex-1 flex-col gap-1.5">
-                    <Label
-                      htmlFor={`cbm-${row.id}`}
-                      className="text-xs font-medium text-foreground"
-                    >
-                      CBM (m³)
-                    </Label>
-                    <Input
-                      disabled
-                      id={`cbm-${row.id}`}
-                      value={getRowCbm(row).toFixed(4)}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                    />
-                  </div>
-
-                  <div className="flex flex-1 flex-col gap-1.5">
-                    <Label
-                      htmlFor={`volume-${row.id}`}
-                      className="text-xs font-medium text-foreground"
-                    >
-                      Volume (m³)
-                    </Label>
-                    <Input
-                      disabled
-                      id={`volume-${row.id}`}
-                      value={getRowTotalVolume(row).toFixed(4)}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                    />
-                  </div>
-
-                  <button
-                    onClick={() => removeMeasurement(row.id)}
-                    disabled={measurements.length === 1}
-                    className="mb-0.5 flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 p-2 text-zinc-400 transition-colors hover:bg-neutral-700 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
-                  >
-                    <IconTrash size={15} />
-                  </button>
                 </div>
-              ))}
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-foreground">CBM (m³)</Label>
+                  <Input disabled value={isDraftValid ? getRowCbm(draft).toFixed(4) : "0.0000"} className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100" />
+                </div>
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-foreground">Volume Weight (kg)</Label>
+                  <Input disabled value={isDraftValid ? getRowTotalVolume(draft).toFixed(4) : "0.0000"} className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100" />
+                </div>
+
+                <Button onClick={handleAddMeasurement} disabled={!isDraftValid} className="mb-0.5 h-9 rounded-md">Add</Button>
+              </div>
+
+              <div className="overflow-x-auto rounded-md border border-neutral-700">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-neutral-700 hover:bg-transparent">
+                      {['Length', 'Width', 'Height', 'Packages', 'UOM', 'CBM (m³)', 'Volume Weight (kg)', 'Actions'].map((heading) => (
+                        <TableHead key={heading} className="text-xs font-medium text-zinc-400">{heading}</TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {measurements.length ? measurements.map((row) => (
+                      <TableRow key={row.id} className="border-neutral-800 hover:bg-neutral-800/40">
+                        <TableCell className="text-sm text-zinc-300">{row.length}</TableCell>
+                        <TableCell className="text-sm text-zinc-300">{row.width}</TableCell>
+                        <TableCell className="text-sm text-zinc-300">{row.height}</TableCell>
+                        <TableCell className="text-sm text-zinc-300">{row.total}</TableCell>
+                        <TableCell className="text-sm text-zinc-300">{row.uom}</TableCell>
+                        <TableCell className="text-sm text-zinc-300">{getRowCbm(row).toFixed(4)}</TableCell>
+                        <TableCell className="text-sm text-zinc-300">{getRowTotalVolume(row).toFixed(4)}</TableCell>
+                        <TableCell>
+                          <button onClick={() => removeMeasurement(row.id)} className="flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 p-2 text-zinc-400 transition-colors hover:bg-neutral-700 hover:text-zinc-100">
+                            <IconTrash size={15} />
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    )) : (
+                      <TableRow><TableCell colSpan={8} className="h-20 text-center text-sm text-zinc-500">No measurements added yet.</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
 
               <div className="flex justify-end border-t border-neutral-800 pt-3">
                 <div className="text-xs text-zinc-400">

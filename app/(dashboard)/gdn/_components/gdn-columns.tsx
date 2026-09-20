@@ -168,6 +168,10 @@ export const goodsDeliverNoteColumns = (
       enableHiding: false,
       cell: ({ row }) => {
         const id = String(row.original.id)
+        const status = row.original.status?.trim().toUpperCase()
+        const canModifyRow =
+          canModify &&
+          ["DRAFT", "COMPLETED", "SAVED"].includes(status ?? "")
 
         return (
           <div className="flex items-center gap-1">
@@ -192,6 +196,7 @@ export const goodsDeliverNoteColumns = (
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 p-0"
+                      disabled={!canModifyRow}
                       onClick={() => actions.onEdit(id)}
                     >
                       <IconPencil className="h-4 w-4 text-zinc-400 hover:text-zinc-100" />
@@ -205,6 +210,7 @@ export const goodsDeliverNoteColumns = (
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 p-0"
+                      disabled={!canModifyRow}
                       onClick={() => actions.onDelete(id)}
                     >
                       <IconTrash className="h-4 w-4 text-destructive hover:text-red-400" />

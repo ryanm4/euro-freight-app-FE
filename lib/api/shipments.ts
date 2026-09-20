@@ -1,3 +1,5 @@
+import { getLoggedInUserIdentifier } from "@/lib/auth"
+
 export async function fetchShipments() {
   const res = await fetch("/api/shipments")
   if (!res.ok) throw new Error("Failed to fetch shipments")
@@ -30,15 +32,24 @@ export interface CreateShipmentPayload {
   container_number: string | null
   container_size: string | null
   final_seal_no: string | null
-  created_by: string
-  hbl_ids: number[]
+  created_by?: string
+  updated_by?: string
+  hbl_ids?: number[]
+  grn_ids?: number[]
 }
 
 export async function createShipment(payload: CreateShipmentPayload) {
+  const userIdentifier = getLoggedInUserIdentifier()
+  const body = {
+    ...payload,
+    created_by: payload.created_by || userIdentifier || "admin",
+    updated_by: payload.updated_by || userIdentifier || "admin",
+  }
+
   const res = await fetch("/api/shipments", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   })
 
   if (!res.ok) {
@@ -71,15 +82,23 @@ export async function updateShipment(
     container_number: string | null
     container_size: string | null
     final_seal_no: string | null
-    hbl_ids: number[]
+    hbl_ids?: number[]
+    grn_ids?: number[]
+    updated_by?: string
   }
 ) {
+  const userIdentifier = getLoggedInUserIdentifier()
+  const body = {
+    ...payload,
+    updated_by: payload.updated_by || userIdentifier || "admin",
+  }
+
   const res = await fetch(`/api/shipments/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   })
 
   if (!res.ok) {

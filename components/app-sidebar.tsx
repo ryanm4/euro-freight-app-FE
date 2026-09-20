@@ -63,15 +63,16 @@ const data = {
       url: "/grn",
       icon: <IconFileCheck />,
     },
-    {
-      title: "HBL/HAWB",
-      url: "/hbl-hawb",
-      icon: <IconFileInvoice />,
-    },
+
     {
       title: "Shipment",
       url: "/shipment",
       icon: <IconShip />,
+    },
+    {
+      title: "HBL/HAWB",
+      url: "/hbl-hawb",
+      icon: <IconFileInvoice />,
     },
     {
       title: "Clients",
@@ -98,7 +99,7 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  
+
   const [user, setUser] = React.useState(data.user)
 
   React.useEffect(() => {

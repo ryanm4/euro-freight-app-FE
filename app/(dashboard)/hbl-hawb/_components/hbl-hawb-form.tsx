@@ -17,19 +17,30 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { createBillOfLading } from "@/lib/api/bill_of_lading"
 import { fetchClients } from "@/lib/api/clients"
-import { fetchGRNs } from "@/lib/api/goods_receive_notes"
+import { fetchShipments } from "@/lib/api/shipments"
 import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
 import { IconCalendarFilled, IconPlus, IconTrash } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
 import { format, isValid, parse } from "date-fns"
 import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
-import GRNTable, { GRN } from "./GRNTable"
+import { useEffect, useMemo, useState } from "react"
+import ShipmentSelectionTable from "./ShipmentSelectionTable"
 
 interface Port {
   id: number
   value: string
+}
+
+const parseDate = (val: string): Date | undefined => {
+  if (!val) return undefined
+  let d = parse(val, "yyyy-MM-dd HH:mm:ss", new Date())
+  if (isValid(d)) return d
+  d = parse(val, "yyyy-MM-dd", new Date())
+  if (isValid(d)) return d
+  d = new Date(val)
+  if (isValid(d)) return d
+  return undefined
 }
 
 export default function HBLHABWForm() {
@@ -48,11 +59,17 @@ export default function HBLHABWForm() {
   const [estimatedTimeOfDelivery, setEstimatedTimeOfDelivery] = useState("")
   const [voyageNo, setVoyageNo] = useState("")
   const [estimatedTimeOfArrival, setEstimatedTimeOfArrival] = useState("")
+  const [origin, setOrigin] = useState("")
+  const [destination, setDestination] = useState("")
+  const [originPort, setOriginPort] = useState("")
+  const [dischargePort, setDischargePort] = useState("")
+  const [finalPlaceOfDelivery, setFinalPlaceOfDelivery] = useState("")
   const [actualTimeOfArrival, setActualTimeOfArrival] = useState("")
   const [actualTimeOfDelivery, setActualTimeOfDelivery] = useState("")
   const [arrivalPort, setArrivalPort] = useState("")
   const [inlandLocation, setInlandLocation] = useState("")
   const [noOfPieces, setNoOfPieces] = useState("")
+  const [totalPiecesCount, setTotalPiecesCount] = useState("")
   const [grossWeight, setGrossWeight] = useState("")
   const [chargeableWeight, setChargeableWeight] = useState("")
   const [cbm, setCbm] = useState("")
@@ -69,6 +86,7 @@ export default function HBLHABWForm() {
   const [notifyId, setNotifyId] = useState("")
 
   const [selectedGrnIds, setSelectedGrnIds] = useState<Set<number>>(new Set())
+  const [selectedShipmentIds, setSelectedShipmentIds] = useState<Set<number>>(new Set())
 
   const [ports, setPorts] = useState<Port[]>([{ id: 1, value: "" }])
 
@@ -87,16 +105,196 @@ export default function HBLHABWForm() {
     queryFn: fetchClients,
   })
 
-  const {
-    data: grnData,
-    // isLoading,
-    // error,
-  } = useQuery({
-    queryKey: ["grns", "COMPLETED", shipmentMode],
-    queryFn: () => fetchGRNs("COMPLETED", shipmentMode),
-    enabled: !!shipmentMode,
+  const { data: shipmentsData } = useQuery({
+    queryKey: ["shipments"],
+    queryFn: fetchShipments,
   })
-  // data={(data?.data ?? []) as GOODS_RECEIVE_NOTE[]}
+
+  const plannedShipments = useMemo(() => {
+    const raw = Array.isArray(shipmentsData)
+      ? shipmentsData
+      : Array.isArray(shipmentsData?.data)
+        ? shipmentsData.data
+        : []
+
+    return raw.filter((s: any) => {
+      const statusLower = s.status?.trim().toLowerCase()
+      if (statusLower !== "planned" && statusLower !== "draft") return false
+
+      if (shipmentMode === "AIR") {
+        const isAir =
+          s.flight_number ||
+          s.origin ||
+          s.destination ||
+          s.hbls?.[0]?.type === "AIR"
+        if (!isAir) return false
+      } else if (shipmentMode === "SEA") {
+        const isSea =
+          s.vessel_name ||
+          s.container_number ||
+          s.origin_port ||
+          s.hbls?.[0]?.type === "SEA" ||
+          s.hbls?.[0]?.type === "FCL" ||
+          s.hbls?.[0]?.type === "LCL"
+        if (!isSea) return false
+      }
+
+      return true
+    })
+  }, [shipmentsData, shipmentMode])
+
+  const toggleShipment = (id: number) => {
+    setSelectedShipmentIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.clear()
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  useEffect(() => {
+    if (selectedShipmentIds.size === 0) {
+      setMblMawbNo("")
+      setVesselName("")
+      setVoyageNo("")
+      setOrigin("")
+      setDestination("")
+      setOriginPort("")
+      setDischargePort("")
+      setFinalPlaceOfDelivery("")
+      setEstimatedTimeOfDelivery("")
+      setEstimatedTimeOfArrival("")
+      setArrivalPort("")
+      setInlandLocation("")
+      setNoOfPieces("")
+      setTotalPiecesCount("")
+      setGrossWeight("")
+      setChargeableWeight("")
+      setCbm("")
+      setSelectedGrnIds(new Set())
+      return
+    }
+
+    const selectedShipments = plannedShipments.filter((s: any) =>
+      selectedShipmentIds.has(s.id)
+    )
+
+    if (selectedShipments.length > 0) {
+      const s = selectedShipments[0]
+      const vesselOrAirline = s.vessel_name ?? s.airline_shipping_line ?? ""
+      const voyageOrFlight = s.voyage_number ?? s.flight_number ?? ""
+      const orig = s.origin ?? s.origin_port ?? ""
+      const dest = s.destination ?? s.discharge_port ?? s.final_place_of_delivery ?? ""
+      const origPort = s.origin_port ?? s.origin ?? ""
+      const dischPort = s.discharge_port ?? s.destination ?? ""
+      const finalDeliv = s.final_place_of_delivery ?? s.destination ?? ""
+      const etdVal = s.etd_colombo ?? s.etd_origin ?? ""
+      const etaVal = s.eta_discharge_port ?? s.eta_destination ?? s.eta_final_delivery_place ?? ""
+
+      setMblMawbNo(s.mbl_mawb_no ?? "")
+      setVesselName(vesselOrAirline)
+      setVoyageNo(voyageOrFlight)
+      setOrigin(orig)
+      setDestination(dest)
+      setOriginPort(origPort)
+      setDischargePort(dischPort)
+      setFinalPlaceOfDelivery(finalDeliv)
+      setEstimatedTimeOfDelivery(etdVal)
+      setEstimatedTimeOfArrival(etaVal)
+      setArrivalPort(dischPort)
+      setInlandLocation(finalDeliv)
+
+      const grnIds = new Set<number>()
+      let totalCartonCount = 0
+      let totalPiecesCount = 0
+      let totalGrossWeight = 0
+      let totalGrossVolume = 0
+
+      selectedShipments.forEach((shipment: any) => {
+        const grns = shipment.grns ?? shipment.grn_details ?? []
+        grns.forEach((g: any) => {
+          const id = typeof g === "object" ? g.id : g
+          if (id) grnIds.add(Number(id))
+
+          if (typeof g === "object") {
+            // Total Pieces Count: total of quantity across GRNs
+            if (g.quantity != null) {
+              totalPiecesCount += Number(g.quantity) || 0
+            }
+
+            // Total Carton Count: get actual_carton_count from GRN (or GDNs / packing lists)
+            if (g.actual_carton_count != null) {
+              totalCartonCount += Number(g.actual_carton_count) || 0
+            } else if (Array.isArray(g.gdns) && g.gdns.length > 0) {
+              g.gdns.forEach((gdn: any) => {
+                const c = gdn.actual_cartoons ?? gdn.cartoons
+                if (c != null) totalCartonCount += Number(c) || 0
+              })
+            } else if (Array.isArray(g.packing_lists) && g.packing_lists.length > 0) {
+              g.packing_lists.forEach((pl: any) => {
+                if (pl.total_cartons != null) totalCartonCount += Number(pl.total_cartons) || 0
+              })
+            }
+
+            // Total Gross Weight & Total Gross Volume: get it from gdn / actual_gross_weight & actual_gross_volume
+            if (Array.isArray(g.gdns) && g.gdns.length > 0) {
+              g.gdns.forEach((gdn: any) => {
+                const w = gdn.actual_gross_weight ?? gdn.gross_weight
+                if (w != null) totalGrossWeight += parseFloat(String(w)) || 0
+
+                const v = gdn.actual_gross_volume ?? gdn.gross_volume
+                if (v != null) totalGrossVolume += parseFloat(String(v)) || 0
+              })
+            } else if (Array.isArray(g.packing_lists) && g.packing_lists.length > 0) {
+              g.packing_lists.forEach((pl: any) => {
+                if (pl.total_gross_weight_kg != null) {
+                  totalGrossWeight += parseFloat(String(pl.total_gross_weight_kg)) || 0
+                }
+                const vol = pl.total_cbm ?? pl.total_volume
+                if (vol != null) {
+                  totalGrossVolume += parseFloat(String(vol)) || 0
+                }
+              })
+            }
+          }
+        })
+        const directGrnIds = shipment.grn_ids ?? []
+        directGrnIds.forEach((id: number) => grnIds.add(Number(id)))
+      })
+
+      if (grnIds.size > 0) {
+        setSelectedGrnIds(grnIds)
+      }
+
+      setNoOfPieces(totalCartonCount > 0 ? String(totalCartonCount) : "")
+      setTotalPiecesCount(totalPiecesCount > 0 ? String(totalPiecesCount) : "")
+      setGrossWeight(
+        totalGrossWeight > 0
+          ? Number.isInteger(totalGrossWeight)
+            ? String(totalGrossWeight)
+            : totalGrossWeight.toFixed(3)
+          : ""
+      )
+      setChargeableWeight(
+        totalGrossVolume > 0
+          ? Number.isInteger(totalGrossVolume)
+            ? String(totalGrossVolume)
+            : totalGrossVolume.toFixed(3)
+          : ""
+      )
+      setCbm(
+        totalGrossVolume > 0
+          ? Number.isInteger(totalGrossVolume)
+            ? String(totalGrossVolume)
+            : totalGrossVolume.toFixed(3)
+          : ""
+      )
+    }
+  }, [selectedShipmentIds, plannedShipments])
 
   const clientOptions = useMemo(() => {
     return (
@@ -202,6 +400,7 @@ export default function HBLHABWForm() {
         onboardedDate,
         actualTimeOfDelivery,
         actualTimeOfArrival,
+        selectedShipmentIds,
         selectedGrnIds,
         ports,
         status,
@@ -292,27 +491,27 @@ export default function HBLHABWForm() {
                     >
                       {date
                         ? (() => {
-                            const parseDate = (
-                              val: string
-                            ): Date | undefined => {
-                              if (!val) return undefined
-                              let d = parse(
-                                val,
-                                "yyyy-MM-dd HH:mm:ss",
-                                new Date()
-                              )
-                              if (isValid(d)) return d
-                              d = parse(val, "yyyy-MM-dd", new Date())
-                              if (isValid(d)) return d
-                              d = new Date(val)
-                              if (isValid(d)) return d
-                              return undefined
-                            }
-                            const selectedDate = parseDate(date)
-                            return selectedDate
-                              ? format(selectedDate, "PPP")
-                              : "Pick a date"
-                          })()
+                          const parseDate = (
+                            val: string
+                          ): Date | undefined => {
+                            if (!val) return undefined
+                            let d = parse(
+                              val,
+                              "yyyy-MM-dd HH:mm:ss",
+                              new Date()
+                            )
+                            if (isValid(d)) return d
+                            d = parse(val, "yyyy-MM-dd", new Date())
+                            if (isValid(d)) return d
+                            d = new Date(val)
+                            if (isValid(d)) return d
+                            return undefined
+                          }
+                          const selectedDate = parseDate(date)
+                          return selectedDate
+                            ? format(selectedDate, "PPP")
+                            : "Pick a date"
+                        })()
                         : "Pick a date"}
                       <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
@@ -436,12 +635,10 @@ export default function HBLHABWForm() {
                 </Label>
                 <Input
                   id="mbl-mawb-no"
-                  placeholder="Enter MBL / MAWB No"
+                  placeholder="Selected shipment MBL / MAWB No"
                   value={mblMawbNo}
-                  // readOnly={true}
-                  disabled={true}
-                  // onChange={(e) => setMblMawbNo(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  readOnly={true}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -541,19 +738,18 @@ export default function HBLHABWForm() {
       <div className="grid grid-cols-1 gap-5">
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4">
-            <h2 className="text-sm font-semibold text-zinc-100">GRNs</h2>
+            <h2 className="text-sm font-semibold text-zinc-100">Shipments</h2>
             <p className="mt-0.5 text-xs text-zinc-500">
-              List of available Goods Received Notes
+              List of available planned shipments
             </p>
           </div>
 
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
-              <GRNTable
-                grns={(grnData?.data ?? []) as GRN[]}
-                selectedIds={selectedGrnIds}
-                onToggle={toggleGrn}
-                selectedType={type}
+              <ShipmentSelectionTable
+                shipments={plannedShipments}
+                selectedIds={selectedShipmentIds}
+                onToggle={toggleShipment}
               />
             </div>
           </div>
@@ -577,52 +773,49 @@ export default function HBLHABWForm() {
                 <>
                   <div className="flex flex-col gap-1.5">
                     <Label
-                      htmlFor="vessel-name"
+                      htmlFor="flight-number"
                       className="text-xs font-medium text-foreground"
                     >
                       Flight Number
                     </Label>
                     <Input
                       id="flight-number"
-                      placeholder="Enter Flight Number"
-                      value={vesselName}
-                      disabled={true}
-                      onChange={(e) => setVesselName(e.target.value)}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                      placeholder="Selected shipment Flight Number"
+                      value={voyageNo || vesselName}
+                      readOnly={true}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
                     <Label
-                      htmlFor="vessel-name"
+                      htmlFor="air-origin"
                       className="text-xs font-medium text-foreground"
                     >
                       Origin
                     </Label>
                     <Input
-                      id="flight-number"
-                      placeholder="Enter Flight Number"
-                      value={vesselName}
-                      disabled={true}
-                      onChange={(e) => setVesselName(e.target.value)}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                      id="air-origin"
+                      placeholder="Selected shipment Origin"
+                      value={origin}
+                      readOnly={true}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
                     <Label
-                      htmlFor="vessel-name"
+                      htmlFor="air-destination"
                       className="text-xs font-medium text-foreground"
                     >
                       Destination
                     </Label>
                     <Input
-                      id="flight-number"
-                      placeholder="Enter Flight Number"
-                      value={vesselName}
-                      disabled={true}
-                      onChange={(e) => setVesselName(e.target.value)}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                      id="air-destination"
+                      placeholder="Selected shipment Destination"
+                      value={destination}
+                      readOnly={true}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
                     />
                   </div>
 
@@ -639,77 +832,29 @@ export default function HBLHABWForm() {
                           id="estimated-time-of-delivery"
                           variant="outline"
                           className={cn(
-                            "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                            "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-semibold text-zinc-100 disabled:opacity-100 cursor-default",
                             !estimatedTimeOfDelivery && "text-zinc-500"
                           )}
                         >
                           {estimatedTimeOfDelivery
                             ? (() => {
-                                const parseDate = (
-                                  val: string
-                                ): Date | undefined => {
-                                  if (!val) return undefined
-                                  let d = parse(
-                                    val,
-                                    "yyyy-MM-dd HH:mm:ss",
-                                    new Date()
-                                  )
-                                  if (isValid(d)) return d
-                                  d = parse(val, "yyyy-MM-dd", new Date())
-                                  if (isValid(d)) return d
-                                  d = new Date(val)
-                                  if (isValid(d)) return d
-                                  return undefined
-                                }
-                                const selectedDate = parseDate(
-                                  estimatedTimeOfDelivery
-                                )
-                                return selectedDate
-                                  ? format(selectedDate, "PPP")
-                                  : "Pick a date"
-                              })()
-                            : "Pick a date"}
+                              const selectedDate = parseDate(
+                                estimatedTimeOfDelivery
+                              )
+                              return selectedDate
+                                ? format(selectedDate, "PPP")
+                                : estimatedTimeOfDelivery
+                            })()
+                            : "No shipment selected"}
                           <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={(() => {
-                            const parseDate = (
-                              val: string
-                            ): Date | undefined => {
-                              if (!val) return undefined
-                              let d = parse(
-                                val,
-                                "yyyy-MM-dd HH:mm:ss",
-                                new Date()
-                              )
-                              if (isValid(d)) return d
-                              d = parse(val, "yyyy-MM-dd", new Date())
-                              if (isValid(d)) return d
-                              d = new Date(val)
-                              if (isValid(d)) return d
-                              return undefined
-                            }
-                            return parseDate(estimatedTimeOfDelivery)
-                          })()}
-                          onSelect={(selectedDate) => {
-                            if (selectedDate) {
-                              setEstimatedTimeOfDelivery(
-                                format(selectedDate, "yyyy-MM-dd")
-                              )
-                            }
-                          }}
-                          captionLayout="dropdown"
-                        />
-                      </PopoverContent>
                     </Popover>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
                     <Label
-                      htmlFor="estimated-time-of-delivery"
+                      htmlFor="estimated-time-of-arrival"
                       className="text-xs font-medium text-foreground"
                     >
                       ETA - Destination
@@ -717,74 +862,26 @@ export default function HBLHABWForm() {
                     <Popover>
                       <PopoverTrigger asChild disabled={true}>
                         <Button
-                          id="estimated-time-of-delivery"
+                          id="estimated-time-of-arrival"
                           variant="outline"
                           className={cn(
-                            "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                            !data?.shipment?.eta_destination && "text-zinc-500"
+                            "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-semibold text-zinc-100 disabled:opacity-100 cursor-default",
+                            !estimatedTimeOfArrival && "text-zinc-500"
                           )}
                         >
-                          {estimatedTimeOfDelivery
+                          {estimatedTimeOfArrival
                             ? (() => {
-                                const parseDate = (
-                                  val: string
-                                ): Date | undefined => {
-                                  if (!val) return undefined
-                                  let d = parse(
-                                    val,
-                                    "yyyy-MM-dd HH:mm:ss",
-                                    new Date()
-                                  )
-                                  if (isValid(d)) return d
-                                  d = parse(val, "yyyy-MM-dd", new Date())
-                                  if (isValid(d)) return d
-                                  d = new Date(val)
-                                  if (isValid(d)) return d
-                                  return undefined
-                                }
-                                const selectedDate = parseDate(
-                                  estimatedTimeOfDelivery
-                                )
-                                return selectedDate
-                                  ? format(selectedDate, "PPP")
-                                  : "Pick a date"
-                              })()
-                            : "Pick a date"}
+                              const selectedDate = parseDate(
+                                estimatedTimeOfArrival
+                              )
+                              return selectedDate
+                                ? format(selectedDate, "PPP")
+                                : estimatedTimeOfArrival
+                            })()
+                            : "No shipment selected"}
                           <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={(() => {
-                            const parseDate = (
-                              val: string
-                            ): Date | undefined => {
-                              if (!val) return undefined
-                              let d = parse(
-                                val,
-                                "yyyy-MM-dd HH:mm:ss",
-                                new Date()
-                              )
-                              if (isValid(d)) return d
-                              d = parse(val, "yyyy-MM-dd", new Date())
-                              if (isValid(d)) return d
-                              d = new Date(val)
-                              if (isValid(d)) return d
-                              return undefined
-                            }
-                            return parseDate(estimatedTimeOfDelivery)
-                          })()}
-                          onSelect={(selectedDate) => {
-                            if (selectedDate) {
-                              setEstimatedTimeOfDelivery(
-                                format(selectedDate, "yyyy-MM-dd")
-                              )
-                            }
-                          }}
-                          captionLayout="dropdown"
-                        />
-                      </PopoverContent>
                     </Popover>
                   </div>
                 </>
@@ -799,11 +896,10 @@ export default function HBLHABWForm() {
                     </Label>
                     <Input
                       id="vessel-name"
-                      placeholder="Enter Vessel Name"
+                      placeholder="Selected shipment Vessel Name"
                       value={vesselName}
-                      disabled={true}
-                      onChange={(e) => setVesselName(e.target.value)}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                      readOnly={true}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
                     />
                   </div>
 
@@ -816,11 +912,10 @@ export default function HBLHABWForm() {
                     </Label>
                     <Input
                       id="voyage-no"
-                      placeholder="Enter Voyage No"
+                      placeholder="Selected shipment Voyage No"
                       value={voyageNo}
-                      disabled={true}
-                      onChange={(e) => setVoyageNo(e.target.value)}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                      readOnly={true}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
                     />
                   </div>
 
@@ -833,28 +928,26 @@ export default function HBLHABWForm() {
                     </Label>
                     <Input
                       id="origin-port"
-                      placeholder="Enter Origin Port"
-                      value={""}
-                      disabled={true}
-                      onChange={(e) => setVoyageNo(e.target.value)}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                      placeholder="Selected shipment Origin Port"
+                      value={originPort || origin}
+                      readOnly={true}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
                     <Label
-                      htmlFor="discharge  -port"
+                      htmlFor="discharge-port"
                       className="text-xs font-medium text-foreground"
                     >
                       Discharge Port
                     </Label>
                     <Input
                       id="discharge-port"
-                      placeholder="Enter Discharge Port"
-                      value={""}
-                      disabled={true}
-                      onChange={(e) => setVoyageNo(e.target.value)}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                      placeholder="Selected shipment Discharge Port"
+                      value={dischargePort || destination}
+                      readOnly={true}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
                     />
                   </div>
 
@@ -867,11 +960,10 @@ export default function HBLHABWForm() {
                     </Label>
                     <Input
                       id="final-place-of-delivery"
-                      placeholder="Enter Final Place of Delivery"
-                      value={""}
-                      disabled={true}
-                      onChange={(e) => setVoyageNo(e.target.value)}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                      placeholder="Selected shipment Final Place of Delivery"
+                      value={finalPlaceOfDelivery || destination}
+                      readOnly={true}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
                     />
                   </div>
 
@@ -888,152 +980,23 @@ export default function HBLHABWForm() {
                           id="estimated-time-of-delivery"
                           variant="outline"
                           className={cn(
-                            "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                            "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-semibold text-zinc-100 disabled:opacity-100 cursor-default",
                             !estimatedTimeOfDelivery && "text-zinc-500"
                           )}
                         >
                           {estimatedTimeOfDelivery
                             ? (() => {
-                                const parseDate = (
-                                  val: string
-                                ): Date | undefined => {
-                                  if (!val) return undefined
-                                  let d = parse(
-                                    val,
-                                    "yyyy-MM-dd HH:mm:ss",
-                                    new Date()
-                                  )
-                                  if (isValid(d)) return d
-                                  d = parse(val, "yyyy-MM-dd", new Date())
-                                  if (isValid(d)) return d
-                                  d = new Date(val)
-                                  if (isValid(d)) return d
-                                  return undefined
-                                }
-                                const selectedDate = parseDate(
-                                  estimatedTimeOfDelivery
-                                )
-                                return selectedDate
-                                  ? format(selectedDate, "PPP")
-                                  : "Pick a date"
-                              })()
-                            : "Pick a date"}
+                              const selectedDate = parseDate(
+                                estimatedTimeOfDelivery
+                              )
+                              return selectedDate
+                                ? format(selectedDate, "PPP")
+                                : estimatedTimeOfDelivery
+                            })()
+                            : "No shipment selected"}
                           <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={(() => {
-                            const parseDate = (
-                              val: string
-                            ): Date | undefined => {
-                              if (!val) return undefined
-                              let d = parse(
-                                val,
-                                "yyyy-MM-dd HH:mm:ss",
-                                new Date()
-                              )
-                              if (isValid(d)) return d
-                              d = parse(val, "yyyy-MM-dd", new Date())
-                              if (isValid(d)) return d
-                              d = new Date(val)
-                              if (isValid(d)) return d
-                              return undefined
-                            }
-                            return parseDate(estimatedTimeOfDelivery)
-                          })()}
-                          onSelect={(selectedDate) => {
-                            if (selectedDate) {
-                              setEstimatedTimeOfDelivery(
-                                format(selectedDate, "yyyy-MM-dd")
-                              )
-                            }
-                          }}
-                          captionLayout="dropdown"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <Label
-                      htmlFor="estimated-time-of-arrival"
-                      className="text-xs font-medium text-foreground"
-                    >
-                      ETA -Discharge Port
-                    </Label>
-                    <Popover>
-                      <PopoverTrigger asChild disabled={true}>
-                        <Button
-                          id="estimated-time-of-arrival"
-                          variant="outline"
-                          className={cn(
-                            "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                            !estimatedTimeOfArrival && "text-zinc-500"
-                          )}
-                        >
-                          {estimatedTimeOfArrival
-                            ? (() => {
-                                const parseDate = (
-                                  val: string
-                                ): Date | undefined => {
-                                  if (!val) return undefined
-                                  let d = parse(
-                                    val,
-                                    "yyyy-MM-dd HH:mm:ss",
-                                    new Date()
-                                  )
-                                  if (isValid(d)) return d
-                                  d = parse(val, "yyyy-MM-dd", new Date())
-                                  if (isValid(d)) return d
-                                  d = new Date(val)
-                                  if (isValid(d)) return d
-                                  return undefined
-                                }
-                                const selectedDate = parseDate(
-                                  estimatedTimeOfArrival
-                                )
-                                return selectedDate
-                                  ? format(selectedDate, "PPP")
-                                  : "Pick a date"
-                              })()
-                            : "Pick a date"}
-                          <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={(() => {
-                            const parseDate = (
-                              val: string
-                            ): Date | undefined => {
-                              if (!val) return undefined
-                              let d = parse(
-                                val,
-                                "yyyy-MM-dd HH:mm:ss",
-                                new Date()
-                              )
-                              if (isValid(d)) return d
-                              d = parse(val, "yyyy-MM-dd", new Date())
-                              if (isValid(d)) return d
-                              d = new Date(val)
-                              if (isValid(d)) return d
-                              return undefined
-                            }
-                            return parseDate(estimatedTimeOfArrival)
-                          })()}
-                          onSelect={(selectedDate) => {
-                            if (selectedDate) {
-                              setEstimatedTimeOfArrival(
-                                format(selectedDate, "yyyy-MM-dd")
-                              )
-                            }
-                          }}
-                          captionLayout="dropdown"
-                        />
-                      </PopoverContent>
                     </Popover>
                   </div>
 
@@ -1056,28 +1019,28 @@ export default function HBLHABWForm() {
                         >
                           {actualTimeOfDelivery
                             ? (() => {
-                                const parseDate = (
-                                  val: string
-                                ): Date | undefined => {
-                                  if (!val) return undefined
-                                  let d = parse(
-                                    val,
-                                    "yyyy-MM-dd HH:mm:ss",
-                                    new Date()
-                                  )
-                                  if (isValid(d)) return d
-                                  d = parse(val, "yyyy-MM-dd", new Date())
-                                  if (isValid(d)) return d
-                                  d = new Date(val)
-                                  if (isValid(d)) return d
-                                  return undefined
-                                }
-                                const selectedDate =
-                                  parseDate(actualTimeOfDelivery)
-                                return selectedDate
-                                  ? format(selectedDate, "PPP")
-                                  : "Pick a date"
-                              })()
+                              const parseDate = (
+                                val: string
+                              ): Date | undefined => {
+                                if (!val) return undefined
+                                let d = parse(
+                                  val,
+                                  "yyyy-MM-dd HH:mm:ss",
+                                  new Date()
+                                )
+                                if (isValid(d)) return d
+                                d = parse(val, "yyyy-MM-dd", new Date())
+                                if (isValid(d)) return d
+                                d = new Date(val)
+                                if (isValid(d)) return d
+                                return undefined
+                              }
+                              const selectedDate =
+                                parseDate(actualTimeOfDelivery)
+                              return selectedDate
+                                ? format(selectedDate, "PPP")
+                                : "Pick a date"
+                            })()
                             : "Pick a date"}
                           <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -1258,35 +1221,33 @@ export default function HBLHABWForm() {
 
               <div className="flex flex-col gap-1.5">
                 <Label
-                  htmlFor="no-of-pieces"
+                  htmlFor="total-carton-count"
                   className="text-xs font-medium text-foreground"
                 >
                   Total Carton Count
                 </Label>
                 <Input
-                  id="no-of-pieces"
-                  placeholder="Enter No. of Pieces"
+                  id="total-carton-count"
+                  placeholder=" Total Carton Count"
                   value={noOfPieces}
-                  readOnly
-                  disabled={true}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  readOnly={true}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <Label
-                  htmlFor="no-of-pieces"
+                  htmlFor="total-pieces-count"
                   className="text-xs font-medium text-foreground"
                 >
                   Total Pieces Count
                 </Label>
                 <Input
-                  id="no-of-pieces"
-                  placeholder="Enter No. of Pieces"
-                  value={noOfPieces}
-                  onChange={(e) => setNoOfPieces(e.target.value)}
-                  disabled={true}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  id="total-pieces-count"
+                  placeholder=" Total Pieces Count"
+                  value={totalPiecesCount}
+                  readOnly={true}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
                 />
               </div>
 
@@ -1299,32 +1260,30 @@ export default function HBLHABWForm() {
                 </Label>
                 <Input
                   id="gross-weight"
-                  placeholder="Enter Gross Weight"
+                  placeholder="Total Gross Weight"
                   value={grossWeight}
-                  onChange={(e) => setGrossWeight(e.target.value)}
-                  disabled={true}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  readOnly={true}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <Label
-                  htmlFor="chargeable-weight"
+                  htmlFor="total-volume"
                   className="text-xs font-medium text-foreground"
                 >
                   Total Volume
                 </Label>
                 <Input
-                  id="chargeable-weight"
-                  placeholder="Enter Chargeable Weight"
-                  value={chargeableWeight}
-                  onChange={(e) => setChargeableWeight(e.target.value)}
-                  disabled={true}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  id="total-volume"
+                  placeholder=" Total Volume"
+                  value={chargeableWeight || cbm}
+                  readOnly={true}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5">
+              {/* <div className="flex flex-col gap-1.5">
                 <Label
                   htmlFor="cbm"
                   className="text-xs font-medium text-foreground"
@@ -1339,7 +1298,7 @@ export default function HBLHABWForm() {
                   disabled={true}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
-              </div>
+              </div> */}
 
               {/* <div className="flex flex-col gap-1.5">
                 <Label
@@ -1470,13 +1429,16 @@ export default function HBLHABWForm() {
                 Packing lists and carton quantities.
               </p>
             </div>
-            <button
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={addPort}
-              className="flex items-center gap-1.5 rounded-md border border-neutral-600 bg-neutral-800 px-3 py-1.5 text-xs text-zinc-100 transition-colors hover:bg-neutral-700"
+              className="h-8 gap-1.5 text-xs border-neutral-300 bg-white text-neutral-900 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700 dark:hover:text-white"
             >
               <IconPlus size={13} />
               Add Port
-            </button>
+            </Button>
           </div>
 
           <div className="space-y-4">
@@ -1498,13 +1460,16 @@ export default function HBLHABWForm() {
                       className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                     />
                   </div>
-                  <button
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
                     onClick={() => removePort(port.id)}
                     disabled={ports.length === 1}
-                    className="mb-0.5 flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800 p-2 text-zinc-400 transition-colors hover:bg-neutral-700 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-30"
+                    className="mb-0.5 h-9 w-9 shrink-0 border-neutral-300 bg-white text-destructive hover:bg-neutral-100 hover:text-red-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-red-400 dark:hover:bg-neutral-700 dark:hover:text-red-300 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <IconTrash size={15} />
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>

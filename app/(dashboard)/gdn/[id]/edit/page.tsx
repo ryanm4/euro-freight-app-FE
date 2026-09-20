@@ -428,14 +428,58 @@ useEffect(() => {
   if (hasHydrated || !gdnRes?.data) return
   const gdn = gdnRes.data
 
-  const readyToHydrate =
-    (!gdn.client_name || clientOptions.length > 0) &&
-    (!gdn.forwarder_name || forwarderOptions.length > 0) &&
-    (!gdn.manufacture_name || manufacturerOptions.length > 0) &&
-    (!gdn.driver_name || driverOptions.length > 0) &&
-    (!gdn.wharf_staff_name || wharfStaffOptions.length > 0)
+  // Rows available for selection, sourced from the "completed" packing
+  // lists endpoint.
+  const availableRows: PackingListRow[] = useMemo(() => {
+    return (
+      packingLists?.data?.map((pl: any) => ({
+        id: pl.packing_list_id,
+        packingListNo: pl.packing_list_no ?? "",
+        documentDate: pl.document_date
+          ? new Date(pl.document_date).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })
+          : "—",
+        shipTo: pl.ship_to ?? "",
+        shippingMode: pl.shipping_mode ?? "",
+        totalCartons: pl.total_cartons ?? 0,
+        totalCbm: pl.total_cbm ?? "0",
+        totalNetWeightKg: pl.total_net_weight_kg ?? "0",
+        totalQuantity: pl.total_quantity ?? 0,
+        totalVolume: pl.total_volume ?? "0",
+        total_gross_weight_kg: pl.total_gross_weight_kg ?? "0",
+      })) ?? []
+    )
+  }, [packingLists])
 
-  if (!readyToHydrate) return
+  // The GDN's currently-linked packing lists — kept visible in the table
+  // even if they no longer show up in the "completed" list, so the user
+  // never loses sight of what's already attached to this GDN.
+  const linkedRows: PackingListRow[] = useMemo(() => {
+    return (
+      gdnRes?.data?.packing_lists?.map((pl: any) => ({
+        id: pl.id,
+        packingListNo: pl.packing_list_no ?? `PL-${pl.id}`,
+        documentDate: pl.date
+          ? new Date(pl.date.replace(" ", "T")).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })
+          : "—",
+        shipTo: pl.ship_to ?? "",
+        shippingMode: pl.shipping_mode ?? "",
+        totalCartons: pl.total_cartons ?? 0,
+        totalCbm: pl.total_cbm ?? "0",
+        totalNetWeightKg: pl.total_net_weight_kg ?? "0",
+        totalQuantity: pl.total_quantity ?? 0,
+        totalVolume: pl.total_volume ?? "0",
+        total_gross_weight_kg: pl.total_gross_weight_kg ?? "0",
+      })) ?? []
+    )
+  }, [gdnRes])
 
   setDate(
     gdn.date
@@ -526,144 +570,144 @@ useEffect(() => {
       }))
     )
   } else if (gdn.length_cm || gdn.width_cm || gdn.height_cm) {
-    setMeasurements([
-      {
-        id: 1,
-        length: gdn.length_cm ? String(gdn.length_cm) : "",
-        width: gdn.width_cm ? String(gdn.width_cm) : "",
-        height: gdn.height_cm ? String(gdn.height_cm) : "",
-        total: gdn.cartoons ? String(gdn.cartoons) : "",
-        uom: "cm",
-        cbm: "0.0000",
-        volume: "0.0000",
-      },
-    ])
-  }
+      setMeasurements([
+        {
+          id: 1,
+          length: gdn.length_cm ? String(gdn.length_cm) : "",
+          width: gdn.width_cm ? String(gdn.width_cm) : "",
+          height: gdn.height_cm ? String(gdn.height_cm) : "",
+          total: gdn.cartoons ? String(gdn.cartoons) : "",
+          uom: "cm",
+          cbm: "0.0000",
+          volume: "0.0000",
+        },
+      ])
+    }
 
-  setHasHydrated(true)
-}, [
-  gdnRes,
-  hasHydrated,
-  clientOptions,
-  forwarderOptions,
-  manufacturerOptions,
-  driverOptions,
-  wharfStaffOptions,
-])
+    setHasHydrated(true)
+  }, [
+    gdnRes,
+    hasHydrated,
+    clientOptions,
+    forwarderOptions,
+    manufacturerOptions,
+    driverOptions,
+    wharfStaffOptions,
+  ])
 
-const handleSave = async () => {
-  if (!derivedClient || !derivedForwarder) {
-    alert(
-      "Please select at least one packing list to derive Client and Forwarder."
-    )
-    return
-  }
-  if (!manufacturer || !date) {
-    alert("Please fill in Date and Manufacturer.")
-    return
-  }
-  if (!deliveredTo) {
-    alert("Please select a Dispatch Location.")
-    return
-  }
-  if (!transportMode) {
-    alert("Please select a Cargo Transport Mode.")
-    return
-  }
-  if (
-    transportMode === "FCL container" &&
-    (!containerNo || !containerSize || !primarySealNo || !secondarySealNo)
-  ) {
-    alert(
-      "Please fill in Container No, Container Size, Primary Seal No, and Secondary Seal No."
-    )
-    return
-  }
-  if (!driver) {
-    alert("Please select a Driver.")
-    return
-  }
-  if (!wharfStaff) {
-    alert("Please select Wharf Staff.")
-    return
-  }
-  if (!status) {
-    alert("Please select a Status.")
-    return
-  }
-  if (!client || !forwarder) {
-    alert("Please select a Client and Forwarder.")
-    return
-  }
-  if (!quantityLoaded || Number(quantityLoaded) <= 0) {
-    alert("Please enter a valid Quantity Loaded.")
-    return
-  }
-  if (Number(quantityLoaded) > packingListQuantity) {
-    alert(
-      `Quantity Loaded (${quantityLoaded}) cannot exceed the Packing List Quantity (${packingListQuantity}).`
-    )
-    return
-  }
+  const handleSave = async () => {
+    if (!derivedClient || !derivedForwarder) {
+      alert(
+        "Please select at least one packing list to derive Client and Forwarder."
+      )
+      return
+    }
+    if (!manufacturer || !date) {
+      alert("Please fill in Date and Manufacturer.")
+      return
+    }
+    if (!deliveredTo) {
+      alert("Please select a Dispatch Location.")
+      return
+    }
+    if (!transportMode) {
+      alert("Please select a Cargo Transport Mode.")
+      return
+    }
+    if (
+      transportMode === "FCL container" &&
+      (!containerNo || !containerSize || !primarySealNo || !secondarySealNo)
+    ) {
+      alert(
+        "Please fill in Container No, Container Size, Primary Seal No, and Secondary Seal No."
+      )
+      return
+    }
+    if (!driver) {
+      alert("Please select a Driver.")
+      return
+    }
+    if (!wharfStaff) {
+      alert("Please select Wharf Staff.")
+      return
+    }
+    if (!status) {
+      alert("Please select a Status.")
+      return
+    }
+    if (!client || !forwarder) {
+      alert("Please select a Client and Forwarder.")
+      return
+    }
+    if (!quantityLoaded || Number(quantityLoaded) <= 0) {
+      alert("Please enter a valid Quantity Loaded.")
+      return
+    }
+    if (Number(quantityLoaded) > packingListQuantity) {
+      alert(
+        `Quantity Loaded (${quantityLoaded}) cannot exceed the Packing List Quantity (${packingListQuantity}).`
+      )
+      return
+    }
 
-  try {
-    setIsSaving(true)
+    try {
+      setIsSaving(true)
 
-    const formattedDate = `${date} 00:00:00`
+      const formattedDate = `${date} 00:00:00`
 
-    await updateGoodsDispatchNote(id, {
-      client_id: Number(client),
-      forwarder_id: Number(forwarder),
-      manufacture_id: Number(manufacturer),
-      date: formattedDate,
-      packing_list_ids: selectedRows,
-      cartoons: quantityLoaded,
-      gross_weight: grossWeight,
-      gross_volume: totalCalculatedVolume,
-      status,
-      gdn_grn_ref: gdnReference,
-      vehicle_no: vehicleNo,
-      driver_id: Number(driver),
-      dispatch_location: deliveredTo,
-      transport_mode: transportMode,
-      ...(transportMode === "FCL container"
-        ? {
+      await updateGoodsDispatchNote(id, {
+        client_id: Number(client),
+        forwarder_id: Number(forwarder),
+        manufacture_id: Number(manufacturer),
+        date: formattedDate,
+        packing_list_ids: selectedRows,
+        cartoons: quantityLoaded,
+        gross_weight: grossWeight,
+        gross_volume: totalCalculatedVolume,
+        status,
+        gdn_grn_ref: gdnReference,
+        vehicle_no: vehicleNo,
+        driver_id: Number(driver),
+        dispatch_location: deliveredTo,
+        transport_mode: transportMode,
+        ...(transportMode === "FCL container"
+          ? {
             container_no: containerNo,
             container_size: containerSize,
             primary_seal_no: primarySealNo,
             secondary_seal_no: secondarySealNo,
           }
-        : {}),
-      custom_doc_status: customDocStatus,
-      wharf_staff_id: Number(wharfStaff),
-      driver_contact_no: driverContactNo,
-      driver_contact_no_optional: driverContactNoOptional,
-      wharf_contact_no: wharfStaffContactNo,
-      wharf_contact_no_optional: wharfStaffContactNoOptional,
-      measurements: measurements.map((m) => ({
-        length_cm: Number(m.length),
-        width_cm: Number(m.width),
-        height_cm: Number(m.height),
-        uom: m.uom,
-        total: Number(m.total),
-        per_carton_volume_m3: getRowCbmPerCarton(m),
-        calculated_volume_m3: getRowTotalVolume(m),
-        packages: Number(m.total),
-        cbm: getRowCbm(m),
-        volume: getRowTotalVolume(m),
-      })),
-      remarks,
-    })
-    router.push("/gdn")
-  } catch (err) {
-    console.error(err)
-    alert("Failed to update goods dispatch note.")
-  } finally {
-    setIsSaving(false)
+          : {}),
+        custom_doc_status: customDocStatus,
+        wharf_staff_id: Number(wharfStaff),
+        driver_contact_no: driverContactNo,
+        driver_contact_no_optional: driverContactNoOptional,
+        wharf_contact_no: wharfStaffContactNo,
+        wharf_contact_no_optional: wharfStaffContactNoOptional,
+        measurements: measurements.map((m) => ({
+          length_cm: Number(m.length),
+          width_cm: Number(m.width),
+          height_cm: Number(m.height),
+          uom: m.uom,
+          total: Number(m.total),
+          per_carton_volume_m3: getRowCbmPerCarton(m),
+          calculated_volume_m3: getRowTotalVolume(m),
+          packages: Number(m.total),
+          cbm: getRowCbm(m),
+          volume: getRowTotalVolume(m),
+        })),
+        remarks,
+      })
+      router.push("/gdn")
+    } catch (err) {
+      console.error(err)
+      alert("Failed to update goods dispatch note.")
+    } finally {
+      setIsSaving(false)
+    }
   }
-}
 
-useEffect(() => {
+  useEffect(() => {
   if (!selectedDriver) return
   setDriverNic(selectedDriver?.nic_no ?? "")
   setDriverContactNo(selectedDriver?.contact_no ?? "")
@@ -703,15 +747,121 @@ return (
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-zinc-100">
-              Shipment Details
-            </h2>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Core shipment reference information.
-            </p>
+      <div className="mx-auto space-y-5">
+        <div className="flex justify-end gap-3">
+          <Button
+            variant="outline"
+            className="rounded-md"
+            onClick={() => router.push("/gdn")}
+            disabled={isSaving}
+          >
+            Cancel
+          </Button>
+          <Button
+            className="rounded-md"
+            onClick={handleSave}
+            disabled={isSaving}
+          >
+            {isSaving ? "Saving…" : "Save"}
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold text-zinc-100">
+                Shipment Details
+              </h2>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Core shipment reference information.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="date"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Date
+                  </Label>
+                  <Button
+                    id="date"
+                    variant="outline"
+                    disabled
+                    className={cn(
+                      "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-normal text-zinc-100 opacity-100 disabled:cursor-not-allowed disabled:opacity-100",
+                      !date && "text-zinc-500"
+                    )}
+                  >
+                    {date
+                      ? (() => {
+                        const parseDate = (val: string): Date | undefined => {
+                          if (!val) return undefined
+                          let d = parse(
+                            val,
+                            "yyyy-MM-dd HH:mm:ss",
+                            new Date()
+                          )
+                          if (isValid(d)) return d
+                          d = parse(val, "yyyy-MM-dd", new Date())
+                          if (isValid(d)) return d
+                          d = new Date(val)
+                          if (isValid(d)) return d
+                          return undefined
+                        }
+                        const selectedDate = parseDate(date)
+                        return selectedDate
+                          ? format(selectedDate, "yyyy-MM-dd")
+                          : "Pick a date"
+                      })()
+                      : "Pick a date"}
+                    <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="gdn-reference"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    GDN/GRN Reference
+                  </Label>
+                  <Input
+                    id="gdn-reference"
+                    placeholder="Enter GDN/GRN Reference"
+                    value={`GRN-${gdnReference}`}
+                    onChange={(e) => setGdnReference(e.target.value)}
+                    readOnly
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-foreground">
+                    Status
+                  </Label>
+                  <Select value={status} onValueChange={setStatus}>
+                    <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                      <SelectValue placeholder="Choose Status" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                      {STATUS_OPTIONS.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="GRN_OPEN" disabled>
+                        GRN OPEN
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -723,6 +873,464 @@ return (
                 >
                   Date
                 </Label>
+                <Input
+                  id="vehicle-no"
+                  placeholder="Enter Vehicle No"
+                  value={vehicleNo}
+                  onChange={(e) => setVehicleNo(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Driver
+                </Label>
+                <Select value={driver} onValueChange={setDriver}>
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Choose Driver" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {driverOptions.map((d: any) => (
+                      <SelectItem key={d.id} value={String(d.id)}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-foreground">
+                    Driver NIC
+                  </Label>
+                  <Input
+                    disabled
+                    id="driver-nic"
+                    placeholder="Enter Driver NIC"
+                    value={driverNic}
+                    onChange={(e) => setDriverNic(e.target.value)}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-foreground">
+                    Driver Contact No
+                  </Label>
+                  <Input
+                    disabled
+                    id="driver-contact-no"
+                    placeholder="Enter Driver Contact No"
+                    value={driverContactNo}
+                    onChange={(e) => setDriverContactNo(e.target.value)}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-foreground">
+                    Driver Contact No (Optional)
+                  </Label>
+                  <Input
+                    id="driver-contact-no-optional"
+                    placeholder="Enter Driver Contact No (Optional)"
+                    value={driverContactNoOptional}
+                    onChange={(e) => setDriverContactNoOptional(e.target.value)}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Wharf Staff
+                </Label>
+                <Select value={wharfStaff} onValueChange={setWharfStaff}>
+                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                    <SelectValue placeholder="Choose Wharf Staff" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                    {wharfStaffOptions.map((w: any) => (
+                      <SelectItem key={w.id} value={String(w.id)}>
+                        {w.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Wharf Staff Contact No
+                </Label>
+                <Input
+                  disabled
+                  id="wharf-staff-contact-no"
+                  placeholder="Enter Wharf Staff Contact No"
+                  value={wharfStaffContactNo}
+                  onChange={(e) => setWharfStaffContactNo(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  Wharf Staff Contact No (Optional)
+                </Label>
+                <Input
+                  id="wharf-staff-contact-no-optional"
+                  placeholder="Enter Wharf Staff Contact No (Optional)"
+                  value={wharfStaffContactNoOptional}
+                  onChange={(e) =>
+                    setWharfStaffContactNoOptional(e.target.value)
+                  }
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-1">
+          <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold text-zinc-100">
+                Available Packing Lists
+              </h2>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Select the packing list(s) for this dispatch. Customer and
+                Forwarder above are extracted automatically from your selection.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="overflow-x-auto rounded-md border border-neutral-700">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-neutral-700 hover:bg-transparent">
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Packing List No
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Date
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Ship To
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Shipping Mode
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Total Cartons
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Total CBM
+                      </TableHead>
+                      {/* <TableHead className="text-xs font-medium text-zinc-400">
+                        Total Net Weight(kg)
+                      </TableHead> */}
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Total Pieces
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Total Weight
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Total Volume
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-zinc-400">
+                        Actions
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rows.length ? (
+                      rows.map((row) => (
+                        <TableRow
+                          key={row.id}
+                          className="border-neutral-800 hover:bg-neutral-800/40"
+                        >
+                          <TableCell className="text-sm text-zinc-100">
+                            {row.packingListNo}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.documentDate}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.shipTo}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.shippingMode}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.totalCartons}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.totalCbm}
+                          </TableCell>
+                          {/* <TableCell className="text-sm text-zinc-300">
+                            {row.totalNetWeightKg}
+                          </TableCell> */}
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.totalQuantity}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.total_gross_weight_kg}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.totalVolume}
+                          </TableCell>
+                          <TableCell>
+                            {(() => {
+                              const isDisabled =
+                                !!lockedShippingMode &&
+                                row.shippingMode !== lockedShippingMode &&
+                                !selectedRows.includes(row.id)
+
+                              const checkboxEl = (
+                                <Checkbox
+                                  checked={selectedRows.includes(row.id)}
+                                  disabled={isDisabled}
+                                  onCheckedChange={() => toggleRow(row.id)}
+                                  className="border-neutral-600"
+                                />
+                              )
+
+                              if (!isDisabled) return checkboxEl
+
+                              return (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex cursor-not-allowed">
+                                        {checkboxEl}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="border-neutral-700 bg-[#0A0A0A] text-xs text-zinc-100">
+                                      Shipping Mode locked to{" "}
+                                      {lockedShippingMode}. Deselect all rows to
+                                      switch modes.
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )
+                            })()}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={10}
+                          className="h-24 text-center text-sm text-zinc-500"
+                        >
+                          No results.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5">
+          <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold text-zinc-100">
+                Packing Information
+              </h2>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Planned cartons and the actual physical count loaded.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="cartons"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Packing List Quantity
+                  </Label>
+                  <Input
+                    disabled
+                    id="cartons"
+                    placeholder="Enter Cartons"
+                    value={packingListQuantity}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="quantity-loaded"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Quantity Loaded
+                  </Label>
+                  <Input
+                    id="quantity-loaded"
+                    type="number"
+                    max={packingListQuantity}
+                    placeholder="Enter Quantity Loaded"
+                    value={quantityLoaded}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val !== "" && Number(val) > packingListQuantity) {
+                        setQuantityLoaded(String(packingListQuantity))
+                      } else {
+                        setQuantityLoaded(val)
+                      }
+                    }}
+                    className={cn(
+                      "h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
+                      quantityExceedsAvailable &&
+                      "border-red-500 focus-visible:ring-red-500"
+                    )}
+                  />
+                  {quantityExceedsAvailable && (
+                    <p className="text-xs text-red-500">
+                      Cannot exceed Packing List Quantity ({packingListQuantity}
+                      )
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-foreground">
+                    Customs Document Status
+                  </Label>
+                  <Select
+                    value={customDocStatus}
+                    onValueChange={setCustomDocStatus}
+                  >
+                    <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                      <SelectValue placeholder="Choose Status" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                      {CUSTOM_DOC_STATUS_OPTIONS.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label
+                    htmlFor="gross-weight"
+                    className="text-xs font-medium text-foreground"
+                  >
+                    Gross Weight
+                  </Label>
+                  <Input
+                    id="gross-weight"
+                    placeholder="Enter Gross Weight"
+                    value={grossWeight}
+                    onChange={(e) => setGrossWeight(e.target.value)}
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-zinc-100">
+                  Shipment Measurements
+                </h2>
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  Enter a carton dimension set, then click Add (or hit Enter) to
+                  add it to the list below.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-end gap-2 rounded-md border border-neutral-800 bg-neutral-950/40 p-3">
+                {(
+                  [
+                    ["length", "Length"],
+                    ["width", "Width"],
+                    ["height", "Height"],
+                    ["total", "Packages"],
+                  ] as const
+                ).map(([field, label]) => (
+                  <div className="flex flex-1 flex-col gap-1.5">
+                    <Label className="text-xs font-medium text-foreground">
+                      {label}
+                      {field !== "total" ? ` (${draft.uom})` : ""}
+                    </Label>
+                    <Input
+                      ref={field === "length" ? draftLengthRef : undefined}
+                      placeholder={label}
+                      value={draft[field]}
+                      onChange={(e) => updateDraftField(field, e.target.value)}
+                      onKeyDown={handleDraftKeyDown}
+                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600"
+                    />
+                  </div>
+                ))}
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-foreground">
+                    UOM
+                  </Label>
+                  <Select
+                    value={draft.uom}
+                    onValueChange={(val) => updateDraftField("uom", val)}
+                  >
+                    <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
+                      <SelectValue placeholder="UOM" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                      {UOM_OPTIONS.map((u) => (
+                        <SelectItem key={u} value={u}>
+                          {u}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-foreground">
+                    CBM (m³)
+                  </Label>
+                  <Input
+                    disabled
+                    value={
+                      isDraftValid ? getRowCbm(draft).toFixed(4) : "0.0000"
+                    }
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100"
+                  />
+                </div>
+
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-foreground">
+                    Volume Weight (kg)
+                  </Label>
+                  <Input
+                    disabled
+                    value={
+                      isDraftValid
+                        ? getRowTotalVolume(draft).toFixed(4)
+                        : "0.0000"
+                    }
+                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100"
+                  />
+                </div>
+
                 <Button
                   id="date"
                   variant="outline"
@@ -754,44 +1362,80 @@ return (
                 </Button>
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="gdn-reference"
-                  className="text-xs font-medium text-foreground"
-                >
-                  GDN/GRN Reference
-                </Label>
-                <Input
-                  id="gdn-reference"
-                  placeholder="Enter GDN/GRN Reference"
-                  value={`GRN-${gdnReference}`}
-                  onChange={(e) => setGdnReference(e.target.value)}
-                  readOnly
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
-                  Status
-                </Label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                    <SelectValue placeholder="Choose Status" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    {STATUS_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="GRN_OPEN" disabled>
-                      GRN OPEN
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="overflow-x-auto rounded-md border border-neutral-700">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-neutral-700 hover:bg-transparent">
+                      {[
+                        "Length",
+                        "Width",
+                        "Height",
+                        "Packages",
+                        "UOM",
+                        "CBM (m³)",
+                        "Volume Weight (kg)",
+                        "Actions",
+                      ].map((heading) => (
+                        <TableHead
+                          key={heading}
+                          className="text-xs font-medium text-zinc-400"
+                        >
+                          {heading}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {measurements.length ? (
+                      measurements.map((row) => (
+                        <TableRow
+                          key={row.id}
+                          className="border-neutral-800 hover:bg-neutral-800/40"
+                        >
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.length}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.width}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.height}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.total}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {row.uom}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {getRowCbm(row).toFixed(4)}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-300">
+                            {getRowTotalVolume(row).toFixed(4)}
+                          </TableCell>
+                          <TableCell>
+                            <button
+                              type="button"
+                              onClick={() => removeMeasurement(row.id)}
+                              className="flex items-center justify-center rounded-md border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 p-2 text-red-600 dark:text-red-400 transition-colors hover:bg-red-100 dark:hover:bg-neutral-700"
+                            >
+                              <IconTrash size={15} />
+                            </button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="h-20 text-center text-sm text-zinc-500"
+                        >
+                          No measurements added yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -1013,247 +1657,6 @@ return (
           </div>
         </div>
 
-        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-zinc-100">
-              Vehicle & Personnel
-            </h2>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Driver and wharf staff details are extracted from their existing
-              profiles.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex flex-col gap-1.5">
-              <Label
-                htmlFor="vehicle-no"
-                className="text-xs font-medium text-foreground"
-              >
-                Vehicle No
-              </Label>
-              <Input
-                id="vehicle-no"
-                placeholder="Enter Vehicle No"
-                value={vehicleNo}
-                onChange={(e) => setVehicleNo(e.target.value)}
-                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-foreground">
-                Driver
-              </Label>
-              <Select value={driver} onValueChange={setDriver}>
-                <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                  <SelectValue placeholder="Choose Driver" />
-                </SelectTrigger>
-                <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                  {driverOptions.map((d: any) => (
-                    <SelectItem key={d.id} value={String(d.id)}>
-                      {d.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
-                  Driver NIC
-                </Label>
-                <Input
-                  disabled
-                  id="driver-nic"
-                  placeholder="Enter Driver NIC"
-                  value={driverNic}
-                  onChange={(e) => setDriverNic(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
-                  Driver Contact No
-                </Label>
-                <Input
-                  disabled
-                  id="driver-contact-no"
-                  placeholder="Enter Driver Contact No"
-                  value={driverContactNo}
-                  onChange={(e) => setDriverContactNo(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
-                  Driver Contact No (Optional)
-                </Label>
-                <Input
-                  id="driver-contact-no-optional"
-                  placeholder="Enter Driver Contact No (Optional)"
-                  value={driverContactNoOptional}
-                  onChange={(e) => setDriverContactNoOptional(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-foreground">
-                Wharf Staff
-              </Label>
-              <Select value={wharfStaff} onValueChange={setWharfStaff}>
-                <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                  <SelectValue placeholder="Choose Wharf Staff" />
-                </SelectTrigger>
-                <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                  {wharfStaffOptions.map((w: any) => (
-                    <SelectItem key={w.id} value={String(w.id)}>
-                      {w.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-foreground">
-                Wharf Staff Contact No
-              </Label>
-              <Input
-                disabled
-                id="wharf-staff-contact-no"
-                placeholder="Enter Wharf Staff Contact No"
-                value={wharfStaffContactNo}
-                onChange={(e) => setWharfStaffContactNo(e.target.value)}
-                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-foreground">
-                Wharf Staff Contact No (Optional)
-              </Label>
-              <Input
-                id="wharf-staff-contact-no-optional"
-                placeholder="Enter Wharf Staff Contact No (Optional)"
-                value={wharfStaffContactNoOptional}
-                onChange={(e) => setWharfStaffContactNoOptional(e.target.value)}
-                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-5">
-        <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-zinc-100">
-              Packing Information
-            </h2>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Planned cartons and the actual physical count loaded.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="cartons"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Packing List Quantity
-                </Label>
-                <Input
-                  disabled
-                  id="cartons"
-                  placeholder="Enter Cartons"
-                  value={packingListQuantity}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="quantity-loaded"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Quantity Loaded
-                </Label>
-                <Input
-                  id="quantity-loaded"
-                  type="number"
-                  max={packingListQuantity}
-                  placeholder="Enter Quantity Loaded"
-                  value={quantityLoaded}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    if (val !== "" && Number(val) > packingListQuantity) {
-                      setQuantityLoaded(String(packingListQuantity))
-                    } else {
-                      setQuantityLoaded(val)
-                    }
-                  }}
-                  className={cn(
-                    "h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500",
-                    quantityExceedsAvailable &&
-                      "border-red-500 focus-visible:ring-red-500"
-                  )}
-                />
-                {quantityExceedsAvailable && (
-                  <p className="text-xs text-red-500">
-                    Cannot exceed Packing List Quantity ({packingListQuantity})
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-foreground">
-                  Customs Document Status
-                </Label>
-                <Select
-                  value={customDocStatus}
-                  onValueChange={setCustomDocStatus}
-                >
-                  <SelectTrigger className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500">
-                    <SelectValue placeholder="Choose Status" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    {CUSTOM_DOC_STATUS_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="gross-weight"
-                  className="text-xs font-medium text-foreground"
-                >
-                  Gross Weight
-                </Label>
-                <Input
-                  id="gross-weight"
-                  placeholder="Enter Gross Weight"
-                  value={grossWeight}
-                  onChange={(e) => setGrossWeight(e.target.value)}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
 
         <div className="rounded-md border border-neutral-700 bg-neutral-900 p-5">
           <div className="mb-4 flex items-start justify-between">

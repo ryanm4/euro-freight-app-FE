@@ -16,6 +16,7 @@ import {
 } from "@tabler/icons-react"
 import { ColumnDef } from "@tanstack/react-table"
 import { format } from "date-fns"
+import Link from "next/link"
 
 interface ShipmentTableActions {
   onEdit: (id: string) => void
@@ -78,6 +79,45 @@ export const shipmentColumns = (
       accessorKey: "mbl_mawb_no",
       header: "MBL / MAWB No",
       cell: ({ row }) => <div>{row.original.mbl_mawb_no || "N/A"}</div>,
+    },
+    {
+      id: "grn_no",
+      header: "GRN #",
+      cell: ({ row }) => {
+        const rawGrns = (row.original as any).grns ?? (row.original as any).grn_details
+        let grnList: { id: number | string }[] = []
+
+        if (Array.isArray(rawGrns) && rawGrns.length > 0) {
+          grnList = rawGrns.map((g: any) =>
+            typeof g === "object" ? { id: g.id } : { id: g }
+          )
+        } else {
+          const rawIds = (row.original as any).grn_ids
+          if (Array.isArray(rawIds) && rawIds.length > 0) {
+            grnList = rawIds.map((id: any) => ({ id }))
+          }
+        }
+
+        if (grnList.length === 0) {
+          return <div className="text-zinc-500">—</div>
+        }
+
+        return (
+          <div className="flex flex-wrap items-center gap-1 font-medium">
+            {grnList.map((g, idx) => (
+              <span key={g.id}>
+                <Link
+                  href={`/grn/${g.id}`}
+                  className="text-blue-400 hover:text-blue-300 hover:underline"
+                >
+                  GRN-{g.id}
+                </Link>
+                {idx < grnList.length - 1 && <span className="text-zinc-400">,</span>}
+              </span>
+            ))}
+          </div>
+        )
+      },
     },
     {
       id: "vessel_voyage",
@@ -193,6 +233,8 @@ export const shipmentColumns = (
       enableHiding: false,
       cell: ({ row }) => {
         const id = String(row.original.id)
+        const status = row.original.status?.trim().toLowerCase()
+        const canModifyRow = canModify && (status === "planned" || status === "draft")
 
         return (
           <div className="flex items-center gap-1">
@@ -218,12 +260,15 @@ export const shipmentColumns = (
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 p-0"
+                      disabled={!canModifyRow}
                       onClick={() => actions.onEdit(id)}
                     >
                       <IconPencil className="h-4 w-4 text-zinc-400 hover:text-zinc-100" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Edit</TooltipContent>
+                  <TooltipContent>
+                    {canModifyRow ? "Edit" : "Editing not allowed unless status is Planned"}
+                  </TooltipContent>
                 </Tooltip>
 
                 <Tooltip>
@@ -232,12 +277,15 @@ export const shipmentColumns = (
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 p-0"
+                      disabled={!canModifyRow}
                       onClick={() => actions.onDelete(id)}
                     >
                       <IconTrash className="h-4 w-4 text-destructive hover:text-red-400" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Delete</TooltipContent>
+                  <TooltipContent>
+                    {canModifyRow ? "Delete" : "Deleting not allowed unless status is Planned"}
+                  </TooltipContent>
                 </Tooltip>
               </>
             )}

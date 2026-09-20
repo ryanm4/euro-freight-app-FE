@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { useParams, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 
@@ -120,8 +120,15 @@ export default function ShipmentEdit() {
         final_seal_no: shipment.final_seal_no ?? "",
       })
 
-      const existingIds =
-        shipment.hbls?.map((h: any) => h.id) ?? shipment.hbl_ids ?? []
+      const linkedIds = [
+        ...(shipment.hbls ?? []),
+        ...(shipment.hbl_hawb_details ?? []),
+      ].map((hbl: any) => Number(hbl.id))
+      const existingIds = [
+        ...linkedIds,
+        ...(shipment.hbl_ids ?? []).map((hblId: number) => Number(hblId)),
+      ].filter((hblId, index, ids) => Number.isFinite(hblId) && ids.indexOf(hblId) === index)
+
       setSelectedHBLIds(new Set(existingIds))
     }
   }, [res?.data])
@@ -133,7 +140,22 @@ export default function ShipmentEdit() {
     enabled: !!mode,
   })
 
-  const hbls = hblsRes?.data ?? []
+  const linkedHBLs = useMemo(() => {
+    const shipment = res?.data as SHIPMENT | undefined
+    return (shipment?.hbls ?? shipment?.hbl_hawb_details ?? []) as any[]
+  }, [res?.data])
+
+  const availableHBLs = useMemo(() => hblsRes?.data ?? [], [hblsRes])
+
+  const hbls = useMemo(() => {
+    const merged = [...linkedHBLs]
+    availableHBLs.forEach((hbl: any) => {
+      if (!merged.some((linkedHbl: any) => linkedHbl.id === hbl.id)) {
+        merged.push(hbl)
+      }
+    })
+    return merged
+  }, [linkedHBLs, availableHBLs])
 
   const handleChange = (field: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))

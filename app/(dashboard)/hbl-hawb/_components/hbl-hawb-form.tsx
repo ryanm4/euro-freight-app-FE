@@ -43,6 +43,7 @@ export default function HBLHABWForm() {
   const [client, setClient] = useState("")
   const [manufacturer, setManufacturer] = useState("")
   const [mblMawbNo, setMblMawbNo] = useState("")
+  const [house_bl_no, setHouse_bl_no] = useState("")
   const [vesselName, setVesselName] = useState("")
   const [estimatedTimeOfDelivery, setEstimatedTimeOfDelivery] = useState("")
   const [voyageNo, setVoyageNo] = useState("")
@@ -112,7 +113,7 @@ export default function HBLHABWForm() {
 
   const shipperOptions = useMemo(() => {
     return (
-      data?.data?.filter((client: any) => client.type === UserRole.Forwarder) ||
+      data?.data?.filter((client: any) => client.type === UserRole.Supplier) ||
       []
     )
   }, [data])
@@ -192,6 +193,7 @@ export default function HBLHABWForm() {
         arrivalPort,
         inlandLocation,
         mblMawbNo,
+        house_bl_no,
         noOfPieces,
         grossWeight,
         chargeableWeight,
@@ -206,7 +208,7 @@ export default function HBLHABWForm() {
         shipperId,
         consigneeId,
         notifyId,
-        total_freight_cost
+        total_freight_cost,
       })
       router.push("/hbl-hawb")
     } catch (err) {
@@ -439,6 +441,21 @@ export default function HBLHABWForm() {
                   // readOnly={true}
                   disabled={true}
                   // onChange={(e) => setMblMawbNo(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="house-bl-no"
+                  className="text-xs font-medium text-foreground"
+                >
+                  House BL No
+                </Label>
+                <Input
+                  id="house-bl-no"
+                  placeholder="Enter House BL No"
+                  value={house_bl_no}
+                  onChange={(e) => setHouse_bl_no(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>

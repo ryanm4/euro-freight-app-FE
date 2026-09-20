@@ -72,7 +72,7 @@ export default function HBLTable({
     "ETD",
     "ETA",
     "Arrival Port",
-    "Pieces",
+    // "Pieces",
     "Status",
   ]
   if (!readOnly) headers.push("Actions")
@@ -125,9 +125,9 @@ export default function HBLTable({
               <TableCell className="text-sm text-zinc-300">
                 {hbl.arrival_port ?? "—"}
               </TableCell>
-              <TableCell className="text-sm text-zinc-300">
+              {/* <TableCell className="text-sm text-zinc-300">
                 {hbl.no_pieces?.toLocaleString() ?? "—"}
-              </TableCell>
+              </TableCell> */}
               <TableCell>
                 <span className="inline-flex items-center rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs font-medium text-yellow-400">
                   {hbl.status}

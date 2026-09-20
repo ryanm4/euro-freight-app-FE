@@ -5,7 +5,6 @@ export async function fetchHBLHAWBs(status?: string, mode?: string) {
 
   const qs = params.toString()
   const url = qs ? `/api/hbl_hawbs?${qs}` : "/api/hbl_hawbs"
-
   const res = await fetch(url)
   if (!res.ok) throw new Error("Failed to fetch HBL/HAWBs")
   return res.json()
@@ -30,6 +29,7 @@ export interface CreateBillOfLadingPayload {
   arrival_port: string
   inland_location: string
   mbl_mawb_no: string
+  house_bl_no: string
   status: string
   no_pieces: number
   gross_weight: string
@@ -58,6 +58,7 @@ export interface CreateBillOfLadingInput {
   arrivalPort: string
   inlandLocation: string
   mblMawbNo: string
+  house_bl_no: string
   noOfPieces: string
   grossWeight: string
   chargeableWeight: string
@@ -95,6 +96,7 @@ function buildBillOfLadingPayload(
     arrival_port: input.arrivalPort,
     inland_location: input.inlandLocation,
     mbl_mawb_no: input.mblMawbNo,
+    house_bl_no: input.house_bl_no,
     status: input.status,
     no_pieces: Number(input.noOfPieces),
     gross_weight: input.grossWeight,

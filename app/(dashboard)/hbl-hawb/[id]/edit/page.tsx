@@ -75,6 +75,7 @@ export default function HBLHABWEdit() {
   const [client, setClient] = useState("")
   const [manufacturer, setManufacturer] = useState("")
   const [mblMawbNo, setMblMawbNo] = useState("")
+  const [house_bl_no, setHouse_bl_no] = useState("")
   const [vesselName, setVesselName] = useState("")
   const [estimatedTimeOfDelivery, setEstimatedTimeOfDelivery] = useState("")
   const [voyageNo, setVoyageNo] = useState("")
@@ -118,6 +119,7 @@ export default function HBLHABWEdit() {
       hbl.manufacture?.id != null ? String(hbl.manufacture.id) : ""
     )
     setMblMawbNo(hbl.mbl_mawb_no ?? "")
+    setHouse_bl_no(hbl.house_bl_no ?? "")
     setVesselName(hbl.planned_vessel_name ?? "")
     setVoyageNo(hbl.voyage_no ?? "")
     setEstimatedTimeOfDelivery(toDateInputValue(hbl.etd))
@@ -184,7 +186,7 @@ export default function HBLHABWEdit() {
   }, [data])
 
   const shipperOptions = useMemo(() => {
-    return data?.data?.filter((c: any) => c.type === UserRole.Forwarder) || []
+    return data?.data?.filter((c: any) => c.type === UserRole.Supplier) || []
   }, [data])
 
   const consigneeOptions = useMemo(() => {
@@ -250,6 +252,7 @@ export default function HBLHABWEdit() {
         arrivalPort,
         inlandLocation,
         mblMawbNo,
+        house_bl_no,
         noOfPieces,
         grossWeight,
         chargeableWeight,
@@ -448,7 +451,9 @@ export default function HBLHABWEdit() {
                     <SelectValue placeholder="Choose Status" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    <SelectItem value="SHIPMENT_OPEN" disabled>SHIPMENT OPEN</SelectItem>
+                    <SelectItem value="SHIPMENT_OPEN" disabled>
+                      SHIPMENT OPEN
+                    </SelectItem>
                     <SelectItem value="saved">Saved</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
@@ -518,6 +523,21 @@ export default function HBLHABWEdit() {
                   placeholder="Enter MBL / MAWB No"
                   value={mblMawbNo}
                   onChange={(e) => setMblMawbNo(e.target.value)}
+                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="mbl-mawb-no"
+                  className="text-xs font-medium text-foreground"
+                >
+                  House BL No
+                </Label>
+                <Input
+                  id="house-bl-no"
+                  placeholder="Enter House BL No"
+                  value={house_bl_no}
+                  onChange={(e) => setHouse_bl_no(e.target.value)}
                   className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-1 focus-visible:ring-zinc-500"
                 />
               </div>

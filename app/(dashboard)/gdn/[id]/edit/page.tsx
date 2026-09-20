@@ -556,29 +556,20 @@ useEffect(() => {
               ? String(m.packages ?? "")
               : String(m.quantity ?? ""),
           uom: m.uom ?? "cm",
-          cbm: getRowCbm({
-            length: m.length_cm != null ? String(m.length_cm) : "",
-            width: m.width_cm != null ? String(m.width_cm) : "",
-            height: m.height_cm != null ? String(m.height_cm) : "",
-            total:
-              m.packages != null
-                ? String(m.packages ?? "")
-                : String(m.quantity ?? ""),
-            uom: m.uom ?? "cm",
-          }).toFixed(4),
-          volume: getRowTotalVolume({
-            length: m.length_cm != null ? String(m.length_cm) : "",
-            width: m.width_cm != null ? String(m.width_cm) : "",
-            height: m.height_cm != null ? String(m.height_cm) : "",
-            total:
-              m.packages != null
-                ? String(m.packages ?? "")
-                : String(m.quantity ?? ""),
-            uom: m.uom ?? "cm",
-          }).toFixed(4),
-        }))
-      )
-    } else if (gdn.length_cm || gdn.width_cm || gdn.height_cm) {
+        }).toFixed(4),
+        volume: getRowTotalVolume({
+          length: m.length_cm != null ? String(m.length_cm) : "",
+          width: m.width_cm != null ? String(m.width_cm) : "",
+          height: m.height_cm != null ? String(m.height_cm) : "",
+          total:
+            m.packages != null
+              ? String(m.packages ?? "")
+              : String(m.quantity ?? ""),
+          uom: m.uom ?? "cm",
+        }).toFixed(4),
+      }))
+    )
+  } else if (gdn.length_cm || gdn.width_cm || gdn.height_cm) {
       setMeasurements([
         {
           id: 1,
@@ -716,130 +707,7 @@ useEffect(() => {
     }
   }
 
-  setHasHydrated(true)
-}, [
-  gdnRes,
-  hasHydrated,
-  clientOptions,
-  forwarderOptions,
-  manufacturerOptions,
-  driverOptions,
-  wharfStaffOptions,
-])
-
-const handleSave = async () => {
-  if (!derivedClient || !derivedForwarder) {
-    alert(
-      "Please select at least one packing list to derive Client and Forwarder."
-    )
-    return
-  }
-  if (!manufacturer || !date) {
-    alert("Please fill in Date and Manufacturer.")
-    return
-  }
-  if (!deliveredTo) {
-    alert("Please select a Dispatch Location.")
-    return
-  }
-  if (!transportMode) {
-    alert("Please select a Cargo Transport Mode.")
-    return
-  }
-  if (
-    transportMode === "FCL container" &&
-    (!containerNo || !containerSize || !primarySealNo || !secondarySealNo)
-  ) {
-    alert(
-      "Please fill in Container No, Container Size, Primary Seal No, and Secondary Seal No."
-    )
-    return
-  }
-  if (!driver) {
-    alert("Please select a Driver.")
-    return
-  }
-  if (!wharfStaff) {
-    alert("Please select Wharf Staff.")
-    return
-  }
-  if (!status) {
-    alert("Please select a Status.")
-    return
-  }
-  if (!client || !forwarder) {
-    alert("Please select a Client and Forwarder.")
-    return
-  }
-  if (!quantityLoaded || Number(quantityLoaded) <= 0) {
-    alert("Please enter a valid Quantity Loaded.")
-    return
-  }
-  if (Number(quantityLoaded) > packingListQuantity) {
-    alert(
-      `Quantity Loaded (${quantityLoaded}) cannot exceed the Packing List Quantity (${packingListQuantity}).`
-    )
-    return
-  }
-
-  try {
-    setIsSaving(true)
-
-    const formattedDate = `${date} 00:00:00`
-
-    await updateGoodsDispatchNote(id, {
-      client_id: Number(client),
-      forwarder_id: Number(forwarder),
-      manufacture_id: Number(manufacturer),
-      date: formattedDate,
-      packing_list_ids: selectedRows,
-      cartoons: quantityLoaded,
-      gross_weight: grossWeight,
-      gross_volume: totalCalculatedVolume,
-      status,
-      gdn_grn_ref: gdnReference,
-      vehicle_no: vehicleNo,
-      driver_id: Number(driver),
-      dispatch_location: deliveredTo,
-      transport_mode: transportMode,
-      ...(transportMode === "FCL container"
-        ? {
-            container_no: containerNo,
-            container_size: containerSize,
-            primary_seal_no: primarySealNo,
-            secondary_seal_no: secondarySealNo,
-          }
-        : {}),
-      custom_doc_status: customDocStatus,
-      wharf_staff_id: Number(wharfStaff),
-      driver_contact_no: driverContactNo,
-      driver_contact_no_optional: driverContactNoOptional,
-      wharf_contact_no: wharfStaffContactNo,
-      wharf_contact_no_optional: wharfStaffContactNoOptional,
-      measurements: measurements.map((m) => ({
-        length_cm: Number(m.length),
-        width_cm: Number(m.width),
-        height_cm: Number(m.height),
-        uom: m.uom,
-        total: Number(m.total),
-        per_carton_volume_m3: getRowCbmPerCarton(m),
-        calculated_volume_m3: getRowTotalVolume(m),
-        packages: Number(m.total),
-        cbm: getRowCbm(m),
-        volume: getRowTotalVolume(m),
-      })),
-      remarks,
-    })
-    router.push("/gdn")
-  } catch (err) {
-    console.error(err)
-    alert("Failed to update goods dispatch note.")
-  } finally {
-    setIsSaving(false)
-  }
-}
-
-useEffect(() => {
+  useEffect(() => {
   if (!selectedDriver) return
   setDriverNic(selectedDriver?.nic_no ?? "")
   setDriverContactNo(selectedDriver?.contact_no ?? "")

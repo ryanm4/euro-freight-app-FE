@@ -7,7 +7,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { PACKING_LIST } from "@/modules/packing-list/types"
+import {
+  PACKING_LIST,
+  PackingListStatus,
+} from "@/modules/packing-list/types"
 import {
   IconArrowsSort,
   IconCloudDownload,
@@ -161,6 +164,11 @@ export const packingListColumns = (
       enableHiding: false,
       cell: ({ row }) => {
         const id = String(row.original.packing_list_id)
+        const status = row.original.status?.toUpperCase()
+        const canModifyRow =
+          canModify &&
+          (status === PackingListStatus.DRAFT ||
+            status === PackingListStatus.COMPLETED)
 
         return (
           <div className="flex items-center gap-1">
@@ -202,6 +210,7 @@ export const packingListColumns = (
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 p-0"
+                      disabled={!canModifyRow}
                       onClick={() => actions.onEdit(id)}
                     >
                       <IconPencil className="h-4 w-4 text-zinc-400 hover:text-zinc-100" />
@@ -215,6 +224,7 @@ export const packingListColumns = (
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 p-0"
+                      disabled={!canModifyRow}
                       onClick={() => actions.onDelete(id)}
                     >
                       <IconTrash className="h-4 w-4 text-destructive hover:text-red-400" />

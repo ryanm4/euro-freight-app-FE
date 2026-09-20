@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PackingListStatus } from "@/modules/packing-list/types"
 import {
   Pagination,
   PaginationContent,
@@ -79,6 +80,9 @@ export default function PackingListViewPage() {
   }
 
   const d = res.data
+  const canEdit = [PackingListStatus.DRAFT, PackingListStatus.COMPLETED].includes(
+    String(d.status ?? "").trim().toUpperCase() as PackingListStatus
+  )
   const items: any[] = Array.isArray(d.items) ? d.items : []
 
   // Pagination
@@ -137,6 +141,7 @@ export default function PackingListViewPage() {
         </Button>
         <Button
           size="lg"
+          disabled={!canEdit}
           onClick={() => router.push(`/packing-list/${id}/edit`)}
         >
           <IconPencil className="mr-2 h-4 w-4" />

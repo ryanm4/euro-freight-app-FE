@@ -267,7 +267,7 @@ export const shipmentColumns = (
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {canModifyRow ? "Edit" : "Editing not allowed unless status is Planned"}
+                    {canModifyRow ? "Edit" : "Editing not allowed unless status is Draft"}
                   </TooltipContent>
                 </Tooltip>
 
@@ -284,7 +284,7 @@ export const shipmentColumns = (
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {canModifyRow ? "Delete" : "Deleting not allowed unless status is Planned"}
+                    {canModifyRow ? "Delete" : "Deleting not allowed unless status is Draft"}
                   </TooltipContent>
                 </Tooltip>
               </>

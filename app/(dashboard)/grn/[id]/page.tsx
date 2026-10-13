@@ -132,6 +132,22 @@ export default function GrnByID() {
     )
   }, [grn])
 
+  const totalActualPackages = useMemo(() => {
+    if (!grn) return 0
+    return grn.actualMeasurements.reduce(
+      (sum, row) => sum + (Number(row.packages ?? row.total) || 0),
+      0
+    )
+  }, [grn])
+
+  const totalActualCbm = useMemo(() => {
+    if (!grn) return 0
+    return grn.actualMeasurements.reduce(
+      (sum, row) => sum + (Number(row.cbm) || 0),
+      0
+    )
+  }, [grn])
+
   const canEdit = [GRNStatus.DRAFT, GRNStatus.COMPLETED].includes(
     String(grn?.status ?? "")
       .trim()
@@ -573,7 +589,19 @@ export default function GrnByID() {
               </Table>
             </div>
 
-            <div className="flex justify-end border-t border-neutral-800 pt-3">
+            <div className="flex justify-end gap-6 border-t border-neutral-800 pt-3">
+              <div className="text-xs text-zinc-400">
+                Total Packages:{" "}
+                <span className="font-medium text-zinc-100">
+                  {totalActualPackages}
+                </span>
+              </div>
+              <div className="text-xs text-zinc-400">
+                Total CBM:{" "}
+                <span className="font-medium text-zinc-100">
+                  {totalActualCbm.toFixed(4)} m³
+                </span>
+              </div>
               <div className="text-xs text-zinc-400">
                 Total Actual Volume:{" "}
                 <span className="font-medium text-zinc-100">

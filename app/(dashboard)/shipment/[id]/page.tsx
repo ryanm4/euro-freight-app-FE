@@ -157,7 +157,7 @@ export default function ShipmentByID() {
                 >
                   Status
                 </Label>
-                <Select value={statusLower || "planned"} disabled>
+                <Select value={statusLower || "draft"} disabled>
                   <SelectTrigger
                     id="status"
                     className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm text-zinc-100 opacity-100 disabled:opacity-100"
@@ -165,10 +165,8 @@ export default function ShipmentByID() {
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent className="border-zinc-700 bg-[#0A0A0A] text-zinc-100">
-                    <SelectItem value="planned">Planned</SelectItem>
-                    <SelectItem value="departure">Departure</SelectItem>
-                    <SelectItem value="in transit">In Transit</SelectItem>
-                    <SelectItem value="arrived">Arrived</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -374,6 +374,20 @@ export default function GRNEdit() {
     )
   }, [actualMeasurements])
 
+  const totalActualPackages = useMemo(() => {
+    return actualMeasurements.reduce(
+      (sum: number, row: any) => sum + (Number(row.total) || 0),
+      0
+    )
+  }, [actualMeasurements])
+
+  const totalActualCbm = useMemo(() => {
+    return actualMeasurements.reduce(
+      (sum: number, row: any) => sum + (Number(row.cbm) || 0),
+      0
+    )
+  }, [actualMeasurements])
+
   const updateActualDraftField = (
     field: "length" | "width" | "height" | "total" | "uom",
     value: string
@@ -1301,7 +1315,7 @@ export default function GRNEdit() {
                             <button
                               type="button"
                               onClick={() => removeActualMeasurement(row.id)}
-                              className="flex items-center justify-center rounded-md border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 p-2 text-red-600 dark:text-red-400 transition-colors hover:bg-red-100 dark:hover:bg-neutral-700"
+                              className="flex items-center justify-center rounded-md border border-neutral-300 bg-neutral-100 p-2 text-red-600 transition-colors hover:bg-red-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-red-400 dark:hover:bg-neutral-700"
                             >
                               <IconTrash size={15} />
                             </button>
@@ -1322,7 +1336,19 @@ export default function GRNEdit() {
                 </Table>
               </div>
 
-              <div className="flex justify-end border-t border-neutral-800 pt-3">
+              <div className="flex justify-end gap-6 border-t border-neutral-800 pt-3">
+                <div className="text-xs text-zinc-400">
+                  Total Packages:{" "}
+                  <span className="font-medium text-zinc-100">
+                    {totalActualPackages}
+                  </span>
+                </div>
+                <div className="text-xs text-zinc-400">
+                  Total CBM:{" "}
+                  <span className="font-medium text-zinc-100">
+                    {totalActualCbm.toFixed(4)} m³
+                  </span>
+                </div>
                 <div className="text-xs text-zinc-400">
                   Total Actual Volume:{" "}
                   <span className="font-medium text-zinc-100">

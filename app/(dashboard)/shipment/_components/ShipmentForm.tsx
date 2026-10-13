@@ -22,7 +22,7 @@ export default function ShipmentForm() {
   const router = useRouter()
 
   const [mode, setMode] = useState("") // "AIR" | "SEA"
-  const [status, setStatus] = useState("planned")
+  const [status, setStatus] = useState("draft")
   const [isSaving, setIsSaving] = useState(false)
   const [selectedGRNIds, setSelectedGRNIds] = useState<Set<number>>(new Set())
 
@@ -311,10 +311,8 @@ export default function ShipmentForm() {
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent className="border-zinc-700 bg-[#0A0A0A] text-zinc-100">
-                    <SelectItem value="planned">Planned</SelectItem>
-                    <SelectItem value="departure">Departure</SelectItem>
-                    <SelectItem value="in transit">In Transit</SelectItem>
-                    <SelectItem value="arrived">Arrived</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

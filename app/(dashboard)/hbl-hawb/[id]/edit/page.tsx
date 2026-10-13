@@ -110,13 +110,16 @@ export default function HBLHABWEdit() {
   const [packingList, setPackingList] = useState<any[]>([])
 
   const [selectedGrnIds, setSelectedGrnIds] = useState<Set<number>>(new Set())
-  const [selectedShipmentIds, setSelectedShipmentIds] = useState<Set<number>>(new Set())
+  const [selectedShipmentIds, setSelectedShipmentIds] = useState<Set<number>>(
+    new Set()
+  )
   const [ports, setPorts] = useState<Port[]>([{ id: 1, value: "" }])
 
   // Populate the form once the HBL/HAWB record loads
   useEffect(() => {
     if (!res?.data) return
     const hbl = res.data
+    console.log("hel", hbl.shipments)
     setHblId(hbl.id ?? "")
     setType(hbl.type ?? "")
     setDate(
@@ -257,7 +260,8 @@ export default function HBLHABWEdit() {
     const hbl = res?.data
     if (!hbl) return null
 
-    const rawLinked = hbl.shipment ?? (Array.isArray(hbl.shipments) ? hbl.shipments[0] : null)
+    const rawLinked =
+      hbl.shipment ?? (Array.isArray(hbl.shipments) ? hbl.shipments[0] : null)
     let linkedId =
       rawLinked?.id ??
       hbl.shipment_id ??
@@ -276,9 +280,7 @@ export default function HBLHABWEdit() {
         : []
 
     const targetId = Number(linkedId ?? rawLinked?.id)
-    const fullShipment = rawList.find(
-      (s: any) => Number(s.id) === targetId
-    )
+    const fullShipment = rawList.find((s: any) => Number(s.id) === targetId)
     return fullShipment ? { ...rawLinked, ...fullShipment } : rawLinked
   }, [res?.data, shipmentsData])
 
@@ -366,12 +368,17 @@ export default function HBLHABWEdit() {
       const vesselOrAirline = s.vessel_name ?? s.airline_shipping_line ?? ""
       const voyageOrFlight = s.voyage_number ?? s.flight_number ?? ""
       const orig = s.origin ?? s.origin_port ?? ""
-      const dest = s.destination ?? s.discharge_port ?? s.final_place_of_delivery ?? ""
+      const dest =
+        s.destination ?? s.discharge_port ?? s.final_place_of_delivery ?? ""
       const origPort = s.origin_port ?? s.origin ?? ""
       const dischPort = s.discharge_port ?? s.destination ?? ""
       const finalDeliv = s.final_place_of_delivery ?? s.destination ?? ""
       const etdVal = s.etd_colombo ?? s.etd_origin ?? ""
-      const etaVal = s.eta_discharge_port ?? s.eta_destination ?? s.eta_final_delivery_place ?? ""
+      const etaVal =
+        s.eta_discharge_port ??
+        s.eta_destination ??
+        s.eta_final_delivery_place ??
+        ""
 
       setMblMawbNo(s.mbl_mawb_no ?? "")
       setVesselName(vesselOrAirline)
@@ -404,17 +411,19 @@ export default function HBLHABWEdit() {
               totalPiecesCount += Number(g.quantity) || 0
             }
 
-            // Total Carton Count: get actual_carton_count from GRN (or GDNs / packing lists)
-            if (g.actual_carton_count != null) {
-              totalCartonCount += Number(g.actual_carton_count) || 0
-            } else if (Array.isArray(g.gdns) && g.gdns.length > 0) {
+            // Total Carton Count: sum of cartoons across GDNs (fallback: packing lists)
+            if (Array.isArray(g.gdns) && g.gdns.length > 0) {
               g.gdns.forEach((gdn: any) => {
-                const c = gdn.actual_cartoons ?? gdn.cartoons
+                const c = gdn.cartoons
                 if (c != null) totalCartonCount += Number(c) || 0
               })
-            } else if (Array.isArray(g.packing_lists) && g.packing_lists.length > 0) {
+            } else if (
+              Array.isArray(g.packing_lists) &&
+              g.packing_lists.length > 0
+            ) {
               g.packing_lists.forEach((pl: any) => {
-                if (pl.total_cartons != null) totalCartonCount += Number(pl.total_cartons) || 0
+                if (pl.total_cartons != null)
+                  totalCartonCount += Number(pl.total_cartons) || 0
               })
             }
 
@@ -427,10 +436,14 @@ export default function HBLHABWEdit() {
                 const v = gdn.actual_gross_volume ?? gdn.gross_volume
                 if (v != null) totalGrossVolume += parseFloat(String(v)) || 0
               })
-            } else if (Array.isArray(g.packing_lists) && g.packing_lists.length > 0) {
+            } else if (
+              Array.isArray(g.packing_lists) &&
+              g.packing_lists.length > 0
+            ) {
               g.packing_lists.forEach((pl: any) => {
                 if (pl.total_gross_weight_kg != null) {
-                  totalGrossWeight += parseFloat(String(pl.total_gross_weight_kg)) || 0
+                  totalGrossWeight +=
+                    parseFloat(String(pl.total_gross_weight_kg)) || 0
                 }
                 const vol = pl.total_cbm ?? pl.total_volume
                 if (vol != null) {
@@ -628,9 +641,9 @@ export default function HBLHABWEdit() {
           >
             {value
               ? (() => {
-                const d = parseDate(value)
-                return d ? format(d, "PPP") : "Pick a date"
-              })()
+                  const d = parseDate(value)
+                  return d ? format(d, "PPP") : "Pick a date"
+                })()
               : "Pick a date"}
             <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
           </Button>
@@ -786,7 +799,7 @@ export default function HBLHABWEdit() {
                   placeholder="Selected shipment MBL / MAWB No"
                   value={mblMawbNo}
                   readOnly={true}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                  className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -930,7 +943,7 @@ export default function HBLHABWEdit() {
                     placeholder="Selected shipment Flight Number"
                     value={voyageNo || vesselName}
                     readOnly={true}
-                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                    className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                   />
                 </div>
 
@@ -946,7 +959,7 @@ export default function HBLHABWEdit() {
                     placeholder="Selected shipment Origin"
                     value={origin}
                     readOnly={true}
-                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                    className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                   />
                 </div>
 
@@ -962,7 +975,7 @@ export default function HBLHABWEdit() {
                     placeholder="Selected shipment Destination"
                     value={destination}
                     readOnly={true}
-                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                    className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                   />
                 </div>
 
@@ -979,19 +992,19 @@ export default function HBLHABWEdit() {
                         id="estimated-time-of-delivery"
                         variant="outline"
                         className={cn(
-                          "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-semibold text-zinc-100 disabled:opacity-100 cursor-default",
+                          "h-9 w-full cursor-default justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-semibold text-zinc-100 disabled:opacity-100",
                           !estimatedTimeOfDelivery && "text-zinc-500"
                         )}
                       >
                         {estimatedTimeOfDelivery
                           ? (() => {
-                            const selectedDate = parseDate(
-                              estimatedTimeOfDelivery
-                            )
-                            return selectedDate
-                              ? format(selectedDate, "PPP")
-                              : estimatedTimeOfDelivery
-                          })()
+                              const selectedDate = parseDate(
+                                estimatedTimeOfDelivery
+                              )
+                              return selectedDate
+                                ? format(selectedDate, "PPP")
+                                : estimatedTimeOfDelivery
+                            })()
                           : "No shipment selected"}
                         <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
@@ -1012,19 +1025,19 @@ export default function HBLHABWEdit() {
                         id="estimated-time-of-arrival"
                         variant="outline"
                         className={cn(
-                          "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-semibold text-zinc-100 disabled:opacity-100 cursor-default",
+                          "h-9 w-full cursor-default justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-semibold text-zinc-100 disabled:opacity-100",
                           !estimatedTimeOfArrival && "text-zinc-500"
                         )}
                       >
                         {estimatedTimeOfArrival
                           ? (() => {
-                            const selectedDate = parseDate(
-                              estimatedTimeOfArrival
-                            )
-                            return selectedDate
-                              ? format(selectedDate, "PPP")
-                              : estimatedTimeOfArrival
-                          })()
+                              const selectedDate = parseDate(
+                                estimatedTimeOfArrival
+                              )
+                              return selectedDate
+                                ? format(selectedDate, "PPP")
+                                : estimatedTimeOfArrival
+                            })()
                           : "No shipment selected"}
                         <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
@@ -1046,7 +1059,7 @@ export default function HBLHABWEdit() {
                     placeholder="Selected shipment Vessel Name"
                     value={vesselName}
                     readOnly={true}
-                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                    className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                   />
                 </div>
 
@@ -1062,7 +1075,7 @@ export default function HBLHABWEdit() {
                     placeholder="Selected shipment Voyage No"
                     value={voyageNo}
                     readOnly={true}
-                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                    className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                   />
                 </div>
 
@@ -1078,7 +1091,7 @@ export default function HBLHABWEdit() {
                     placeholder="Selected shipment Origin Port"
                     value={originPort || origin}
                     readOnly={true}
-                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                    className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                   />
                 </div>
 
@@ -1094,7 +1107,7 @@ export default function HBLHABWEdit() {
                     placeholder="Selected shipment Discharge Port"
                     value={dischargePort || destination}
                     readOnly={true}
-                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                    className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                   />
                 </div>
 
@@ -1110,7 +1123,7 @@ export default function HBLHABWEdit() {
                     placeholder="Selected shipment Final Place of Delivery"
                     value={finalPlaceOfDelivery || destination}
                     readOnly={true}
-                    className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                    className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                   />
                 </div>
 
@@ -1127,19 +1140,19 @@ export default function HBLHABWEdit() {
                         id="estimated-time-of-delivery"
                         variant="outline"
                         className={cn(
-                          "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-semibold text-zinc-100 disabled:opacity-100 cursor-default",
+                          "h-9 w-full cursor-default justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-semibold text-zinc-100 disabled:opacity-100",
                           !estimatedTimeOfDelivery && "text-zinc-500"
                         )}
                       >
                         {estimatedTimeOfDelivery
                           ? (() => {
-                            const selectedDate = parseDate(
-                              estimatedTimeOfDelivery
-                            )
-                            return selectedDate
-                              ? format(selectedDate, "PPP")
-                              : estimatedTimeOfDelivery
-                          })()
+                              const selectedDate = parseDate(
+                                estimatedTimeOfDelivery
+                              )
+                              return selectedDate
+                                ? format(selectedDate, "PPP")
+                                : estimatedTimeOfDelivery
+                            })()
                           : "No shipment selected"}
                         <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
@@ -1166,28 +1179,28 @@ export default function HBLHABWEdit() {
                       >
                         {actualTimeOfDelivery
                           ? (() => {
-                            const parseDate = (
-                              val: string
-                            ): Date | undefined => {
-                              if (!val) return undefined
-                              let d = parse(
-                                val,
-                                "yyyy-MM-dd HH:mm:ss",
-                                new Date()
-                              )
-                              if (isValid(d)) return d
-                              d = parse(val, "yyyy-MM-dd", new Date())
-                              if (isValid(d)) return d
-                              d = new Date(val)
-                              if (isValid(d)) return d
-                              return undefined
-                            }
-                            const selectedDate =
-                              parseDate(actualTimeOfDelivery)
-                            return selectedDate
-                              ? format(selectedDate, "PPP")
-                              : "Pick a date"
-                          })()
+                              const parseDate = (
+                                val: string
+                              ): Date | undefined => {
+                                if (!val) return undefined
+                                let d = parse(
+                                  val,
+                                  "yyyy-MM-dd HH:mm:ss",
+                                  new Date()
+                                )
+                                if (isValid(d)) return d
+                                d = parse(val, "yyyy-MM-dd", new Date())
+                                if (isValid(d)) return d
+                                d = new Date(val)
+                                if (isValid(d)) return d
+                                return undefined
+                              }
+                              const selectedDate =
+                                parseDate(actualTimeOfDelivery)
+                              return selectedDate
+                                ? format(selectedDate, "PPP")
+                                : "Pick a date"
+                            })()
                           : "Pick a date"}
                         <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
@@ -1196,9 +1209,7 @@ export default function HBLHABWEdit() {
                       <Calendar
                         mode="single"
                         selected={(() => {
-                          const parseDate = (
-                            val: string
-                          ): Date | undefined => {
+                          const parseDate = (val: string): Date | undefined => {
                             if (!val) return undefined
                             let d = parse(
                               val,
@@ -1270,7 +1281,7 @@ export default function HBLHABWEdit() {
                 placeholder="Selected shipment Total Carton Count"
                 value={noOfPieces}
                 readOnly={true}
-                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
               />
             </div>
 
@@ -1286,7 +1297,7 @@ export default function HBLHABWEdit() {
                 placeholder="Selected shipment Total Pieces Count"
                 value={totalPiecesCount}
                 readOnly={true}
-                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
               />
             </div>
 
@@ -1302,7 +1313,7 @@ export default function HBLHABWEdit() {
                 placeholder="Selected shipment Total Gross Weight"
                 value={grossWeight}
                 readOnly={true}
-                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
               />
             </div>
 
@@ -1318,7 +1329,7 @@ export default function HBLHABWEdit() {
                 placeholder="Selected shipment Total Volume"
                 value={chargeableWeight || cbm}
                 readOnly={true}
-                className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
               />
             </div>
 
@@ -1384,7 +1395,7 @@ export default function HBLHABWEdit() {
               variant="outline"
               size="sm"
               onClick={addPort}
-              className="h-8 gap-1.5 text-xs border-neutral-300 bg-white text-neutral-900 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700 dark:hover:text-white"
+              className="h-8 gap-1.5 border-neutral-300 bg-white text-xs text-neutral-900 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700 dark:hover:text-white"
             >
               <IconPlus size={13} />
               Add Port
@@ -1416,7 +1427,7 @@ export default function HBLHABWEdit() {
                     size="icon"
                     onClick={() => removePort(port.id)}
                     disabled={ports.length === 1}
-                    className="mb-0.5 h-9 w-9 shrink-0 border-neutral-300 bg-white text-destructive hover:bg-neutral-100 hover:text-red-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-red-400 dark:hover:bg-neutral-700 dark:hover:text-red-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="mb-0.5 h-9 w-9 shrink-0 border-neutral-300 bg-white text-destructive hover:bg-neutral-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30 dark:border-neutral-700 dark:bg-neutral-800 dark:text-red-400 dark:hover:bg-neutral-700 dark:hover:text-red-300"
                   >
                     <IconTrash size={15} />
                   </Button>

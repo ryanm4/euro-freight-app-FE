@@ -264,6 +264,20 @@ export default function GoodsReceiveNoteForm() {
     )
   }, [actualMeasurements])
 
+  const totalActualPackages = useMemo(() => {
+    return actualMeasurements.reduce(
+      (sum: number, row: any) => sum + (Number(row.total) || 0),
+      0
+    )
+  }, [actualMeasurements])
+
+  const totalActualCbm = useMemo(() => {
+    return actualMeasurements.reduce(
+      (sum: number, row: any) => sum + (Number(row.cbm) || 0),
+      0
+    )
+  }, [actualMeasurements])
+
   const updateActualDraftField = (
     field: "length" | "width" | "height" | "total" | "uom",
     value: string
@@ -1165,7 +1179,19 @@ export default function GoodsReceiveNoteForm() {
               </Table>
             </div>
 
-            <div className="flex justify-end border-t border-neutral-800 pt-3">
+            <div className="flex justify-end gap-6 border-t border-neutral-800 pt-3">
+              <div className="text-xs text-zinc-400">
+                Total Packages:{" "}
+                <span className="font-medium text-zinc-100">
+                  {totalActualPackages}
+                </span>
+              </div>
+              <div className="text-xs text-zinc-400">
+                Total CBM:{" "}
+                <span className="font-medium text-zinc-100">
+                  {totalActualCbm.toFixed(4)} m³
+                </span>
+              </div>
               <div className="text-xs text-zinc-400">
                 Total Actual Volume Weight:{" "}
                 <span className="font-medium text-zinc-100">

@@ -161,11 +161,9 @@ export default function HBLHAWBByID() {
             totalPiecesCount += Number(g.quantity) || 0
           }
 
-          if (g.actual_carton_count != null) {
-            totalCartonCount += Number(g.actual_carton_count) || 0
-          } else if (Array.isArray(g.gdns) && g.gdns.length > 0) {
+          if (Array.isArray(g.gdns) && g.gdns.length > 0) {
             g.gdns.forEach((gdn: any) => {
-              const c = gdn.actual_cartoons ?? gdn.cartoons
+              const c = gdn.cartoons
               if (c != null) totalCartonCount += Number(c) || 0
             })
           } else if (

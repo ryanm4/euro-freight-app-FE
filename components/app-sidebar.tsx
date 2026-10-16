@@ -28,6 +28,7 @@ import {
   IconUserCog,
   IconUsers,
   IconUsersGroup,
+  IconSailboat,
 } from "@tabler/icons-react"
 
 // This is sample data.
@@ -75,6 +76,11 @@ const data = {
       icon: <IconFileInvoice />,
     },
     {
+      title: "HBL Dashboard",
+      url: "/hbl-dashboard",
+      icon: <IconSailboat />,
+    },
+    {
       title: "Clients",
       url: "/clients",
       icon: <IconUsers />,
@@ -108,7 +114,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       try {
         const parsedUser = JSON.parse(storedUser)
         setUser({
-          name: parsedUser.full_name || parsedUser.name || parsedUser.username || "Admin User",
+          name:
+            parsedUser.full_name ||
+            parsedUser.name ||
+            parsedUser.username ||
+            "Admin User",
           email: parsedUser.email || "admin@example.com",
           avatar: parsedUser.avatar || "/avatars/admin.jpg",
         })
@@ -120,7 +130,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const navMainWithActiveState = data.navMain.map((item) => ({
     ...item,
-    isActive: pathname === item.url || (item.url !== "/" && pathname.startsWith(item.url)),
+    isActive:
+      pathname === item.url ||
+      (item.url !== "/" && pathname.startsWith(item.url)),
   }))
 
   return (

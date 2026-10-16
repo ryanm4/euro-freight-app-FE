@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { port_codes } from "@/config/enum"
 import { createBillOfLading } from "@/lib/api/bill_of_lading"
 import { fetchClients } from "@/lib/api/clients"
 import { fetchShipments } from "@/lib/api/shipments"
@@ -88,6 +89,33 @@ export default function HBLHABWForm() {
   const [selectedShipmentIds, setSelectedShipmentIds] = useState<Set<number>>(new Set())
 
   const [ports, setPorts] = useState<Port[]>([{ id: 1, value: "" }])
+  const airDestinationOptions = port_codes.filter(
+    (port) => port.type === "AIR"
+  )
+  const seaPortOptions = port_codes.filter((port) => port.type === "SEA")
+  const selectedAirDestination =
+    airDestinationOptions.find(
+      (port) =>
+        port.code.toLowerCase() === destination.trim().toLowerCase() ||
+        port.code
+          .split("-")
+          .slice(1)
+          .join("-")
+          .toLowerCase()
+          .startsWith(destination.trim().toLowerCase())
+    )?.code ?? destination
+  const currentDischargePort = dischargePort || destination
+  const selectedDischargePort =
+    seaPortOptions.find(
+      (port) =>
+        port.code.toLowerCase() === currentDischargePort.trim().toLowerCase() ||
+        port.code
+          .split("-")
+          .slice(1)
+          .join("-")
+          .toLowerCase()
+          .startsWith(currentDischargePort.trim().toLowerCase())
+    )?.code ?? currentDischargePort
 
   // FCL and LCL are both sea freight; AIR is the only air mode.
   const shipmentMode = useMemo(() => {
@@ -809,13 +837,33 @@ export default function HBLHABWForm() {
                     >
                       Destination
                     </Label>
-                    <Input
-                      id="air-destination"
-                      placeholder="Selected shipment Destination"
-                      value={destination}
-                      readOnly={true}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
-                    />
+                    <Select
+                      value={selectedAirDestination}
+                      onValueChange={setDestination}
+                    >
+                      <SelectTrigger
+                        id="air-destination"
+                        className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100"
+                      >
+                        <SelectValue placeholder="Select destination" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                        {destination &&
+                          selectedAirDestination === destination &&
+                          !airDestinationOptions.some(
+                            (port) => port.code === destination
+                          ) && (
+                            <SelectItem value={destination}>
+                              {destination}
+                            </SelectItem>
+                          )}
+                        {airDestinationOptions.map((port) => (
+                          <SelectItem key={port.id} value={port.code}>
+                            {port.code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="flex flex-col gap-1.5">
@@ -941,13 +989,33 @@ export default function HBLHABWForm() {
                     >
                       Discharge Port
                     </Label>
-                    <Input
-                      id="discharge-port"
-                      placeholder="Selected shipment Discharge Port"
-                      value={dischargePort || destination}
-                      readOnly={true}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
-                    />
+                    <Select
+                      value={selectedDischargePort}
+                      onValueChange={setDischargePort}
+                    >
+                      <SelectTrigger
+                        id="discharge-port"
+                        className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100"
+                      >
+                        <SelectValue placeholder="Select discharge port" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                        {currentDischargePort &&
+                          selectedDischargePort === currentDischargePort &&
+                          !seaPortOptions.some(
+                            (port) => port.code === currentDischargePort
+                          ) && (
+                            <SelectItem value={currentDischargePort}>
+                              {currentDischargePort}
+                            </SelectItem>
+                          )}
+                        {seaPortOptions.map((port) => (
+                          <SelectItem key={port.id} value={port.code}>
+                            {port.code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="flex flex-col gap-1.5">

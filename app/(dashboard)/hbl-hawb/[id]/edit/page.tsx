@@ -2,6 +2,17 @@
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -33,6 +44,7 @@ import { useEffect, useMemo, useState } from "react"
 import { fetchShipments } from "@/lib/api/shipments"
 import ShipmentSelectionTable from "../../_components/ShipmentSelectionTable"
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
+import { port_codes } from "@/config/enum"
 
 interface Port {
   id: number
@@ -83,8 +95,16 @@ export default function HBLHABWEdit() {
   const [estimatedTimeOfArrival, setEstimatedTimeOfArrival] = useState("")
   const [origin, setOrigin] = useState("")
   const [destination, setDestination] = useState("")
+  const [isAirDestinationEditable, setIsAirDestinationEditable] =
+    useState(false)
+  const [editAlertOpen, setEditAlertOpen] = useState(false)
+  const [editAlertMessage, setEditAlertMessage] = useState("")
+  const [pendingEditField, setPendingEditField] = useState<
+    "air-destination" | "discharge-port" | null
+  >(null)
   const [originPort, setOriginPort] = useState("")
   const [dischargePort, setDischargePort] = useState("")
+  const [isDischargePortEditable, setIsDischargePortEditable] = useState(false)
   const [finalPlaceOfDelivery, setFinalPlaceOfDelivery] = useState("")
   const [actualTimeOfArrival, setActualTimeOfArrival] = useState("")
   const [actualTimeOfDelivery, setActualTimeOfDelivery] = useState("")
@@ -114,6 +134,31 @@ export default function HBLHABWEdit() {
     new Set()
   )
   const [ports, setPorts] = useState<Port[]>([{ id: 1, value: "" }])
+  const airDestinationOptions = port_codes.filter((port) => port.type === "AIR")
+  const seaPortOptions = port_codes.filter((port) => port.type === "SEA")
+  const selectedAirDestination =
+    airDestinationOptions.find(
+      (port) =>
+        port.code.toLowerCase() === destination.trim().toLowerCase() ||
+        port.code
+          .split("-")
+          .slice(1)
+          .join("-")
+          .toLowerCase()
+          .startsWith(destination.trim().toLowerCase())
+    )?.code ?? destination
+  const currentDischargePort = dischargePort || destination
+  const selectedDischargePort =
+    seaPortOptions.find(
+      (port) =>
+        port.code.toLowerCase() === currentDischargePort.trim().toLowerCase() ||
+        port.code
+          .split("-")
+          .slice(1)
+          .join("-")
+          .toLowerCase()
+          .startsWith(currentDischargePort.trim().toLowerCase())
+    )?.code ?? currentDischargePort
 
   // Populate the form once the HBL/HAWB record loads
   useEffect(() => {
@@ -664,6 +709,35 @@ export default function HBLHABWEdit() {
 
   return (
     <div className="mx-6 space-y-5">
+      <AlertDialog
+        open={editAlertOpen}
+        onOpenChange={(open) => {
+          setEditAlertOpen(open)
+          if (!open) setPendingEditField(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>You are editing</AlertDialogTitle>
+            <AlertDialogDescription>{editAlertMessage}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingEditField === "air-destination") {
+                  setIsAirDestinationEditable(true)
+                } else if (pendingEditField === "discharge-port") {
+                  setIsDischargePortEditable(true)
+                }
+                setPendingEditField(null)
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="mt-3">
         <PageTitleWithBreadcrumb
           // title={`HBL/HAWB-${id}`}
@@ -970,13 +1044,57 @@ export default function HBLHABWEdit() {
                   >
                     Destination
                   </Label>
-                  <Input
-                    id="air-destination"
-                    placeholder="Selected shipment Destination"
-                    value={destination}
-                    readOnly={true}
-                    className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
-                  />
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="edit-air-destination"
+                      checked={isAirDestinationEditable}
+                      onCheckedChange={(checked) => {
+                        if (checked === true) {
+                          setPendingEditField("air-destination")
+                          setEditAlertMessage(
+                            "You are editing the destination. Select an AIR port from the list."
+                          )
+                          setEditAlertOpen(true)
+                        } else {
+                          setIsAirDestinationEditable(false)
+                        }
+                      }}
+                    />
+                    <Label
+                      htmlFor="edit-air-destination"
+                      className="text-xs font-normal"
+                    >
+                      Edit Destination
+                    </Label>
+                  </div>
+                  <Select
+                    value={selectedAirDestination}
+                    onValueChange={setDestination}
+                    disabled={!isAirDestinationEditable}
+                  >
+                    <SelectTrigger
+                      id="air-destination"
+                      className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100"
+                    >
+                      <SelectValue placeholder="Select destination" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                      {destination &&
+                        selectedAirDestination === destination &&
+                        !airDestinationOptions.some(
+                          (port) => port.code === destination
+                        ) && (
+                          <SelectItem value={destination}>
+                            {destination}
+                          </SelectItem>
+                        )}
+                      {airDestinationOptions.map((port) => (
+                        <SelectItem key={port.id} value={port.code}>
+                          {port.code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
@@ -1102,13 +1220,57 @@ export default function HBLHABWEdit() {
                   >
                     Discharge Port
                   </Label>
-                  <Input
-                    id="discharge-port"
-                    placeholder="Selected shipment Discharge Port"
-                    value={dischargePort || destination}
-                    readOnly={true}
-                    className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
-                  />
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="edit-discharge-port"
+                      checked={isDischargePortEditable}
+                      onCheckedChange={(checked) => {
+                        if (checked === true) {
+                          setPendingEditField("discharge-port")
+                          setEditAlertMessage(
+                            "You are editing the discharge port. Select a SEA port from the list."
+                          )
+                          setEditAlertOpen(true)
+                        } else {
+                          setIsDischargePortEditable(false)
+                        }
+                      }}
+                    />
+                    <Label
+                      htmlFor="edit-discharge-port"
+                      className="text-xs font-normal"
+                    >
+                      Edit Discharge Port
+                    </Label>
+                  </div>
+                  <Select
+                    value={selectedDischargePort}
+                    onValueChange={setDischargePort}
+                    disabled={!isDischargePortEditable}
+                  >
+                    <SelectTrigger
+                      id="discharge-port"
+                      className="h-9 w-full rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100"
+                    >
+                      <SelectValue placeholder="Select discharge port" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
+                      {currentDischargePort &&
+                        selectedDischargePort === currentDischargePort &&
+                        !seaPortOptions.some(
+                          (port) => port.code === currentDischargePort
+                        ) && (
+                          <SelectItem value={currentDischargePort}>
+                            {currentDischargePort}
+                          </SelectItem>
+                        )}
+                      {seaPortOptions.map((port) => (
+                        <SelectItem key={port.id} value={port.code}>
+                          {port.code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="flex flex-col gap-1.5">

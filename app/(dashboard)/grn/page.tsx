@@ -2,6 +2,7 @@
 
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
+import { getUserType } from "@/hooks/common-hooks"
 import { fetchGRNs } from "@/lib/api/goods_receive_notes"
 import { GOODS_RECEIVE_NOTE } from "@/modules/grn/types"
 import { IconPlus } from "@tabler/icons-react"
@@ -14,14 +15,16 @@ import { DataTable } from "./_components/grn-table"
 export default function GRNPage() {
   const router = useRouter()
   const [searchValue, setSearchValue] = useState("")
+  const userType = getUserType()
+  const shippingMode = userType === "admin" ? undefined : userType
 
   const {
     data,
     isLoading,
     // error,
   } = useQuery({
-    queryKey: ["grns"],
-    queryFn: () => fetchGRNs(),
+    queryKey: ["grns", shippingMode],
+    queryFn: () => fetchGRNs(undefined, shippingMode),
   })
 
   const actions = {

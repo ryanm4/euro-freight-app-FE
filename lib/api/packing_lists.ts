@@ -1,7 +1,9 @@
-export async function fetchPackingLists(status?: string) {
-  const url = status
-    ? `/api/packing_lists?status=${encodeURIComponent(status)}`
-    : "/api/packing_lists"
+export async function fetchPackingLists(status?: string,type?: string) {
+  const searchParams = new URLSearchParams()
+  if (status) searchParams.set("status", status)
+  if (type) searchParams.set("type", type)
+  const query = searchParams.toString()
+  const url = query ? `/api/packing_lists?${query}` : "/api/packing_lists"
 
   const res = await fetch(url)
   if (!res.ok) throw new Error("Failed to fetch packing lists")

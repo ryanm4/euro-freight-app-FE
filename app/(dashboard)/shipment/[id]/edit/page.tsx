@@ -22,6 +22,7 @@ import {
 import { toast } from "sonner"
 import { SHIPMENT } from "@/modules/shipment/types"
 import GRNTable from "../../_components/GRNTable"
+import { getUserType } from "@/hooks/common-hooks"
 
 type Mode = "" | "AIR" | "SEA"
 
@@ -41,6 +42,7 @@ const inferMode = (shipment: SHIPMENT): Mode => {
 }
 
 export default function ShipmentEdit() {
+  const userType = getUserType()
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
 
@@ -128,7 +130,9 @@ export default function ShipmentEdit() {
         ...linkedIds,
         ...((shipment as any).grn_ids ?? []).map((gId: number) => Number(gId)),
         ...((shipment as any).hbl_ids ?? []).map((hId: number) => Number(hId)),
-      ].filter((gId, index, ids) => Number.isFinite(gId) && ids.indexOf(gId) === index)
+      ].filter(
+        (gId, index, ids) => Number.isFinite(gId) && ids.indexOf(gId) === index
+      )
 
       setSelectedGRNIds(new Set(existingIds))
     }
@@ -151,7 +155,10 @@ export default function ShipmentEdit() {
 
   const linkedGRNs = useMemo(() => {
     const shipment = res?.data as any
-    const rawLinked = (shipment?.grns ?? shipment?.grn_details ?? shipment?.hbls ?? []) as any[]
+    const rawLinked = (shipment?.grns ??
+      shipment?.grn_details ??
+      shipment?.hbls ??
+      []) as any[]
     return rawLinked.map((item: any) => {
       const fullGRN = allGRNs.find((g: any) => Number(g.id) === Number(item.id))
       return fullGRN ? { ...item, ...fullGRN } : item
@@ -187,7 +194,11 @@ export default function ShipmentEdit() {
   const grns = useMemo(() => {
     const merged = [...linkedGRNs]
     availableGRNs.forEach((grn: any) => {
-      if (!merged.some((linkedGrn: any) => Number(linkedGrn.id) === Number(grn.id))) {
+      if (
+        !merged.some(
+          (linkedGrn: any) => Number(linkedGrn.id) === Number(grn.id)
+        )
+      ) {
         merged.push(grn)
       }
     })
@@ -203,7 +214,7 @@ export default function ShipmentEdit() {
     const selectedGrns = grns.filter((g: any) => selectedGRNIds.has(g.id))
     const shipTos: string[] = []
     selectedGrns.forEach((g: any) => {
-      (g.packing_lists ?? []).forEach((pl: any) => {
+      ;(g.packing_lists ?? []).forEach((pl: any) => {
         if (pl.ship_to && !shipTos.includes(pl.ship_to)) {
           shipTos.push(pl.ship_to)
         }
@@ -242,7 +253,7 @@ export default function ShipmentEdit() {
       const selectedGrns = grns.filter((g: any) => prev.has(g.id))
       const activeShipTos: string[] = []
       selectedGrns.forEach((g: any) => {
-        (g.packing_lists ?? []).forEach((pl: any) => {
+        ;(g.packing_lists ?? []).forEach((pl: any) => {
           if (
             pl.ship_to &&
             pl.ship_to.trim() &&
@@ -303,44 +314,44 @@ export default function ShipmentEdit() {
       const payload =
         mode === "AIR"
           ? {
-            ...basePayload,
-            vessel_name: null,
-            voyage_number: null,
-            origin_port: null,
-            discharge_port: null,
-            final_place_of_delivery: null,
-            etd_colombo: null,
-            eta_discharge_port: null,
-            eta_final_delivery_place: null,
-            container_number: null,
-            container_size: null,
-            final_seal_no: null,
-            flight_number: formData.flight_number || null,
-            origin: formData.origin || null,
-            destination: formData.destination || null,
-            etd_origin: formData.etd_origin || null,
-            eta_destination: formData.eta_destination || null,
-          }
+              ...basePayload,
+              vessel_name: null,
+              voyage_number: null,
+              origin_port: null,
+              discharge_port: null,
+              final_place_of_delivery: null,
+              etd_colombo: null,
+              eta_discharge_port: null,
+              eta_final_delivery_place: null,
+              container_number: null,
+              container_size: null,
+              final_seal_no: null,
+              flight_number: formData.flight_number || null,
+              origin: formData.origin || null,
+              destination: formData.destination || null,
+              etd_origin: formData.etd_origin || null,
+              eta_destination: formData.eta_destination || null,
+            }
           : {
-            ...basePayload,
-            vessel_name: formData.vessel_name || null,
-            voyage_number: formData.voyage_number || null,
-            origin_port: formData.origin_port || null,
-            discharge_port: formData.discharge_port || null,
-            final_place_of_delivery: formData.final_place_of_delivery || null,
-            etd_colombo: formData.etd_colombo || null,
-            eta_discharge_port: formData.eta_discharge_port || null,
-            eta_final_delivery_place:
-              formData.eta_final_delivery_place || null,
-            container_number: formData.container_number || null,
-            container_size: formData.container_size || null,
-            final_seal_no: formData.final_seal_no || null,
-            flight_number: null,
-            origin: null,
-            destination: null,
-            etd_origin: null,
-            eta_destination: null,
-          }
+              ...basePayload,
+              vessel_name: formData.vessel_name || null,
+              voyage_number: formData.voyage_number || null,
+              origin_port: formData.origin_port || null,
+              discharge_port: formData.discharge_port || null,
+              final_place_of_delivery: formData.final_place_of_delivery || null,
+              etd_colombo: formData.etd_colombo || null,
+              eta_discharge_port: formData.eta_discharge_port || null,
+              eta_final_delivery_place:
+                formData.eta_final_delivery_place || null,
+              container_number: formData.container_number || null,
+              container_size: formData.container_size || null,
+              final_seal_no: formData.final_seal_no || null,
+              flight_number: null,
+              origin: null,
+              destination: null,
+              etd_origin: null,
+              eta_destination: null,
+            }
 
       await updateShipment(id, payload)
       router.push(`/shipment`)
@@ -380,7 +391,7 @@ export default function ShipmentEdit() {
         ]}
       />
 
-      <div className="mx-auto space-y-5 w-full">
+      <div className="mx-auto w-full space-y-5">
         <div className="flex justify-end gap-3">
           <Button
             variant="outline"
@@ -427,8 +438,12 @@ export default function ShipmentEdit() {
                       <SelectValue placeholder="Select mode" />
                     </SelectTrigger>
                     <SelectContent className="border-zinc-700 bg-[#0A0A0A] text-zinc-100">
-                      <SelectItem value="SEA">Sea</SelectItem>
-                      <SelectItem value="AIR">Air</SelectItem>
+                      <SelectItem value="SEA" disabled={userType === "air"}>
+                        Sea
+                      </SelectItem>
+                      <SelectItem value="AIR" disabled={userType === "sea"}>
+                        Air
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -552,7 +567,7 @@ export default function ShipmentEdit() {
                     id="destination"
                     placeholder="Destination"
                     value={formData.destination}
-                    className={`${inputClass} cursor-not-allowed font-medium text-zinc-100 opacity-100 bg-[#0A0A0A] border-zinc-700`}
+                    className={`${inputClass} cursor-not-allowed border-zinc-700 bg-[#0A0A0A] font-medium text-zinc-100 opacity-100`}
                     readOnly
                   />
                 </div>
@@ -706,7 +721,7 @@ export default function ShipmentEdit() {
                     id="final-place-of-delivery"
                     placeholder="Destination"
                     value={formData.final_place_of_delivery}
-                    className={`${inputClass} cursor-not-allowed font-medium text-zinc-100 opacity-100 bg-[#0A0A0A] border-zinc-700`}
+                    className={`${inputClass} cursor-not-allowed border-zinc-700 bg-[#0A0A0A] font-medium text-zinc-100 opacity-100`}
                     readOnly
                   />
                 </div>

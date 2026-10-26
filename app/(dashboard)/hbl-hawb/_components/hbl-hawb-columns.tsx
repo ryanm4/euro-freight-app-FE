@@ -7,6 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { getUserType, isClientUser } from "@/hooks/common-hooks"
 import { HBL_HAWB } from "@/modules/hbl-hawb/types"
 import {
   IconArrowsSort,
@@ -29,6 +30,8 @@ export const hblHawbColumns = (
   options?: { canModify?: boolean }
 ): ColumnDef<HBL_HAWB>[] => {
   const canModify = options?.canModify ?? true
+  const userType = getUserType()
+  const isClient = isClientUser()
 
   const formatDate = (date?: string | null) =>
     date ? format(new Date(date), "dd/MMM/yy") : "N/A"
@@ -232,7 +235,17 @@ export const hblHawbColumns = (
         const statusLower = row.original.status?.trim().toLowerCase() ?? ""
         const isCompleted =
           statusLower === "completed" || statusLower === "completed_hbl"
-        const canModifyRow = canModify && !isCompleted
+        const recordType = row.original.type?.trim().toLowerCase()
+        const isDifferentShippingType =
+          (userType === "sea" && recordType === "air") ||
+          (userType === "air" && recordType === "sea")
+        const canModifyRow =
+          canModify && !isClient && !isCompleted && !isDifferentShippingType
+        const disabledReason = isClient
+          ? "Editing disabled for client users"
+          : isCompleted
+            ? "Editing disabled for completed records"
+            : "Editing disabled for records of another shipping type"
 
         return (
           <div className="flex items-center gap-1">
@@ -267,7 +280,7 @@ export const hblHawbColumns = (
                   <TooltipContent>
                     {canModifyRow
                       ? "Edit"
-                      : "Editing disabled for completed records"}
+                      : disabledReason}
                   </TooltipContent>
                 </Tooltip>
 
@@ -286,7 +299,7 @@ export const hblHawbColumns = (
                   <TooltipContent>
                     {canModifyRow
                       ? "Delete"
-                      : "Deleting disabled for completed records"}
+                      : disabledReason.replace("Editing", "Deleting")}
                   </TooltipContent>
                 </Tooltip>
               </>

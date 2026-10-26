@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { getUserType } from "@/hooks/common-hooks"
 import {
   Select,
   SelectContent,
@@ -20,6 +21,7 @@ import GRNTable from "./GRNTable"
 
 export default function ShipmentForm() {
   const router = useRouter()
+  const userType = getUserType()
 
   const [mode, setMode] = useState("") // "AIR" | "SEA"
   const [status, setStatus] = useState("draft")
@@ -290,8 +292,12 @@ export default function ShipmentForm() {
                     <SelectValue placeholder="Select mode" />
                   </SelectTrigger>
                   <SelectContent className="border-zinc-700 bg-[#0A0A0A] text-zinc-100">
-                    <SelectItem value="SEA">Sea</SelectItem>
-                    <SelectItem value="AIR">Air</SelectItem>
+                    <SelectItem value="SEA" disabled={userType === "air"}>
+                      Sea
+                    </SelectItem>
+                    <SelectItem value="AIR" disabled={userType === "sea"}>
+                      Air
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>

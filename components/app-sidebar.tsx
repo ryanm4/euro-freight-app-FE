@@ -103,32 +103,69 @@ const data = {
   ],
 }
 
+function subscribeToStoredUser(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange)
+  return () => window.removeEventListener("storage", onStoreChange)
+}
+
+function getStoredUserSnapshot() {
+  return sessionStorage.getItem("user")
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const storedUser = React.useSyncExternalStore(
+    subscribeToStoredUser,
+    getStoredUserSnapshot,
+    () => null
+  )
+  const parsedUser = React.useMemo(() => {
+    if (!storedUser) return null
 
-  const [user, setUser] = React.useState(data.user)
-
-  React.useEffect(() => {
-    const storedUser = sessionStorage.getItem("user")
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser)
-        setUser({
-          name:
-            parsedUser.full_name ||
-            parsedUser.name ||
-            parsedUser.username ||
-            "Admin User",
-          email: parsedUser.email || "admin@example.com",
-          avatar: parsedUser.avatar || "/avatars/admin.jpg",
-        })
-      } catch (e) {
-        console.error("Failed to parse user from session storage")
-      }
+    try {
+      const user: unknown = JSON.parse(storedUser)
+      return typeof user === "object" && user !== null
+        ? (user as Record<string, unknown>)
+        : null
+    } catch {
+      console.error("Failed to parse user from session storage")
+      return null
     }
-  }, [])
+  }, [storedUser])
 
-  const navMainWithActiveState = data.navMain.map((item) => ({
+  const groups = parsedUser?.groups
+  const isClientUser =
+    Array.isArray(groups) &&
+    groups.some(
+      (group: unknown) =>
+        typeof group === "object" &&
+        group !== null &&
+        "group_name" in group &&
+        typeof group.group_name === "string" &&
+        group.group_name.trim().toLowerCase() === "client"
+    )
+  const user = {
+    name:
+      (typeof parsedUser?.full_name === "string" && parsedUser.full_name) ||
+      (typeof parsedUser?.name === "string" && parsedUser.name) ||
+      (typeof parsedUser?.username === "string" && parsedUser.username) ||
+      data.user.name,
+    email:
+      (typeof parsedUser?.email === "string" && parsedUser.email) ||
+      data.user.email,
+    avatar:
+      (typeof parsedUser?.avatar === "string" && parsedUser.avatar) ||
+      data.user.avatar,
+  }
+
+  const visibleNavItems = isClientUser
+    ? data.navMain.filter(
+        (item) =>
+          item.url === "/hbl-hawb" || item.url === "/hbl-dashboard"
+      )
+    : data.navMain
+
+  const navMainWithActiveState = visibleNavItems.map((item) => ({
     ...item,
     isActive:
       pathname === item.url ||

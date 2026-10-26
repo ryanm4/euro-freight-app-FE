@@ -66,6 +66,7 @@ import {
 } from "@/lib/api/goods_dispatch_notes"
 import { fetchPackingLists } from "@/lib/api/packing_lists"
 import { fetchWharfStaff } from "@/lib/api/wharf_staff"
+import { getUserType } from "@/hooks/common-hooks"
 import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
 import { IconCalendarFilled, IconTrash } from "@tabler/icons-react"
@@ -120,6 +121,8 @@ const findOptionValueByName = (
 export default function GDNEdit() {
   const router = useRouter()
   const { id } = useParams<{ id: string }>()
+  const userType = getUserType()
+  const packingListType = userType === "admin" ? undefined : userType
   const [isSaving, setIsSaving] = useState(false)
   const [hasHydrated, setHasHydrated] = useState(false)
 
@@ -176,8 +179,8 @@ export default function GDNEdit() {
   })
 
   const { data: packingLists } = useQuery({
-    queryKey: ["packingLists", "completed"],
-    queryFn: () => fetchPackingLists("completed"),
+    queryKey: ["packingLists", "completed", packingListType],
+    queryFn: () => fetchPackingLists("completed", packingListType),
   })
 
   const { data: driversData } = useQuery({
@@ -916,7 +919,16 @@ export default function GDNEdit() {
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
                     {DISPATCH_LOCATION_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
+                      <SelectItem
+                        key={opt.value}
+                        value={opt.value}
+                        disabled={
+                          (userType === "sea" &&
+                            opt.value === "Katunayaka Airport") ||
+                          (userType === "air" &&
+                            opt.value !== "Katunayaka Airport")
+                        }
+                      >
                         {opt.label}
                       </SelectItem>
                     ))}

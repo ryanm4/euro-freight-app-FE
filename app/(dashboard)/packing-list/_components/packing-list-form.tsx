@@ -48,6 +48,7 @@ import { fetchClients } from "@/lib/api/clients"
 import { SHIPPING_MODE_OPTIONS } from "@/lib/constants"
 import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
+import { getUserType } from "@/hooks/common-hooks"
 import { CLIENT_LIST } from "@/modules/clients/types"
 import { packingListSchema } from "@/modules/packing-list/validation"
 import { PackingListStatus } from "@/modules/packing-list/types"
@@ -122,6 +123,7 @@ export default function PackingListForm({
   packingListId,
 }: PackingListFormProps) {
   const router = useRouter()
+  const userType = getUserType()
   const [uploadedData, setUploadedData] =
     useState<UploadedPackingListData | null>(initialUploadedData || null)
   const [isUploading, setIsUploading] = useState(false)
@@ -748,7 +750,14 @@ export default function PackingListForm({
                       </SelectTrigger>
                       <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
                         {SHIPPING_MODE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
+                          <SelectItem
+                            key={opt.value}
+                            value={opt.value}
+                            disabled={
+                              (userType === "sea" && opt.value === "AIR") ||
+                              (userType === "air" && opt.value !== "AIR")
+                            }
+                          >
                             {opt.label}
                           </SelectItem>
                         ))}

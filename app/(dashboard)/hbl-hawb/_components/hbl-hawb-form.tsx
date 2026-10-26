@@ -27,6 +27,7 @@ import { format, isValid, parse } from "date-fns"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import ShipmentSelectionTable from "./ShipmentSelectionTable"
+import { getUserType } from "@/hooks/common-hooks"
 
 interface Port {
   id: number
@@ -45,6 +46,7 @@ const parseDate = (val: string): Date | undefined => {
 }
 
 export default function HBLHABWForm() {
+  const userType = getUserType()
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
 
@@ -86,12 +88,12 @@ export default function HBLHABWForm() {
   const [notifyId, setNotifyId] = useState("")
 
   const [selectedGrnIds, setSelectedGrnIds] = useState<Set<number>>(new Set())
-  const [selectedShipmentIds, setSelectedShipmentIds] = useState<Set<number>>(new Set())
+  const [selectedShipmentIds, setSelectedShipmentIds] = useState<Set<number>>(
+    new Set()
+  )
 
   const [ports, setPorts] = useState<Port[]>([{ id: 1, value: "" }])
-  const airDestinationOptions = port_codes.filter(
-    (port) => port.type === "AIR"
-  )
+  const airDestinationOptions = port_codes.filter((port) => port.type === "AIR")
   const seaPortOptions = port_codes.filter((port) => port.type === "SEA")
   const selectedAirDestination =
     airDestinationOptions.find(
@@ -134,7 +136,7 @@ export default function HBLHABWForm() {
 
   const { data: shipmentsData } = useQuery({
     queryKey: ["shipments"],
-    queryFn: fetchShipments,
+    queryFn: () => fetchShipments(),
   })
 
   const plannedShipments = useMemo(() => {
@@ -215,12 +217,17 @@ export default function HBLHABWForm() {
       const vesselOrAirline = s.vessel_name ?? s.airline_shipping_line ?? ""
       const voyageOrFlight = s.voyage_number ?? s.flight_number ?? ""
       const orig = s.origin ?? s.origin_port ?? ""
-      const dest = s.destination ?? s.discharge_port ?? s.final_place_of_delivery ?? ""
+      const dest =
+        s.destination ?? s.discharge_port ?? s.final_place_of_delivery ?? ""
       const origPort = s.origin_port ?? s.origin ?? ""
       const dischPort = s.discharge_port ?? s.destination ?? ""
       const finalDeliv = s.final_place_of_delivery ?? s.destination ?? ""
       const etdVal = s.etd_colombo ?? s.etd_origin ?? ""
-      const etaVal = s.eta_discharge_port ?? s.eta_destination ?? s.eta_final_delivery_place ?? ""
+      const etaVal =
+        s.eta_discharge_port ??
+        s.eta_destination ??
+        s.eta_final_delivery_place ??
+        ""
 
       setMblMawbNo(s.mbl_mawb_no ?? "")
       setVesselName(vesselOrAirline)
@@ -261,9 +268,13 @@ export default function HBLHABWForm() {
                 const c = gdn.actual_cartoons ?? gdn.cartoons
                 if (c != null) totalCartonCount += Number(c) || 0
               })
-            } else if (Array.isArray(g.packing_lists) && g.packing_lists.length > 0) {
+            } else if (
+              Array.isArray(g.packing_lists) &&
+              g.packing_lists.length > 0
+            ) {
               g.packing_lists.forEach((pl: any) => {
-                if (pl.total_cartons != null) totalCartonCount += Number(pl.total_cartons) || 0
+                if (pl.total_cartons != null)
+                  totalCartonCount += Number(pl.total_cartons) || 0
               })
             }
 
@@ -276,10 +287,14 @@ export default function HBLHABWForm() {
                 const v = gdn.actual_gross_volume ?? gdn.gross_volume
                 if (v != null) totalGrossVolume += parseFloat(String(v)) || 0
               })
-            } else if (Array.isArray(g.packing_lists) && g.packing_lists.length > 0) {
+            } else if (
+              Array.isArray(g.packing_lists) &&
+              g.packing_lists.length > 0
+            ) {
               g.packing_lists.forEach((pl: any) => {
                 if (pl.total_gross_weight_kg != null) {
-                  totalGrossWeight += parseFloat(String(pl.total_gross_weight_kg)) || 0
+                  totalGrossWeight +=
+                    parseFloat(String(pl.total_gross_weight_kg)) || 0
                 }
                 const vol = pl.total_cbm ?? pl.total_volume
                 if (vol != null) {
@@ -518,27 +533,27 @@ export default function HBLHABWForm() {
                     >
                       {date
                         ? (() => {
-                          const parseDate = (
-                            val: string
-                          ): Date | undefined => {
-                            if (!val) return undefined
-                            let d = parse(
-                              val,
-                              "yyyy-MM-dd HH:mm:ss",
-                              new Date()
-                            )
-                            if (isValid(d)) return d
-                            d = parse(val, "yyyy-MM-dd", new Date())
-                            if (isValid(d)) return d
-                            d = new Date(val)
-                            if (isValid(d)) return d
-                            return undefined
-                          }
-                          const selectedDate = parseDate(date)
-                          return selectedDate
-                            ? format(selectedDate, "PPP")
-                            : "Pick a date"
-                        })()
+                            const parseDate = (
+                              val: string
+                            ): Date | undefined => {
+                              if (!val) return undefined
+                              let d = parse(
+                                val,
+                                "yyyy-MM-dd HH:mm:ss",
+                                new Date()
+                              )
+                              if (isValid(d)) return d
+                              d = parse(val, "yyyy-MM-dd", new Date())
+                              if (isValid(d)) return d
+                              d = new Date(val)
+                              if (isValid(d)) return d
+                              return undefined
+                            }
+                            const selectedDate = parseDate(date)
+                            return selectedDate
+                              ? format(selectedDate, "PPP")
+                              : "Pick a date"
+                          })()
                         : "Pick a date"}
                       <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
@@ -580,8 +595,12 @@ export default function HBLHABWForm() {
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
                     {/* <SelectItem value="FCL">FCL</SelectItem> */}
-                    <SelectItem value="SEA">Sea</SelectItem>
-                    <SelectItem value="AIR">Air</SelectItem>
+                    <SelectItem value="SEA" disabled={userType === "air"}>
+                      Sea
+                    </SelectItem>
+                    <SelectItem value="AIR" disabled={userType === "sea"}>
+                      Air
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -665,7 +684,7 @@ export default function HBLHABWForm() {
                   placeholder="Selected shipment MBL / MAWB No"
                   value={mblMawbNo}
                   readOnly={true}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                  className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -810,7 +829,7 @@ export default function HBLHABWForm() {
                       placeholder="Selected shipment Flight Number"
                       value={voyageNo || vesselName}
                       readOnly={true}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                      className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                     />
                   </div>
 
@@ -826,7 +845,7 @@ export default function HBLHABWForm() {
                       placeholder="Selected shipment Origin"
                       value={origin}
                       readOnly={true}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                      className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                     />
                   </div>
 
@@ -879,19 +898,19 @@ export default function HBLHABWForm() {
                           id="estimated-time-of-delivery"
                           variant="outline"
                           className={cn(
-                            "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-semibold text-zinc-100 disabled:opacity-100 cursor-default",
+                            "h-9 w-full cursor-default justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-semibold text-zinc-100 disabled:opacity-100",
                             !estimatedTimeOfDelivery && "text-zinc-500"
                           )}
                         >
                           {estimatedTimeOfDelivery
                             ? (() => {
-                              const selectedDate = parseDate(
-                                estimatedTimeOfDelivery
-                              )
-                              return selectedDate
-                                ? format(selectedDate, "PPP")
-                                : estimatedTimeOfDelivery
-                            })()
+                                const selectedDate = parseDate(
+                                  estimatedTimeOfDelivery
+                                )
+                                return selectedDate
+                                  ? format(selectedDate, "PPP")
+                                  : estimatedTimeOfDelivery
+                              })()
                             : "No shipment selected"}
                           <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -912,19 +931,19 @@ export default function HBLHABWForm() {
                           id="estimated-time-of-arrival"
                           variant="outline"
                           className={cn(
-                            "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-semibold text-zinc-100 disabled:opacity-100 cursor-default",
+                            "h-9 w-full cursor-default justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-semibold text-zinc-100 disabled:opacity-100",
                             !estimatedTimeOfArrival && "text-zinc-500"
                           )}
                         >
                           {estimatedTimeOfArrival
                             ? (() => {
-                              const selectedDate = parseDate(
-                                estimatedTimeOfArrival
-                              )
-                              return selectedDate
-                                ? format(selectedDate, "PPP")
-                                : estimatedTimeOfArrival
-                            })()
+                                const selectedDate = parseDate(
+                                  estimatedTimeOfArrival
+                                )
+                                return selectedDate
+                                  ? format(selectedDate, "PPP")
+                                  : estimatedTimeOfArrival
+                              })()
                             : "No shipment selected"}
                           <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -946,7 +965,7 @@ export default function HBLHABWForm() {
                       placeholder="Selected shipment Vessel Name"
                       value={vesselName}
                       readOnly={true}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                      className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                     />
                   </div>
 
@@ -962,7 +981,7 @@ export default function HBLHABWForm() {
                       placeholder="Selected shipment Voyage No"
                       value={voyageNo}
                       readOnly={true}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                      className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                     />
                   </div>
 
@@ -978,7 +997,7 @@ export default function HBLHABWForm() {
                       placeholder="Selected shipment Origin Port"
                       value={originPort || origin}
                       readOnly={true}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                      className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                     />
                   </div>
 
@@ -1030,7 +1049,7 @@ export default function HBLHABWForm() {
                       placeholder="Selected shipment Final Place of Delivery"
                       value={finalPlaceOfDelivery || destination}
                       readOnly={true}
-                      className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                      className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                     />
                   </div>
 
@@ -1047,19 +1066,19 @@ export default function HBLHABWForm() {
                           id="estimated-time-of-delivery"
                           variant="outline"
                           className={cn(
-                            "h-9 w-full justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-semibold text-zinc-100 disabled:opacity-100 cursor-default",
+                            "h-9 w-full cursor-default justify-start rounded-md border-neutral-700 bg-[#0A0A0A] pl-3 text-left text-sm font-semibold text-zinc-100 disabled:opacity-100",
                             !estimatedTimeOfDelivery && "text-zinc-500"
                           )}
                         >
                           {estimatedTimeOfDelivery
                             ? (() => {
-                              const selectedDate = parseDate(
-                                estimatedTimeOfDelivery
-                              )
-                              return selectedDate
-                                ? format(selectedDate, "PPP")
-                                : estimatedTimeOfDelivery
-                            })()
+                                const selectedDate = parseDate(
+                                  estimatedTimeOfDelivery
+                                )
+                                return selectedDate
+                                  ? format(selectedDate, "PPP")
+                                  : estimatedTimeOfDelivery
+                              })()
                             : "No shipment selected"}
                           <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -1086,28 +1105,28 @@ export default function HBLHABWForm() {
                         >
                           {actualTimeOfDelivery
                             ? (() => {
-                              const parseDate = (
-                                val: string
-                              ): Date | undefined => {
-                                if (!val) return undefined
-                                let d = parse(
-                                  val,
-                                  "yyyy-MM-dd HH:mm:ss",
-                                  new Date()
-                                )
-                                if (isValid(d)) return d
-                                d = parse(val, "yyyy-MM-dd", new Date())
-                                if (isValid(d)) return d
-                                d = new Date(val)
-                                if (isValid(d)) return d
-                                return undefined
-                              }
-                              const selectedDate =
-                                parseDate(actualTimeOfDelivery)
-                              return selectedDate
-                                ? format(selectedDate, "PPP")
-                                : "Pick a date"
-                            })()
+                                const parseDate = (
+                                  val: string
+                                ): Date | undefined => {
+                                  if (!val) return undefined
+                                  let d = parse(
+                                    val,
+                                    "yyyy-MM-dd HH:mm:ss",
+                                    new Date()
+                                  )
+                                  if (isValid(d)) return d
+                                  d = parse(val, "yyyy-MM-dd", new Date())
+                                  if (isValid(d)) return d
+                                  d = new Date(val)
+                                  if (isValid(d)) return d
+                                  return undefined
+                                }
+                                const selectedDate =
+                                  parseDate(actualTimeOfDelivery)
+                                return selectedDate
+                                  ? format(selectedDate, "PPP")
+                                  : "Pick a date"
+                              })()
                             : "Pick a date"}
                           <IconCalendarFilled className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -1298,7 +1317,7 @@ export default function HBLHABWForm() {
                   placeholder=" Total Carton Count"
                   value={noOfPieces}
                   readOnly={true}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                  className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                 />
               </div>
 
@@ -1314,7 +1333,7 @@ export default function HBLHABWForm() {
                   placeholder=" Total Pieces Count"
                   value={totalPiecesCount}
                   readOnly={true}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                  className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                 />
               </div>
 
@@ -1330,7 +1349,7 @@ export default function HBLHABWForm() {
                   placeholder="Total Gross Weight"
                   value={grossWeight}
                   readOnly={true}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                  className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                 />
               </div>
 
@@ -1346,7 +1365,7 @@ export default function HBLHABWForm() {
                   placeholder=" Total Volume"
                   value={chargeableWeight || cbm}
                   readOnly={true}
-                  className="h-9 rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none cursor-default opacity-100 disabled:opacity-100"
+                  className="h-9 cursor-default rounded-md border-zinc-700 bg-[#0A0A0A] text-sm font-semibold text-zinc-100 opacity-100 placeholder:text-zinc-500 focus-visible:outline-none disabled:opacity-100"
                 />
               </div>
 
@@ -1501,7 +1520,7 @@ export default function HBLHABWForm() {
               variant="outline"
               size="sm"
               onClick={addPort}
-              className="h-8 gap-1.5 text-xs border-neutral-300 bg-white text-neutral-900 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700 dark:hover:text-white"
+              className="h-8 gap-1.5 border-neutral-300 bg-white text-xs text-neutral-900 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700 dark:hover:text-white"
             >
               <IconPlus size={13} />
               Add Port
@@ -1533,7 +1552,7 @@ export default function HBLHABWForm() {
                     size="icon"
                     onClick={() => removePort(port.id)}
                     disabled={ports.length === 1}
-                    className="mb-0.5 h-9 w-9 shrink-0 border-neutral-300 bg-white text-destructive hover:bg-neutral-100 hover:text-red-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-red-400 dark:hover:bg-neutral-700 dark:hover:text-red-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="mb-0.5 h-9 w-9 shrink-0 border-neutral-300 bg-white text-destructive hover:bg-neutral-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30 dark:border-neutral-700 dark:bg-neutral-800 dark:text-red-400 dark:hover:bg-neutral-700 dark:hover:text-red-300"
                   >
                     <IconTrash size={15} />
                   </Button>

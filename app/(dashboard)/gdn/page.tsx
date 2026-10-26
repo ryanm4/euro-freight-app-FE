@@ -11,10 +11,14 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { goodsDeliverNoteColumns } from "./_components/gdn-columns"
 import { DataTable } from "./_components/gdn-table"
+import { getUserType } from "@/hooks/common-hooks"
 
 export default function GDNPage() {
   const router = useRouter()
   const [searchValue, setSearchValue] = useState("")
+
+    const userType = getUserType()
+    const gdnType = userType === "admin" ? undefined : userType
 
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [selectedGDN, setSelectedGDN] = useState<GOODS_DELIVER_NOTE | null>(
@@ -26,8 +30,8 @@ export default function GDNPage() {
     isLoading,
     // error,
   } = useQuery({
-    queryKey: ["gdns"],
-    queryFn: () => fetchGDNs(),
+    queryKey: ["gdns",gdnType],
+    queryFn: () => fetchGDNs(undefined,gdnType),
   })
 
   const actions = {

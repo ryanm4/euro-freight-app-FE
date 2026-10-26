@@ -40,6 +40,7 @@ import {
   updateGoodsReceiveNote,
 } from "@/lib/api/goods_receive_notes"
 import { fetchRecipients } from "@/lib/api/recipients"
+import { getUserType } from "@/hooks/common-hooks"
 import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
 import { IconCalendarFilled, IconTrash } from "@tabler/icons-react"
@@ -113,6 +114,8 @@ const findOptionValueByName = (
 export default function GRNEdit() {
   const router = useRouter()
   const { id } = useParams<{ id: string }>()
+  const userType = getUserType()
+  const shippingType = userType === "admin" ? undefined : userType
   const [isSaving, setIsSaving] = useState(false)
   const [hasHydrated, setHasHydrated] = useState(false)
 
@@ -159,8 +162,8 @@ export default function GRNEdit() {
   })
 
   const { data: gdns } = useQuery({
-    queryKey: ["gdns", "completed"],
-    queryFn: () => fetchGDNs("completed"),
+    queryKey: ["gdns", "completed", shippingType],
+    queryFn: () => fetchGDNs("completed", shippingType),
   })
 
   const { data: recipientsList } = useQuery({

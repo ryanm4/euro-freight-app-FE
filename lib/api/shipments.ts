@@ -1,7 +1,12 @@
 import { getLoggedInUserIdentifier } from "@/lib/auth"
 
-export async function fetchShipments() {
-  const res = await fetch("/api/shipments")
+export async function fetchShipments(shipping_mode?: string) {
+  const searchParams = new URLSearchParams()
+  if (shipping_mode) searchParams.set("shipping_mode", shipping_mode)
+  const query = searchParams.toString()
+  const url = query ? `/api/shipments?${query}` : "/api/shipments"
+
+  const res = await fetch(url)
   if (!res.ok) throw new Error("Failed to fetch shipments")
   return res.json()
 }

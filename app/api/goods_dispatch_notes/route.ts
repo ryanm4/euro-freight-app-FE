@@ -7,12 +7,17 @@ export async function GET(request: Request) {
   // return Response.json(data)
   const { searchParams } = new URL(request.url)
   const status = searchParams.get("status")
+  const shipping_type = searchParams.get("shipping_type")
 
   const backendUrl = new URL(
     `${process.env.BACKEND_URL}/api/v1/goods_dispatch_notes`
   )
   if (status) {
     backendUrl.searchParams.set("status", status)
+  }
+
+   if (shipping_type) {
+    backendUrl.searchParams.set("shipping_type", shipping_type)
   }
 
   const res = await fetch(backendUrl.toString())

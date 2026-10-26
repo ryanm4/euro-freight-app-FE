@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { getUserType, isClientUser } from "@/hooks/common-hooks"
 import { fetchBillOfLadingById } from "@/lib/api/bill_of_lading"
 import { fetchShipments } from "@/lib/api/shipments"
 import { cn } from "@/lib/utils"
@@ -42,6 +43,8 @@ const parseDate = (val: string): Date | undefined => {
 
 export default function HBLHAWBByID() {
   const { id } = useParams<{ id: string }>()
+  const userType = getUserType()
+  const isClient = isClientUser()
 
   const {
     data: res,
@@ -54,7 +57,7 @@ export default function HBLHAWBByID() {
 
   const { data: shipmentsData } = useQuery({
     queryKey: ["shipments"],
-    queryFn: fetchShipments,
+    queryFn: () => fetchShipments(),
   })
 
   const data = res?.data
@@ -307,6 +310,14 @@ export default function HBLHAWBByID() {
 
   const type = data.type ?? (linkedShipment?.flight_number ? "AIR" : "SEA")
   const status = data.status ?? "saved"
+  const hasDifferentShippingType =
+    (userType === "sea" && type.trim().toLowerCase() === "air") ||
+    (userType === "air" && type.trim().toLowerCase() === "sea")
+  const isEditDisabled =
+    status.trim().toLowerCase() === "completed" ||
+    status.trim().toLowerCase() === "completed_hbl" ||
+    isClient ||
+    hasDifferentShippingType
 
   const renderDateField = (
     label: string,
@@ -354,8 +365,7 @@ export default function HBLHAWBByID() {
       </div>
 
       <div className="flex justify-end gap-3">
-        {status.trim().toLowerCase() === "completed" ||
-        status.trim().toLowerCase() === "completed_hbl" ? (
+        {isEditDisabled ? (
           <Button className="rounded-md" disabled>
             Edit
           </Button>

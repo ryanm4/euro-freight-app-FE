@@ -3,6 +3,7 @@
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
 import { fetchPackingLists } from "@/lib/api/packing_lists"
+import { getUserType } from "@/hooks/common-hooks"
 import { PACKING_LIST } from "@/modules/packing-list/types"
 import { IconPlus } from "@tabler/icons-react"
 import { useQuery } from "@tanstack/react-query"
@@ -14,6 +15,8 @@ import { DataTable } from "./_components/packing-list-table"
 export default function PackingListPage() {
   const router = useRouter()
   const [searchValue, setSearchValue] = useState("")
+  const userType = getUserType()
+  const packingListType = userType === "admin" ? undefined : userType
 
   const actions = useMemo(
     () => ({
@@ -29,8 +32,8 @@ export default function PackingListPage() {
     isLoading,
     // error,
   } = useQuery({
-    queryKey: ["packing-lists"],
-    queryFn: () => fetchPackingLists(),
+    queryKey: ["packing-lists", packingListType],
+    queryFn: () => fetchPackingLists(undefined, packingListType),
     refetchOnMount: "always",
     staleTime: 0,
   })

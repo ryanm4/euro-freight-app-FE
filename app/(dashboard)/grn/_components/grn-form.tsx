@@ -36,6 +36,7 @@ import { fetchClients } from "@/lib/api/clients"
 import { fetchGDNs } from "@/lib/api/goods_dispatch_notes"
 import { createGoodsReceiveNote } from "@/lib/api/goods_receive_notes"
 import { fetchRecipients } from "@/lib/api/recipients"
+import { getUserType } from "@/hooks/common-hooks"
 import { UserRole } from "@/lib/enums/user-role"
 import { cn } from "@/lib/utils"
 import { GOODS_DELIVER_NOTE } from "@/modules/gdn/types"
@@ -73,6 +74,8 @@ export default function GoodsReceiveNoteForm() {
 
   const [selectedRows, setSelectedRows] = useState<number[]>([])
   const [actual_cartons, setActualCartons] = useState<number>(0)
+  const userType = getUserType()
+  const shippingType = userType === "admin" ? undefined : userType
 
   const ACTUAL_UOM_OPTIONS = ["cm", "m"]
 
@@ -100,8 +103,8 @@ export default function GoodsReceiveNoteForm() {
   })
 
   const { data: gdns } = useQuery({
-    queryKey: ["gdns", "completed"],
-    queryFn: () => fetchGDNs("completed"),
+    queryKey: ["gdns", "completed", shippingType],
+    queryFn: () => fetchGDNs("completed", shippingType),
   })
 
   const { data: recipientsList } = useQuery({

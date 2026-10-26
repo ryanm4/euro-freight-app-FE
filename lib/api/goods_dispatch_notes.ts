@@ -50,10 +50,15 @@ export type UpdateGoodsDispatchNotePayload = Partial<
   Omit<CreateGoodsDispatchNotePayload, "created_by">
 >
 
-export async function fetchGDNs(status?: string) {
-  const url = status
-    ? `/api/goods_dispatch_notes?status=${encodeURIComponent(status)}`
+export async function fetchGDNs(status?: string, shipping_type?: string) {
+  const searchParams = new URLSearchParams()
+  if (status) searchParams.set("status", status)
+  if (shipping_type) searchParams.set("shipping_type", shipping_type)
+  const query = searchParams.toString()
+  const url = query
+    ? `/api/goods_dispatch_notes?${query}`
     : "/api/goods_dispatch_notes"
+
   const res = await fetch(url)
   if (!res.ok) throw new Error("Failed to fetch goods dispatch notes")
   return res.json()

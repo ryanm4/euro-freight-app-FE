@@ -45,6 +45,7 @@ import { fetchShipments } from "@/lib/api/shipments"
 import ShipmentSelectionTable from "../../_components/ShipmentSelectionTable"
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { port_codes } from "@/config/enum"
+import { getUserType } from "@/hooks/common-hooks"
 
 interface Port {
   id: number
@@ -68,6 +69,7 @@ const toDateInputValue = (val?: string | null) =>
   val ? String(val).slice(0, 10) : ""
 
 export default function HBLHABWEdit() {
+  const userType = getUserType()
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
@@ -164,7 +166,6 @@ export default function HBLHABWEdit() {
   useEffect(() => {
     if (!res?.data) return
     const hbl = res.data
-    console.log("hel", hbl.shipments)
     setHblId(hbl.id ?? "")
     setType(hbl.type ?? "")
     setDate(
@@ -298,7 +299,7 @@ export default function HBLHABWEdit() {
 
   const { data: shipmentsData } = useQuery({
     queryKey: ["shipments"],
-    queryFn: fetchShipments,
+    queryFn: () => fetchShipments(),
   })
 
   const linkedShipment = useMemo(() => {
@@ -786,8 +787,12 @@ export default function HBLHABWEdit() {
                     <SelectValue placeholder="Choose Type" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md border-neutral-700 bg-[#0A0A0A] text-neutral-100">
-                    <SelectItem value="SEA">Sea</SelectItem>
-                    <SelectItem value="AIR">Air</SelectItem>
+                    <SelectItem value="SEA" disabled={userType === "air"}>
+                      Sea
+                    </SelectItem>
+                    <SelectItem value="AIR" disabled={userType === "sea"}>
+                      Air
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>

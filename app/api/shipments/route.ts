@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 
-export async function GET() {
-  const res = await fetch(`${process.env.BACKEND_URL}/api/v1/shipments`)
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const shippingMode = searchParams.get("shipping_mode")
+
+  const backendUrl = new URL(`${process.env.BACKEND_URL}/api/v1/shipments`)
+  if (shippingMode) {
+    backendUrl.searchParams.set("shipping_mode", shippingMode)
+  }
+
+  const res = await fetch(backendUrl.toString())
 
   const data = await res.json()
   return Response.json(data)

@@ -2,6 +2,7 @@
 
 import PageTitleWithBreadcrumb from "@/components/shared/page-title-with-breadcrumb"
 import { Button } from "@/components/ui/button"
+import { getUserType } from "@/hooks/common-hooks"
 import { fetchShipments } from "@/lib/api/shipments"
 import { SHIPMENT } from "@/modules/shipment/types"
 import { IconPlus } from "@tabler/icons-react"
@@ -14,14 +15,16 @@ import { DataTable } from "./_components/shipment-table"
 export default function ShipmentPage() {
   const router = useRouter()
   const [searchValue, setSearchValue] = useState("")
+  const userType = getUserType()
+  const shippingMode = userType === "admin" ? undefined : userType
 
   const {
     data,
     isLoading,
     // error,
   } = useQuery({
-    queryKey: ["shipments"],
-    queryFn: fetchShipments,
+    queryKey: ["shipments", shippingMode],
+    queryFn: () => fetchShipments(shippingMode),
   })
 
   const actions = {

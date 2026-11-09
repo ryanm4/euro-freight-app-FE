@@ -161,7 +161,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const visibleNavItems = isClientUser
     ? data.navMain.filter(
         (item) =>
-          item.url === "/hbl-hawb" || item.url === "/hbl-dashboard"
+          item.url === "/hbl-hawb" || item.url === "/hbl-dashboard" || item.url === "/purchase-order"
       )
     : data.navMain
 
